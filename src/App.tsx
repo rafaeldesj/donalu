@@ -5,7 +5,9 @@ import { ClientDashboard } from './pages/client/ClientDashboard';
 import { StaffDashboard } from './pages/staff/StaffDashboard';
 import { AdminDashboard } from './pages/manager/AdminDashboard';
 import { UserManagement } from './pages/manager/UserManagement';
-import { ShieldCheck, ChefHat, CreditCard, Bell, ShoppingBag, Heart, FileText, Users, Navigation } from 'lucide-react';
+import { DeliveryActive } from './pages/delivery/DeliveryActive';
+import { DeliveryHistory } from './pages/delivery/DeliveryHistory';
+import { ShieldCheck, ChefHat, CreditCard, Bell, ShoppingBag, Heart, FileText, Users, Navigation, CheckCircle } from 'lucide-react';
 import logoDonalu from './assets/logo_donalu.png';
 
 const MainLayout = () => {
@@ -23,7 +25,7 @@ const MainLayout = () => {
         if (userData.staffFunctions?.cook) setActiveView('cozinha');
         else if (userData.staffFunctions?.attendant) setActiveView('atendimento');
         else if (userData.staffFunctions?.cashier) setActiveView('caixa');
-        else if (userData.staffFunctions?.delivery) setActiveView('entrega');
+        else if (userData.staffFunctions?.delivery) setActiveView('entrega_andamento');
       } else if (['manager', 'owner', 'developer'].includes(userData.role)) {
         setActiveView('admin');
       } else {
@@ -72,45 +74,52 @@ const MainLayout = () => {
 
   // Lista dinâmica de botões de navegação conforme o nível de privilégio do usuário
   const menuItems = [];
+  const isOnlyDelivery = role === 'staff' && staff?.delivery;
 
-  // Se for cliente, desenvolvedor, owner ou gerente
-  if (['client', 'developer', 'owner', 'manager'].includes(role)) {
-    menuItems.push({ id: 'menu', label: 'Cardápio Digital', icon: ShoppingBag });
-  }
+  if (isOnlyDelivery) {
+    menuItems.push({ id: 'entrega_andamento', label: 'Entrega em Andamento', icon: Navigation });
+    menuItems.push({ id: 'entrega_finalizada', label: 'Entregas Finalizadas', icon: CheckCircle });
+  } else {
+    // Se for cliente, desenvolvedor, owner ou gerente
+    if (['client', 'developer', 'owner', 'manager'].includes(role)) {
+      menuItems.push({ id: 'menu', label: 'Cardápio Digital', icon: ShoppingBag });
+    }
 
-  // Fidelidade visível apenas para clientes e developers logados
-  if (['client', 'developer'].includes(role) && user) {
-    menuItems.push({ id: 'fidelidade', label: 'Cartão Fidelidade', icon: Heart });
-  }
+    // Fidelidade visível apenas para clientes e developers logados
+    if (['client', 'developer'].includes(role) && user) {
+      menuItems.push({ id: 'fidelidade', label: 'Cartão Fidelidade', icon: Heart });
+    }
 
-  // Fila da cozinha (Cozinheiro, admin, owner, dev)
-  if (role === 'developer' || role === 'owner' || role === 'manager' || (role === 'staff' && staff?.cook)) {
-    menuItems.push({ id: 'cozinha', label: 'Fila Cozinha', icon: ChefHat });
-  }
+    // Fila da cozinha (Cozinheiro, admin, owner, dev)
+    if (role === 'developer' || role === 'owner' || role === 'manager' || (role === 'staff' && staff?.cook)) {
+      menuItems.push({ id: 'cozinha', label: 'Fila Cozinha', icon: ChefHat });
+    }
 
-  // Fila de atendimento (Atendente, admin, owner, dev)
-  if (role === 'developer' || role === 'owner' || role === 'manager' || (role === 'staff' && staff?.attendant)) {
-    menuItems.push({ id: 'atendimento', label: 'Balcão de Entrega', icon: Bell });
-  }
+    // Fila de atendimento (Atendente, admin, owner, dev)
+    if (role === 'developer' || role === 'owner' || role === 'manager' || (role === 'staff' && staff?.attendant)) {
+      menuItems.push({ id: 'atendimento', label: 'Balcão de Entrega', icon: Bell });
+    }
 
-  // Fila de caixa (Caixa, admin, owner, dev)
-  if (role === 'developer' || role === 'owner' || role === 'manager' || (role === 'staff' && staff?.cashier)) {
-    menuItems.push({ id: 'caixa', label: 'Fila Caixa', icon: CreditCard });
-  }
+    // Fila de caixa (Caixa, admin, owner, dev)
+    if (role === 'developer' || role === 'owner' || role === 'manager' || (role === 'staff' && staff?.cashier)) {
+      menuItems.push({ id: 'caixa', label: 'Fila Caixa', icon: CreditCard });
+    }
 
-  // Fila de entregas (Entregador, admin, owner, dev)
-  if (role === 'developer' || role === 'owner' || role === 'manager' || (role === 'staff' && staff?.delivery)) {
-    menuItems.push({ id: 'entrega', label: 'Fila de Entregas', icon: Navigation });
-  }
+    // Fila de entregas (Entregador, admin, owner, dev)
+    if (role === 'developer' || role === 'owner' || role === 'manager' || (role === 'staff' && staff?.delivery)) {
+      menuItems.push({ id: 'entrega_andamento', label: 'Entrega em Andamento', icon: Navigation });
+      menuItems.push({ id: 'entrega_finalizada', label: 'Entregas Finalizadas', icon: CheckCircle });
+    }
 
-  // Painel Administrativo (admin, owner, dev)
-  if (['developer', 'owner', 'manager'].includes(role)) {
-    menuItems.push({ id: 'admin', label: 'Painel Admin', icon: FileText });
-  }
+    // Painel Administrativo (admin, owner, dev)
+    if (['developer', 'owner', 'manager'].includes(role)) {
+      menuItems.push({ id: 'admin', label: 'Painel Admin', icon: FileText });
+    }
 
-  // Painel de Gestão de Usuários (admin, owner, dev)
-  if (['developer', 'owner', 'manager'].includes(role)) {
-    menuItems.push({ id: 'users', label: 'Usuários', icon: Users });
+    // Painel de Gestão de Usuários (admin, owner, dev)
+    if (['developer', 'owner', 'manager'].includes(role)) {
+      menuItems.push({ id: 'users', label: 'Usuários', icon: Users });
+    }
   }
 
   const getRoleLabel = (r: string) => {
@@ -179,7 +188,8 @@ const MainLayout = () => {
           {activeView === 'cozinha' && <StaffDashboard filter="cook" />}
           {activeView === 'atendimento' && <StaffDashboard filter="attendant" />}
           {activeView === 'caixa' && <StaffDashboard filter="cashier" />}
-          {activeView === 'entrega' && <StaffDashboard filter="delivery" />}
+          {activeView === 'entrega_andamento' && <DeliveryActive />}
+          {activeView === 'entrega_finalizada' && <DeliveryHistory />}
           {activeView === 'admin' && <AdminDashboard />}
           {activeView === 'users' && <UserManagement />}
         </main>

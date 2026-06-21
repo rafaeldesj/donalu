@@ -23,4 +23,10 @@ export interface OrderDocument {
     zipCode: string;
     complement?: string;
   };
+  deliveryUid?: string;
+  deliveryName?: string;
+  deliveryCoords?: {
+    lat: number;
+    lng: number;
+  };
 }
