@@ -127,7 +127,14 @@ const MainLayout = () => {
       case 'developer': return 'Developer';
       case 'owner': return 'Proprietário';
       case 'manager': return 'Gerente';
-      case 'staff': return 'Colaborador';
+      case 'staff': {
+        const subroles: string[] = [];
+        if (userData?.staffFunctions?.cook) subroles.push('Cozinha');
+        if (userData?.staffFunctions?.attendant) subroles.push('Atendimento');
+        if (userData?.staffFunctions?.cashier) subroles.push('Caixa');
+        if (userData?.staffFunctions?.delivery) subroles.push('Entrega');
+        return subroles.length > 0 ? `Colaborador [${subroles.join(', ')}]` : 'Colaborador';
+      }
       case 'client':
       default:
         return 'Cliente';
