@@ -26,4 +26,5 @@ export interface UserDocument {
   phoneNumber?: string;
   staffFunctions?: StaffFunctions;
   clientAddress?: UserAddress;
+  tempPassword?: string;
 }

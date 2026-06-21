@@ -21,6 +21,7 @@ export const UserManagement = () => {
   const [attendant, setAttendant] = useState(false);
   const [cashier, setCashier] = useState(false);
   const [delivery, setDelivery] = useState(false);
+  const [initialPassword, setInitialPassword] = useState('');
   
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -61,6 +62,7 @@ export const UserManagement = () => {
     setAttendant(false);
     setCashier(false);
     setDelivery(false);
+    setInitialPassword('');
     setError(null);
     setSuccess(null);
     setShowForm(true);
@@ -75,6 +77,7 @@ export const UserManagement = () => {
     setAttendant(user.staffFunctions?.attendant || false);
     setCashier(user.staffFunctions?.cashier || false);
     setDelivery(user.staffFunctions?.delivery || false);
+    setInitialPassword('');
     setError(null);
     setSuccess(null);
     setShowForm(true);
@@ -129,6 +132,11 @@ export const UserManagement = () => {
       return;
     }
 
+    if (!editUser && (!initialPassword || initialPassword.trim().length < 6)) {
+      setError('A senha inicial é obrigatória para novos cadastros e deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
     setSubmitting(true);
 
     const staffFunctions: StaffFunctions = {
@@ -159,6 +167,7 @@ export const UserManagement = () => {
         // Pré-cadastro do usuário (gerará um ID temporário aleatório no Firestore)
         const docRef = await addDoc(collection(db, 'users'), {
           ...payload,
+          tempPassword: initialPassword.trim(),
           uid: '' // UID será preenchido quando o usuário fizer login
         });
         
@@ -376,6 +385,13 @@ export const UserManagement = () => {
               <label>Endereço de E-mail</label>
               <input type="email" placeholder="email@donalupastelaria.com" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ padding: '0.6rem 1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', outline: 'none' }} />
             </div>
+
+            {!editUser && (
+              <div className="input-group" style={{ gridColumn: '1 / -1' }}>
+                <label>Senha de Acesso Inicial</label>
+                <input type="password" placeholder="Mínimo de 6 caracteres para o primeiro login" value={initialPassword} onChange={(e) => setInitialPassword(e.target.value)} required style={{ padding: '0.6rem 1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', outline: 'none' }} />
+              </div>
+            )}
 
             <div className="input-group" style={{ gridColumn: '1 / -1' }}>
               <label>Nível de Acesso (Privilégio)</label>
