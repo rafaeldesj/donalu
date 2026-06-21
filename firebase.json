@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "target": "donalu-site",
     "public": "dist",
     "ignore": [
       "firebase.json",

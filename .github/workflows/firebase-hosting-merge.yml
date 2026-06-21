@@ -18,3 +18,4 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DONA_LU_4242D }}
           channelId: live
           projectId: dona-lu-4242d
+          target: donalu-site
