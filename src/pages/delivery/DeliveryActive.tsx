@@ -9,6 +9,157 @@ import 'leaflet/dist/leaflet.css';
 
 const DONA_LU_COORDS: [number, number] = [-22.9112951, -43.5602961];
 
+interface AvailableOrderMapProps {
+  orderId: string;
+  address: any;
+}
+
+const AvailableOrderMap = ({ orderId, address }: AvailableOrderMapProps) => {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const markersRef = useRef<{ origin?: L.Marker; destination?: L.Marker; polyline?: L.Polyline }>({});
+  const [destCoords, setDestCoords] = useState<[number, number] | null>(null);
+
+  const getFallbackCoords = (id: string): [number, number] => {
+    const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const latOffset = ((hash % 20) - 10) / 400;
+    const lngOffset = ((hash % 17) - 8) / 400;
+    return [DONA_LU_COORDS[0] + latOffset, DONA_LU_COORDS[1] + lngOffset];
+  };
+
+  useEffect(() => {
+    if (!address) return;
+    const queryStr = `${address.street}, ${address.number}, ${address.neighborhood}, Campo Grande, Rio de Janeiro`;
+    
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryStr)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.length > 0) {
+          setDestCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
+        } else {
+          setDestCoords(getFallbackCoords(orderId));
+        }
+      })
+      .catch(() => {
+        setDestCoords(getFallbackCoords(orderId));
+      });
+  }, [address, orderId]);
+
+  useEffect(() => {
+    if (!mapContainerRef.current || !destCoords) return;
+
+    if (!mapInstanceRef.current) {
+      const map = L.map(mapContainerRef.current, {
+        zoomControl: false,
+        scrollWheelZoom: false,
+        dragging: false,
+        doubleClickZoom: false
+      }).setView(DONA_LU_COORDS, 13);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+
+      mapInstanceRef.current = map;
+    }
+
+    const map = mapInstanceRef.current;
+
+    // Remove camadas antigas
+    if (markersRef.current.origin) map.removeLayer(markersRef.current.origin);
+    if (markersRef.current.destination) map.removeLayer(markersRef.current.destination);
+    if (markersRef.current.polyline) map.removeLayer(markersRef.current.polyline);
+
+    const originIcon = L.divIcon({
+      html: `<div style="font-size: 20px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); transform: translate(-2px, -4px);">🏠</div>`,
+      className: 'leaflet-div-icon-emoji',
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
+    });
+
+    const destIcon = L.divIcon({
+      html: `<div style="font-size: 20px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); transform: translate(-2px, -4px);">📍</div>`,
+      className: 'leaflet-div-icon-emoji',
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
+    });
+
+    markersRef.current.origin = L.marker(DONA_LU_COORDS, { icon: originIcon })
+      .addTo(map)
+      .bindPopup('<b>Dona Lu Pastelaria</b>');
+
+    markersRef.current.destination = L.marker(destCoords, { icon: destIcon })
+      .addTo(map)
+      .bindPopup('<b>Destino de Entrega</b>');
+
+    // Busca rota real pelas ruas via OSRM API
+    const coordsStr = `${DONA_LU_COORDS[1]},${DONA_LU_COORDS[0]};${destCoords[1]},${destCoords[0]}`;
+    const url = `https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=full&geometries=geojson`;
+
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        let routePoints: [number, number][] = [DONA_LU_COORDS, destCoords];
+        if (data.routes && data.routes.length > 0) {
+          const rawCoords = data.routes[0].geometry.coordinates;
+          routePoints = rawCoords.map((c: any) => [c[1], c[0]]);
+        }
+        
+        if (markersRef.current.polyline) map.removeLayer(markersRef.current.polyline);
+
+        const polyline = L.polyline(routePoints, {
+          color: '#e28743',
+          weight: 4,
+          opacity: 0.85
+        }).addTo(map);
+        markersRef.current.polyline = polyline;
+
+        const bounds = L.latLngBounds(routePoints);
+        map.fitBounds(bounds, { padding: [25, 25] });
+      })
+      .catch(err => {
+        console.error("Erro rota OSRM minimapa:", err);
+        if (markersRef.current.polyline) map.removeLayer(markersRef.current.polyline);
+
+        const points = [DONA_LU_COORDS, destCoords];
+        const polyline = L.polyline(points, {
+          color: '#e28743',
+          weight: 4,
+          opacity: 0.85
+        }).addTo(map);
+        markersRef.current.polyline = polyline;
+
+        const bounds = L.latLngBounds(points);
+        map.fitBounds(bounds, { padding: [25, 25] });
+      });
+
+    // Adiciona evento de clique para abrir o Google Maps
+    map.off('click');
+    map.on('click', () => {
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${destCoords[0]},${destCoords[1]}&travelmode=driving`, '_blank');
+    });
+
+  }, [destCoords]);
+
+  useEffect(() => {
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
+
+  return (
+    <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)', cursor: 'pointer', marginTop: '0.4rem', zIndex: 1 }} title="Clique para ver no Google Maps">
+      <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
+      <div style={{ position: 'absolute', bottom: '5px', right: '5px', zIndex: 999, background: 'rgba(10,7,7,0.85)', padding: '0.2rem 0.5rem', borderRadius: '12px', fontSize: '0.65rem', color: 'var(--primary-gold)', border: '1px solid rgba(245, 158, 11, 0.3)', pointerEvents: 'none' }}>
+        Ver no Maps 🗺️
+      </div>
+    </div>
+  );
+};
+
 export const DeliveryActive = () => {
   const { user } = useAuth();
   const [orders, setOrders] = useState<OrderDocument[]>([]);
@@ -429,6 +580,9 @@ export const DeliveryActive = () => {
                     <strong>Bairro:</strong> {order.address.neighborhood}<br/>
                     <span style={{ color: 'var(--text-secondary)' }}>{order.address.street}, {order.address.number}</span>
                   </div>
+
+                  {/* Minimapa mostrando rota da loja ao cliente antes de aceitar */}
+                  <AvailableOrderMap orderId={order.id!} address={order.address} />
 
                   <div style={{ maxHeight: '80px', overflowY: 'auto', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                     {order.items.map((it, idx) => (
