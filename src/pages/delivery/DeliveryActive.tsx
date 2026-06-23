@@ -7,7 +7,7 @@ import { Play, Check, AlertTriangle, MapPin, ShoppingBag } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-const DONA_LU_COORDS: [number, number] = [-22.90312, -43.55983];
+const DONA_LU_COORDS: [number, number] = [-22.9112951, -43.5602961];
 
 export const DeliveryActive = () => {
   const { user } = useAuth();
@@ -92,6 +92,7 @@ export const DeliveryActive = () => {
   }, [activeOrder]);
 
   // Ativa watchPosition de geolocalização do Entregador
+  // Ativa busca de geolocalização do Entregador de 1 em 1 segundo para precisão máxima
   useEffect(() => {
     if (!activeOrder) {
       setGpsCoords(null);
@@ -104,30 +105,36 @@ export const DeliveryActive = () => {
       return;
     }
 
-    const watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setGpsCoords([latitude, longitude]);
-        setGpsError(null);
+    const updateLocation = () => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setGpsCoords([latitude, longitude]);
+          setGpsError(null);
 
-        // Atualiza coordenadas em tempo real no Firestore
-        updateDoc(doc(db, 'orders', activeOrder.id!), {
-          deliveryCoords: { lat: latitude, lng: longitude }
-        }).catch((err) => console.error("Erro ao salvar coordenadas no banco:", err));
-      },
-      (error) => {
-        console.error("Erro de GPS:", error);
-        if (error.code === 1) {
-          setGpsError("Acesso à localização negado. O rastreamento de GPS é obrigatório para as entregas!");
-        } else {
-          setGpsError("Sinal de GPS fraco ou indisponível.");
-        }
-      },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
-    );
+          // Atualiza coordenadas em tempo real no Firestore
+          updateDoc(doc(db, 'orders', activeOrder.id!), {
+            deliveryCoords: { lat: latitude, lng: longitude }
+          }).catch((err) => console.error("Erro ao salvar coordenadas no banco:", err));
+        },
+        (error) => {
+          console.error("Erro de GPS:", error);
+          if (error.code === 1) {
+            setGpsError("Acesso à localização negado. O rastreamento de GPS é obrigatório para as entregas!");
+          }
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    };
+
+    // Primeira execução imediata
+    updateLocation();
+
+    // Executa a cada 1 segundo
+    const intervalId = setInterval(updateLocation, 1000);
 
     return () => {
-      navigator.geolocation.clearWatch(watchId);
+      clearInterval(intervalId);
     };
   }, [activeOrder]);
 
@@ -151,6 +158,12 @@ export const DeliveryActive = () => {
 
     const map = mapInstanceRef.current;
 
+    // Adiciona evento de clique para abrir o Google Maps
+    map.off('click');
+    map.on('click', () => {
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${destCoords[0]},${destCoords[1]}&travelmode=driving`, '_blank');
+    });
+
     // Limpa camadas antigas
     if (markersRef.current.origin) map.removeLayer(markersRef.current.origin);
     if (markersRef.current.current) map.removeLayer(markersRef.current.current);
@@ -159,7 +172,7 @@ export const DeliveryActive = () => {
 
     // Criação de DivIcons (Emojis) duráveis para Vite
     const originIcon = L.divIcon({
-      html: `<div style="font-size: 26px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); transform: translate(-2px, -6px);">🥟</div>`,
+      html: `<div style="font-size: 26px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); transform: translate(-2px, -6px);">🏠</div>`,
       className: 'leaflet-div-icon-emoji',
       iconSize: [30, 30],
       iconAnchor: [15, 15]
@@ -173,7 +186,7 @@ export const DeliveryActive = () => {
     });
 
     const destIcon = L.divIcon({
-      html: `<div style="font-size: 26px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); transform: translate(-2px, -6px);">🏠</div>`,
+      html: `<div style="font-size: 26px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); transform: translate(-2px, -6px);">📍</div>`,
       className: 'leaflet-div-icon-emoji',
       iconSize: [30, 30],
       iconAnchor: [15, 15]
@@ -196,19 +209,50 @@ export const DeliveryActive = () => {
       .bindPopup('<b>Você (GPS)</b>');
     markersRef.current.current = currentMarker;
 
-    // Plota a linha de rota
-    const points = [DONA_LU_COORDS, currentLoc, destCoords];
-    const polyline = L.polyline(points, {
-      color: '#e28743',
-      weight: 5,
-      opacity: 0.8,
-      dashArray: '8, 12'
-    }).addTo(map);
-    markersRef.current.polyline = polyline;
+    // Busca rota real pelas ruas via OSRM API
+    const coordsStr = `${DONA_LU_COORDS[1]},${DONA_LU_COORDS[0]};${currentLoc[1]},${currentLoc[0]};${destCoords[1]},${destCoords[0]}`;
+    const url = `https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=full&geometries=geojson`;
 
-    // Enquadra a câmera em todos os pontos
-    const bounds = L.latLngBounds(points);
-    map.fitBounds(bounds, { padding: [50, 50] });
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        let routePoints: [number, number][] = [DONA_LU_COORDS, currentLoc, destCoords];
+        if (data.routes && data.routes.length > 0) {
+          const rawCoords = data.routes[0].geometry.coordinates; // Array de [lng, lat]
+          routePoints = rawCoords.map((c: any) => [c[1], c[0]]); // Converte para [lat, lng]
+        }
+        
+        if (markersRef.current.polyline) map.removeLayer(markersRef.current.polyline);
+
+        const polyline = L.polyline(routePoints, {
+          color: '#e28743',
+          weight: 5,
+          opacity: 0.8,
+          dashArray: '8, 12'
+        }).addTo(map);
+        markersRef.current.polyline = polyline;
+
+        // Enquadra a câmera na rota pelas ruas
+        const bounds = L.latLngBounds(routePoints);
+        map.fitBounds(bounds, { padding: [50, 50] });
+      })
+      .catch(err => {
+        console.error("Erro ao buscar rota OSRM:", err);
+        // Fallback para linha reta se falhar
+        if (markersRef.current.polyline) map.removeLayer(markersRef.current.polyline);
+
+        const points = [DONA_LU_COORDS, currentLoc, destCoords];
+        const polyline = L.polyline(points, {
+          color: '#e28743',
+          weight: 5,
+          opacity: 0.8,
+          dashArray: '8, 12'
+        }).addTo(map);
+        markersRef.current.polyline = polyline;
+
+        const bounds = L.latLngBounds(points);
+        map.fitBounds(bounds, { padding: [50, 50] });
+      });
 
   }, [destCoords, gpsCoords, activeOrder]);
 
@@ -337,17 +381,24 @@ export const DeliveryActive = () => {
                 </span>
                 {loadingDest && <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Geocodificando...</span>}
               </div>
-              <div 
-                ref={mapContainerRef} 
-                style={{ 
-                  flex: 1, 
-                  width: '100%', 
-                  borderRadius: '10px', 
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  overflow: 'hidden',
-                  zIndex: 1
-                }} 
-              />
+              <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <div 
+                  ref={mapContainerRef} 
+                  style={{ 
+                    flex: 1, 
+                    width: '100%', 
+                    borderRadius: '10px', 
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    overflow: 'hidden',
+                    zIndex: 1,
+                    cursor: 'pointer'
+                  }} 
+                  title="Clique no mapa para abrir rota no Google Maps"
+                />
+                <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 999, background: 'rgba(10,7,7,0.85)', padding: '0.35rem 0.75rem', borderRadius: '20px', fontSize: '0.75rem', color: 'var(--primary-gold)', border: '1px solid rgba(245, 158, 11, 0.3)', pointerEvents: 'none', fontWeight: 600 }}>
+                  Clique para abrir no Google Maps 🗺️
+                </div>
+              </div>
             </div>
           </div>
 

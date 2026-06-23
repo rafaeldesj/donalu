@@ -7,7 +7,8 @@ import { AdminDashboard } from './pages/manager/AdminDashboard';
 import { UserManagement } from './pages/manager/UserManagement';
 import { DeliveryActive } from './pages/delivery/DeliveryActive';
 import { DeliveryHistory } from './pages/delivery/DeliveryHistory';
-import { ShieldCheck, ChefHat, CreditCard, Bell, ShoppingBag, Heart, FileText, Users, Navigation, CheckCircle } from 'lucide-react';
+import { OrderTracking } from './pages/client/OrderTracking';
+import { ShieldCheck, ChefHat, CreditCard, Bell, ShoppingBag, Heart, FileText, Users, Navigation, CheckCircle, Clock } from 'lucide-react';
 import logoDonalu from './assets/logo_donalu.png';
 
 const MainLayout = () => {
@@ -83,6 +84,11 @@ const MainLayout = () => {
     // Se for cliente, desenvolvedor, owner ou gerente
     if (['client', 'developer', 'owner', 'manager'].includes(role)) {
       menuItems.push({ id: 'menu', label: 'Cardápio Digital', icon: ShoppingBag });
+    }
+
+    // Acompanhe seu pedido visível apenas para clientes logados
+    if (role === 'client' && user) {
+      menuItems.push({ id: 'tracking', label: 'Acompanhe seu pedido', icon: Clock });
     }
 
     // Fidelidade visível apenas para clientes e developers logados
@@ -191,6 +197,7 @@ const MainLayout = () => {
         {/* 3. Content (Área de Conteúdo Direita) */}
         <main className="content-area-main">
           {activeView === 'menu' && <ClientDashboard showOnly="menu" isVisitor={isVisitor} onLoginRequired={() => setIsVisitor(false)} />}
+          {activeView === 'tracking' && <OrderTracking />}
           {activeView === 'fidelidade' && <ClientDashboard showOnly="loyalty" isVisitor={isVisitor} onLoginRequired={() => setIsVisitor(false)} />}
           {activeView === 'cozinha' && <StaffDashboard filter="cook" />}
           {activeView === 'atendimento' && <StaffDashboard filter="attendant" />}
