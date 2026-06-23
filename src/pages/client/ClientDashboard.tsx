@@ -156,16 +156,26 @@ export const ClientDashboard = ({ showOnly, isVisitor = false, onLoginRequired }
     }
 
     const delayDebounceFn = setTimeout(() => {
-      const queryStr = `${parsed.street}, ${parsed.number}, ${parsed.neighborhood}, Campo Grande, Rio de Janeiro`;
+      // Evita duplicar "Campo Grande" no query se bairro já é Campo Grande
+      const isNeighborhoodCG = parsed.neighborhood.toLowerCase().includes('campo grande');
+      const locationSuffix = isNeighborhoodCG
+        ? 'Campo Grande, Rio de Janeiro, Brasil'
+        : `${parsed.neighborhood}, Campo Grande, Rio de Janeiro, Brasil`;
+
+      const queryStr = `${parsed.street}, ${parsed.number}, ${locationSuffix}`;
+      // Viewbox aproximado de Campo Grande, RJ
+      const viewbox = '-43.65,-22.88,-43.45,-23.00';
+
       setGeocoding(true);
-      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryStr)}`)
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryStr)}&limit=1&countrycodes=br&viewbox=${viewbox}&bounded=1`)
         .then((res) => res.json())
         .then((data) => {
           if (data && data.length > 0) {
             setAddressCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
           } else {
-            const fallbackQueryStr = `${parsed.street}, ${parsed.neighborhood}, Campo Grande, Rio de Janeiro`;
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fallbackQueryStr)}`)
+            // Tenta sem o bounded para ampliar a busca
+            const fallbackQueryStr = `${parsed.street}, ${locationSuffix}`;
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fallbackQueryStr)}&limit=1&countrycodes=br&viewbox=${viewbox}&bounded=1`)
               .then((res) => res.json())
               .then((fallbackData) => {
                 if (fallbackData && fallbackData.length > 0) {

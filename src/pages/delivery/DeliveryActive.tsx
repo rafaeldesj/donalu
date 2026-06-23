@@ -35,17 +35,47 @@ const AvailableOrderMap = ({ orderId, address, clientCoords: savedClientCoords }
       return;
     }
 
-    // Fallback: tenta geocodificar o endereço salvo
+    // Fallback: geocodifica o endereço salvo com precisão melhorada
     if (!address) return;
-    const queryStr = `${address.street}, ${address.number}, ${address.neighborhood}, Campo Grande, Rio de Janeiro`;
-    
-    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryStr)}&limit=1&countrycodes=br`)
+
+    // Evita duplicar "Campo Grande" no query
+    const neighborhood = address.neighborhood || '';
+    const isFieldSameAsCity = neighborhood.toLowerCase().includes('campo grande');
+    const locationSuffix = isFieldSameAsCity
+      ? 'Campo Grande, Rio de Janeiro, Brasil'
+      : `${neighborhood}, Campo Grande, Rio de Janeiro, Brasil`;
+
+    // Query 1: com número completo + bounding box de Campo Grande (mais preciso)
+    const queryWithNumber = `${address.street}, ${address.number}, ${locationSuffix}`;
+    // Viewbox aproximado de Campo Grande, RJ
+    const viewbox = '-43.65,-22.88,-43.45,-23.00';
+
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryWithNumber)}&limit=1&countrycodes=br&viewbox=${viewbox}&bounded=1`)
       .then((res) => res.json())
       .then((data) => {
         if (data && data.length > 0) {
           setDestCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
         } else {
-          setDestCoords(getFallbackCoords(orderId));
+          // Query 2: sem bounded, mas com número
+          return fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryWithNumber)}&limit=1&countrycodes=br`)
+            .then((res) => res.json())
+            .then((data2) => {
+              if (data2 && data2.length > 0) {
+                setDestCoords([parseFloat(data2[0].lat), parseFloat(data2[0].lon)]);
+              } else {
+                // Query 3: somente rua + localidade (sem número)
+                const queryStreetOnly = `${address.street}, ${locationSuffix}`;
+                return fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryStreetOnly)}&limit=1&countrycodes=br&viewbox=${viewbox}&bounded=1`)
+                  .then((res) => res.json())
+                  .then((data3) => {
+                    if (data3 && data3.length > 0) {
+                      setDestCoords([parseFloat(data3[0].lat), parseFloat(data3[0].lon)]);
+                    } else {
+                      setDestCoords(getFallbackCoords(orderId));
+                    }
+                  });
+              }
+            });
         }
       })
       .catch(() => {
