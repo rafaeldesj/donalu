@@ -35,56 +35,67 @@ const AvailableOrderMap = ({ orderId, address, clientCoords: savedClientCoords }
       return;
     }
 
-    // Fallback: geocodifica o endereço usando Photon (mais preciso para endereços BR)
+    // Fallback: geocodifica o endereço usando seleção inteligente de segmento
     if (!address) return;
 
-    // Helper: verifica se coordenada está próxima a Campo Grande (~15km)
-    const MAX_DIST = 0.15;
+    const MAX_DIST = 0.15; // ~15km
     const isNearby = (lat: number, lng: number) =>
       Math.abs(lat - DONA_LU_COORDS[0]) < MAX_DIST && Math.abs(lng - DONA_LU_COORDS[1]) < MAX_DIST;
 
-    // Busca apenas pela rua (sem número) — Photon é mais preciso sem o número
-    const streetQuery = address.street;
+    // Heurística de seleção de segmento: número alto = segmento mais distante do centro
+    const pickBestSegment = (segs: any[], houseNum: number) => {
+      const withDist = segs.map((s: any) => {
+        const lat = parseFloat(s.lat);
+        const lng = parseFloat(s.lon);
+        const dist = Math.sqrt(Math.pow(lat - DONA_LU_COORDS[0], 2) + Math.pow(lng - DONA_LU_COORDS[1], 2));
+        return { s, lat, lng, dist };
+      });
+      withDist.sort((a, b) => a.dist - b.dist);
+      return houseNum >= 200
+        ? withDist[withDist.length - 1].s // mais distante para números altos
+        : withDist[0].s; // mais próximo para números baixos
+    };
 
-    fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(streetQuery)}&lat=${DONA_LU_COORDS[0]}&lon=${DONA_LU_COORDS[1]}&limit=10&lang=pt`)
+    const houseNumber = parseInt(address.number) || 0;
+
+    // Nominatim: todos os segmentos da rua (até 10)
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address.street + ', Campo Grande, Rio de Janeiro')}&countrycodes=br&limit=10`)
       .then((res) => res.json())
       .then((data) => {
-        if (data && data.features && data.features.length > 0) {
-          // Filtra por Brasil E proximidade a Campo Grande (max 15km)
-          const filtered = data.features.filter((f: any) => {
-            if (f.properties?.countrycode !== 'BR') return false;
-            const [fLng, fLat] = f.geometry.coordinates;
-            return isNearby(fLat, fLng);
-          });
-
-          if (filtered.length > 0) {
-            const [lng, lat] = filtered[0].geometry.coordinates;
-            setDestCoords([lat, lng]);
+        if (data && data.length > 0) {
+          const local = data.filter((d: any) => isNearby(parseFloat(d.lat), parseFloat(d.lon)));
+          if (local.length > 0) {
+            const best = pickBestSegment(local, houseNumber);
+            setDestCoords([parseFloat(best.lat), parseFloat(best.lon)]);
             return;
           }
         }
 
-        // Fallback: Nominatim com parâmetros estruturados
-        const nomQuery = `${address.number} ${address.street}`;
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&street=${encodeURIComponent(nomQuery)}&city=Rio+de+Janeiro&state=Rio+de+Janeiro&country=Brazil&countrycodes=br&limit=5`)
+        // Fallback: Photon com seleção de segmento
+        fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(address.street)}&lat=${DONA_LU_COORDS[0]}&lon=${DONA_LU_COORDS[1]}&limit=10`)
           .then((res) => res.json())
-          .then((nomData) => {
-            if (nomData && nomData.length > 0) {
-              const local = nomData.find((d: any) => isNearby(parseFloat(d.lat), parseFloat(d.lon)));
-              if (local) {
-                setDestCoords([parseFloat(local.lat), parseFloat(local.lon)]);
-              } else {
-                setDestCoords(getFallbackCoords(orderId));
+          .then((photonData) => {
+            if (photonData && photonData.features && photonData.features.length > 0) {
+              const filtered = photonData.features.filter((f: any) => {
+                if (f.properties?.countrycode !== 'BR') return false;
+                const [fLng, fLat] = f.geometry.coordinates;
+                return isNearby(fLat, fLng);
+              });
+              if (filtered.length > 0) {
+                const adapted = filtered.map((f: any) => ({
+                  lat: String(f.geometry.coordinates[1]),
+                  lon: String(f.geometry.coordinates[0])
+                }));
+                const best = pickBestSegment(adapted, houseNumber);
+                setDestCoords([parseFloat(best.lat), parseFloat(best.lon)]);
+                return;
               }
-            } else {
-              setDestCoords(getFallbackCoords(orderId));
             }
+            setDestCoords(getFallbackCoords(orderId));
           })
           .catch(() => setDestCoords(getFallbackCoords(orderId)));
       })
-      .catch(() => {
-        setDestCoords(getFallbackCoords(orderId));
-      });
+      .catch(() => setDestCoords(getFallbackCoords(orderId)));
   }, [address, orderId, savedClientCoords]);
 
   useEffect(() => {
