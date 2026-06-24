@@ -297,7 +297,7 @@ export const ClientDashboard = ({ showOnly, isVisitor = false, onLoginRequired, 
           <h2>Programa de Fidelidade e Perfil 💝</h2>
           <p>Confira seus carimbos acumulados e endereço principal de entrega.</p>
         </div>
-        <div className="client-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+        <div className="client-grid-loyalty">
           <div className="loyalty-card" style={{ padding: '2rem' }}>
             <h3>Cartão Fidelidade Dona Lu</h3>
             <p>Junte 10 carimbos e ganhe um pastel doce da sua escolha!</p>
@@ -776,60 +776,6 @@ export const ClientDashboard = ({ showOnly, isVisitor = false, onLoginRequired, 
               <span>🛒 Ver Resumo do Pedido</span>
             </button>
           </form>
-        </div>
-      </div>
-
-      {/* Novidades do Instagram */}
-      <div style={{ marginTop: '2.5rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-          <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            Novidades no Instagram 📸
-          </h3>
-          <a href="https://www.instagram.com/donalupastelaria/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-gold)', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}>
-            @donalupastelaria
-          </a>
-        </div>
-        
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '1rem',
-          marginTop: '1rem'
-        }}>
-          {[
-            { img: pastelCrocante, text: 'Borda recheada e crocante irresistível! 🧀' },
-            { img: pastelFrito, text: 'Pastéis quentinhos fritos na hora! 🔥' },
-            { img: pastelRefri, text: 'A combinação perfeita com refrigerante gelado! 🥤' },
-            { img: pastelCombo, text: 'Conheça nossos combos promocionais da semana! 🥟' }
-          ].map((post, idx) => (
-            <div key={idx} style={{
-              background: 'var(--bg-card)',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              border: '1px solid rgba(255, 255, 255, 0.03)',
-              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
-              transition: 'transform 0.2s',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-3px)'}
-            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-            onClick={() => window.open('https://www.instagram.com/donalupastelaria/', '_blank')}
-            >
-              <div style={{ position: 'relative', paddingTop: '100%' }}>
-                <img src={post.img} alt="Instagram Post" style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover'
-                }} />
-              </div>
-              <div style={{ padding: '0.75rem', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                {post.text}
-              </div>
-            </div>
-          ))}
         </div>
       </div>
 
