@@ -1,4 +1,4 @@
-export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'delivering' | 'completed';
+export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'delivering' | 'completed' | 'cancelled';
 
 export interface OrderItem {
   id: number;
@@ -33,4 +33,9 @@ export interface OrderDocument {
     lat: number;
     lng: number;
   };
+  clientPhone?: string;
+  dailySeq?: number;
+  cancelReason?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
 }

@@ -15,7 +15,32 @@ export async function geocodeAddress(
   const cleanNumber = number.trim();
   const cleanNeighborhood = neighborhood.trim() || 'Campo Grande';
 
-  // Nível 1: Endereço completo (Rua, Número, Bairro, Cidade, Brasil)
+  // Nível 0: ArcGIS public geocoder (extremamente preciso para números de rua no Brasil, estilo Google Maps)
+  if (cleanNumber) {
+    try {
+      const query = `${cleanStreet}, ${cleanNumber}, ${cleanNeighborhood}, ${city}, Brazil`;
+      const url = `https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(query)}&maxLocations=1`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.candidates && data.candidates.length > 0) {
+          const candidate = data.candidates[0];
+          if (candidate.score >= 90 && candidate.location) {
+            const lat = candidate.location.y;
+            const lon = candidate.location.x;
+            if (!isNaN(lat) && !isNaN(lon)) {
+              console.log(`[geocoding] Sucesso Nível 0 (ArcGIS): [${lat}, ${lon}] com score ${candidate.score}`);
+              return [lat, lon];
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[geocoding] Falha no geocodificador Nível 0 (ArcGIS):', err);
+    }
+  }
+
+  // Nível 1: Endereço completo (Rua, Número, Bairro, Cidade, Brasil) via Nominatim
   if (cleanNumber) {
     try {
       const query = `${cleanStreet}, ${cleanNumber}, ${cleanNeighborhood}, ${city}, Brazil`;

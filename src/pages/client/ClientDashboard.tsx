@@ -1,16 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { ShoppingBag, MapPin, Plus, Minus, Trash2, CheckCircle, Edit2, Check, X, Upload } from 'lucide-react';
-import { collection, addDoc } from 'firebase/firestore';
+import { ShoppingBag, MapPin, Plus, Minus, Trash2, Edit2, Check, X, Upload } from 'lucide-react';
+import { DeliveryMap } from '../../components/DeliveryMap';
+import type { MapAddress } from '../../components/DeliveryMap';
+import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 import type { OrderItem } from '../../types/order';
 import pastelCrocante from '../../assets/pastel_crocante.png';
 import pastelFrito from '../../assets/pastel_frito.png';
 import pastelRefri from '../../assets/pastel_refri.png';
 import pastelCombo from '../../assets/pastel_combo.png';
-import { geocodeAddress } from '../../utils/geocoding';
 
 
 
@@ -18,10 +17,11 @@ interface ClientDashboardProps {
   showOnly?: 'menu' | 'loyalty';
   isVisitor?: boolean;
   onLoginRequired?: () => void;
+  onNavigate?: (view: string) => void;
 }
 
-export const ClientDashboard = ({ showOnly, isVisitor = false, onLoginRequired }: ClientDashboardProps) => {
-  const { user, userData } = useAuth();
+export const ClientDashboard = ({ showOnly, isVisitor = false, onLoginRequired, onNavigate }: ClientDashboardProps) => {
+  const { user, userData, updatePhoneNumber } = useAuth();
 
   const defaultPastels = [
     { id: 1, name: 'Pastel de Carne com Queijo', price: 12.00, description: 'Carne moída temperada com queijo mussarela derretido.', image: pastelCrocante },
@@ -55,164 +55,31 @@ export const ClientDashboard = ({ showOnly, isVisitor = false, onLoginRequired }
   const canEdit = ['developer', 'owner', 'manager'].includes(role);
 
   const [cart, setCart] = useState<OrderItem[]>([]);
-  const [complement, setComplement] = useState(userData?.clientAddress?.complement || '');
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deliveryAddress, setDeliveryAddress] = useState<MapAddress | null>(null);
+  const [orderType, setOrderType] = useState<'pickup' | 'delivery'>('pickup');
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credito' | 'debito' | 'dinheiro'>('pix');
+  const [changeFor, setChangeFor] = useState('');
+  const [showOrderSummary, setShowOrderSummary] = useState(false);
 
-  // Estados de endereço e mapa individuais
-  const [street, setStreet] = useState('');
-  const [number, setNumber] = useState('');
-  const [neighborhood, setNeighborhood] = useState('Campo Grande');
+  const [showPhonePrompt, setShowPhonePrompt] = useState(false);
+  const [promptPhone, setPromptPhone] = useState('');
+  const [promptPhoneError, setPromptPhoneError] = useState<string | null>(null);
 
-  const DONA_LU_COORDS: [number, number] = [-22.9112951, -43.5602961];
-  const [mapCoords, setMapCoords] = useState<[number, number]>(DONA_LU_COORDS);
-  const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [geocoding, setGeocoding] = useState(false);
-
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<L.Map | null>(null);
-  const markerRef = useRef<L.Marker | null>(null);
-
-  // Autocomplete do campo Rua (Photon API)
-  useEffect(() => {
-    if (!street.trim() || street.includes(',')) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-
-    const delayDebounceFn = setTimeout(() => {
-      if (street.length >= 3) {
-        const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(street)}&lat=${DONA_LU_COORDS[0]}&lon=${DONA_LU_COORDS[1]}&limit=5`;
-        fetch(url)
-          .then((res) => res.json())
-          .then((data) => {
-            if (data && data.features) {
-              const filtered = data.features.filter((f: any) => f.properties?.countrycode === 'BR');
-              setSuggestions(filtered);
-              setShowSuggestions(filtered.length > 0);
-            }
-          })
-          .catch((err) => console.error("Erro ao buscar sugestões de rua:", err));
-      }
-    }, 400);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [street]);
-
-  // Geocodificação debounced baseada nos inputs (Rua + Número + Bairro)
-  useEffect(() => {
-    if (!street.trim() || !number.trim()) {
-      return;
-    }
-
-    const delayDebounceFn = setTimeout(() => {
-      setGeocoding(true);
-      geocodeAddress(street, number, neighborhood)
-        .then((coords) => {
-          setMapCoords(coords);
-        })
-        .catch((err) => {
-          console.warn('[geocoding] Falha ao geocodificar inputs:', err);
-        })
-        .finally(() => {
-          setGeocoding(false);
-        });
-    }, 800);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [street, number, neighborhood]);
-
-  // Inicialização e atualização do Leaflet Map (Marcador Travado)
-  useEffect(() => {
-    if (!mapContainerRef.current) {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-        markerRef.current = null;
-      }
-      return;
-    }
-
-    if (!mapInstanceRef.current) {
-      const map = L.map(mapContainerRef.current, {
-        zoomControl: true,
-        scrollWheelZoom: true,
-      }).setView(mapCoords, 16);
-
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap'
-      }).addTo(map);
-
-      const clientIcon = L.divIcon({
-        html: `<div style="font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); transform: translate(-2px, -8px);">📍</div>`,
-        className: 'leaflet-div-icon-emoji',
-        iconSize: [36, 36],
-        iconAnchor: [18, 18]
+  const formatPhone = (val: string) => {
+    const digits = val.replace(/\D/g, '');
+    if (digits.length <= 10) {
+      return digits.replace(/^(\d{2})(\d{4})(\d{0,4})$/, (_, p1, p2, p3) => {
+        return `(${p1}) ${p2}${p3 ? '-' + p3 : ''}`;
       });
-
-      // Marcador ESTÁTICO (draggable: false)
-      const marker = L.marker(mapCoords, {
-        icon: clientIcon,
-        draggable: false
-      }).addTo(map);
-
-      markerRef.current = marker;
-      mapInstanceRef.current = map;
     } else {
-      const map = mapInstanceRef.current;
-      const marker = markerRef.current;
-
-      const currentCenter = map.getCenter();
-      const dist = Math.sqrt((currentCenter.lat - mapCoords[0]) ** 2 + (currentCenter.lng - mapCoords[1]) ** 2);
-
-      if (dist > 0.0001) {
-        map.setView(mapCoords, 16);
-      }
-      if (marker) {
-        marker.setLatLng(mapCoords);
-      }
+      return digits.slice(0, 11).replace(/^(\d{2})(\d{5})(\d{0,4})$/, (_, p1, p2, p3) => {
+        return `(${p1}) ${p2}${p3 ? '-' + p3 : ''}`;
+      });
     }
-  }, [mapCoords, cart.length]);
-
-  const handleSelectSuggestion = (feature: any) => {
-    const prop = feature.properties;
-    const streetName = prop.name || '';
-    const neighborhoodName = prop.district || prop.suburb || 'Campo Grande';
-
-    setStreet(streetName);
-    setNeighborhood(neighborhoodName);
-
-    if (feature.geometry?.coordinates) {
-      const [lng, lat] = feature.geometry.coordinates;
-      setMapCoords([lat, lng]);
-    }
-
-    setSuggestions([]);
-    setShowSuggestions(false);
   };
-
-  // Sincroniza dados do endereço ao carregar dados do usuário
-  useEffect(() => {
-    if (userData?.clientAddress) {
-      setStreet(userData.clientAddress.street || '');
-      setNumber(userData.clientAddress.number || '');
-      setNeighborhood(userData.clientAddress.neighborhood || 'Campo Grande');
-      setComplement(userData.clientAddress.complement || '');
-      
-      if (userData.clientAddress.street) {
-        geocodeAddress(
-          userData.clientAddress.street,
-          userData.clientAddress.number || '',
-          userData.clientAddress.neighborhood || ''
-        ).then((coords) => {
-          setMapCoords(coords);
-        }).catch(() => {});
-      }
-    }
-  }, [userData]);
 
 
 
@@ -316,47 +183,104 @@ export const ClientDashboard = ({ showOnly, isVisitor = false, onLoginRequired }
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  const handlePlaceOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const paymentLabels: Record<string, string> = {
+    pix: 'Pix',
+    credito: 'Cartão de Crédito',
+    debito: 'Cartão de Débito',
+    dinheiro: 'Dinheiro',
+  };
+
+  const handleOpenSummary = () => {
     setError(null);
-
-    if (cart.length === 0) {
-      setError('O seu carrinho está vazio.');
+    if (cart.length === 0) { setError('O seu carrinho está vazio.'); return; }
+    if (orderType === 'delivery' && (!deliveryAddress || !deliveryAddress.street)) {
+      setError('Selecione o endereço de entrega no mapa antes de continuar.');
+      return;
+    }
+    if (!paymentMethod) { setError('Selecione a forma de pagamento.'); return; }
+    
+    // Exige cadastro de número de celular se o cliente não tiver um cadastrado
+    if (!isVisitor && user && !userData?.phoneNumber) {
+      setPromptPhone('');
+      setPromptPhoneError(null);
+      setShowPhonePrompt(true);
       return;
     }
 
-    if (!street.trim() || !number.trim() || !neighborhood.trim()) {
-      setError('Por favor, selecione seu endereço no mapa e preencha o número da casa/prédio.');
+    setShowOrderSummary(true);
+  };
+
+  const handleSavePromptPhone = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPromptPhoneError(null);
+    const cleanPhone = promptPhone.replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      setPromptPhoneError('Por favor, informe um número de celular válido com DDD.');
       return;
     }
+    try {
+      if (updatePhoneNumber) {
+        await updatePhoneNumber(promptPhone);
+      }
+      setShowPhonePrompt(false);
+      setShowOrderSummary(true);
+    } catch (err) {
+      console.error(err);
+      setPromptPhoneError('Erro ao salvar número de celular. Tente novamente.');
+    }
+  };
 
+  const handlePlaceOrder = async () => {
+    setError(null);
     setSubmitting(true);
     try {
-      const orderData = {
+      // Calcula o número sequencial do pedido para o dia de negócios atual (inicia às 6h da manhã)
+      const now = new Date();
+      const businessStart = new Date(now);
+      if (now.getHours() < 6) {
+        businessStart.setDate(now.getDate() - 1);
+      }
+      businessStart.setHours(6, 0, 0, 0);
+
+      const qDaily = query(
+        collection(db, 'orders'),
+        where('createdAt', '>=', businessStart.toISOString())
+      );
+      const dailySnap = await getDocs(qDaily);
+      const dailySeq = dailySnap.size + 1;
+
+      const orderData: any = {
         clientUid: user?.uid || '',
         clientName: user?.displayName || user?.email || 'Cliente Anônimo',
+        clientPhone: userData?.phoneNumber || '',
         items: cart,
         total: cartTotal,
         status: 'pending',
         createdAt: new Date().toISOString(),
-        address: {
-          street: street.trim(),
-          number: number.trim(),
-          neighborhood: neighborhood.trim(),
-          city: 'Rio de Janeiro',
-          zipCode: '23000-000',
-          complement: complement.trim(),
-        },
-        clientCoords: {
-          lat: mapCoords[0],
-          lng: mapCoords[1]
-        }
+        orderType,
+        paymentMethod,
+        changeFor: paymentMethod === 'dinheiro' && changeFor ? parseFloat(changeFor.replace(',', '.')) : null,
+        dailySeq,
+        address: orderType === 'delivery' ? {
+          street: deliveryAddress!.street,
+          number: deliveryAddress!.number || '',
+          neighborhood: deliveryAddress!.neighborhood || '',
+          city: deliveryAddress!.city || 'Rio de Janeiro',
+          zipCode: deliveryAddress!.zipCode || '',
+          complement: deliveryAddress!.complement || '',
+          lat: deliveryAddress!.lat,
+          lng: deliveryAddress!.lng,
+        } : null,
       };
 
       await addDoc(collection(db, 'orders'), orderData);
       setCart([]);
+      setDeliveryAddress(null);
+      setShowOrderSummary(false);
+      setPaymentMethod('pix');
+      setChangeFor('');
+      setOrderType('pickup');
       setOrderPlaced(true);
-      setTimeout(() => setOrderPlaced(false), 5000);
     } catch (err: any) {
       console.error(err);
       setError('Erro ao enviar pedido para a cozinha. Tente novamente.');
@@ -457,11 +381,81 @@ export const ClientDashboard = ({ showOnly, isVisitor = false, onLoginRequired }
         </div>
       )}
 
+      {/* Modal de Sucesso do Pedido */}
       {orderPlaced && (
-        <div className="alert-box" style={{ background: 'rgba(16, 185, 129, 0.1)', borderLeft: '3px solid #10b981', color: '#10b981', padding: '1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <CheckCircle size={24} />
-          <div>
-            <strong>Pedido Confirmado com Sucesso!</strong> A cozinha já recebeu o alerta em tempo real.
+        <div
+          className="lightbox-overlay"
+          style={{ zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div style={{
+            background: 'var(--bg-card)',
+            border: '1px solid rgba(16,185,129,0.25)',
+            borderRadius: '24px',
+            padding: '2.5rem 2rem',
+            width: '100%',
+            maxWidth: '420px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '1.2rem',
+            boxShadow: '0 0 60px rgba(16,185,129,0.15), 0 24px 60px rgba(0,0,0,0.6)',
+            textAlign: 'center',
+            animation: 'fadeInUp 0.4s ease',
+          }}>
+            {/* Ícone animado */}
+            <div style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              background: 'rgba(16,185,129,0.12)',
+              border: '2px solid rgba(16,185,129,0.4)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '2.5rem',
+            }}>
+              ✅
+            </div>
+
+            <div>
+              <h2 style={{ margin: '0 0 0.4rem', fontSize: '1.4rem', color: '#10b981', fontWeight: 800 }}>
+                Pedido Confirmado!
+              </h2>
+              <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.6' }}>
+                Seu pedido foi recebido com sucesso e <strong style={{ color: '#fff' }}>já está sendo preparado</strong>! 🥟🔥
+              </p>
+              <p style={{ margin: '0.5rem 0 0', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+                Acompanhe o andamento do pedido em tempo real e fique de olho no status!
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setOrderPlaced(false);
+                onNavigate?.('tracking');
+              }}
+              className="auth-btn auth-btn-login"
+              style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', fontWeight: 700, marginTop: '0.4rem' }}
+            >
+              👀 Acompanhar meu Pedido
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setOrderPlaced(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                textDecoration: 'underline',
+                padding: '0'
+              }}
+            >
+              Fechar
+            </button>
           </div>
         </div>
       )}
@@ -472,7 +466,7 @@ export const ClientDashboard = ({ showOnly, isVisitor = false, onLoginRequired }
         {/* Lista de Pastéis */}
         <div className="menu-section">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', paddingBottom: '0.5rem' }}>
-            <h3 style={{ margin: 0, border: 'none', padding: 0 }}>Pastéis Fritos na Hora</h3>
+            <h3 style={{ margin: 0, border: 'none', padding: 0 }}>Pastéis Gourmet Especiais</h3>
             {canEdit && (
               <button 
                 type="button" 
@@ -624,138 +618,162 @@ export const ClientDashboard = ({ showOnly, isVisitor = false, onLoginRequired }
             )}
           </div>
 
-          <form onSubmit={handlePlaceOrder} className="loyalty-card" style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-            <h3 style={{ fontSize: '1.1rem', margin: '0' }}>Endereço de Entrega</h3>
-            
-            <div className="input-group" style={{ position: 'relative' }}>
-              <label htmlFor="address-street" style={{ fontSize: '0.8rem' }}>Rua</label>
-              <div className="input-wrapper">
-                <MapPin size={16} className="input-icon" />
-                <input 
-                  id="address-street" 
-                  type="text" 
-                  placeholder="Rua Doutor Ibraim Hannas" 
-                  value={street} 
-                  onChange={(e) => setStreet(e.target.value)} 
-                  style={{ padding: '0.5rem 0.5rem 0.5rem 2.2rem', fontSize: '0.85rem' }} 
-                  autoComplete="off"
-                  required
+          {/* Seleção: Retirada ou Entrega */}
+          <div className="loyalty-card" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ color: 'var(--primary-gold)' }}>🛵</span> Como deseja retirar?
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <button
+                type="button"
+                onClick={() => { setOrderType('pickup'); setDeliveryAddress(null); }}
+                style={{
+                  padding: '0.85rem 0.5rem',
+                  borderRadius: '12px',
+                  border: orderType === 'pickup' ? '2px solid var(--primary-gold)' : '1px solid rgba(255,255,255,0.08)',
+                  background: orderType === 'pickup' ? 'rgba(245,158,11,0.1)' : 'rgba(255,255,255,0.02)',
+                  color: orderType === 'pickup' ? 'var(--primary-gold)' : 'var(--text-secondary)',
+                  fontWeight: orderType === 'pickup' ? 700 : 400,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                }}
+              >
+                <span style={{ fontSize: '1.6rem' }}>🏪</span>
+                <span>Vou na loja retirar</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setOrderType('delivery')}
+                style={{
+                  padding: '0.85rem 0.5rem',
+                  borderRadius: '12px',
+                  border: orderType === 'delivery' ? '2px solid var(--primary-gold)' : '1px solid rgba(255,255,255,0.08)',
+                  background: orderType === 'delivery' ? 'rgba(245,158,11,0.1)' : 'rgba(255,255,255,0.02)',
+                  color: orderType === 'delivery' ? 'var(--primary-gold)' : 'var(--text-secondary)',
+                  fontWeight: orderType === 'delivery' ? 700 : 400,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                }}
+              >
+                <span style={{ fontSize: '1.6rem' }}>🛵</span>
+                <span>Quero que me entregue</span>
+              </button>
+            </div>
+
+            {orderType === 'pickup' && (
+              <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', padding: '0.5rem 0.75rem', lineHeight: '1.5' }}>
+                📍 <strong style={{ color: '#fff' }}>Dona Lu Pastelaria</strong> &mdash; Rua Jícara, 239 · Campo Grande · RJ
+              </div>
+            )}
+          </div>
+
+          <form onSubmit={(e) => { e.preventDefault(); handleOpenSummary(); }} className="loyalty-card" style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+
+            {/* Endereço de Entrega — só aparece se cliente escolheu delivery */}
+            {orderType === 'delivery' && (
+              <>
+                <h3 style={{ fontSize: '1.1rem', margin: '0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <MapPin size={18} style={{ color: 'var(--primary-gold)' }} />
+                  Endereço de Entrega
+                </h3>
+
+                <DeliveryMap
+                  onAddressSelect={(addr) => setDeliveryAddress(addr)}
                 />
+
+                {deliveryAddress && (
+                  <div style={{
+                    fontSize: '0.8rem',
+                    color: 'var(--text-secondary)',
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.05)',
+                    borderRadius: '8px',
+                    padding: '0.5rem 0.75rem',
+                    lineHeight: '1.5'
+                  }}>
+                    <strong style={{ color: 'var(--text-primary)' }}>
+                      {deliveryAddress.street}{deliveryAddress.number ? `, ${deliveryAddress.number}` : ''}
+                    </strong>
+                    {deliveryAddress.complement && <span> &middot; {deliveryAddress.complement}</span>}
+                    <br />
+                    {deliveryAddress.neighborhood && `${deliveryAddress.neighborhood} · `}
+                    {deliveryAddress.city}
+                    {deliveryAddress.zipCode && ` · CEP ${deliveryAddress.zipCode}`}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Forma de Pagamento */}
+            <div style={{ borderTop: orderType === 'delivery' ? '1px solid rgba(255,255,255,0.06)' : 'none', paddingTop: orderType === 'delivery' ? '0.75rem' : '0', marginTop: orderType === 'delivery' ? '0.25rem' : '0' }}>
+              <h3 style={{ fontSize: '1.05rem', margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary-gold)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg>
+                Forma de Pagamento
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                {([['pix','Pix 🟡'],['credito','Crédito 💳'],['debito','Débito 💴'],['dinheiro','Dinheiro 💵']] as const).map(([val, label]) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setPaymentMethod(val)}
+                    style={{
+                      padding: '0.6rem 0.5rem',
+                      borderRadius: '10px',
+                      border: paymentMethod === val
+                        ? '2px solid var(--primary-gold)'
+                        : '1px solid rgba(255,255,255,0.08)',
+                      background: paymentMethod === val
+                        ? 'rgba(245,158,11,0.12)'
+                        : 'rgba(255,255,255,0.02)',
+                      color: paymentMethod === val ? 'var(--primary-gold)' : 'var(--text-secondary)',
+                      fontWeight: paymentMethod === val ? 700 : 400,
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      textAlign: 'center',
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
 
-              {/* Sugestões do Autocomplete sob o campo Rua */}
-              {showSuggestions && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  background: '#151010',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                  zIndex: 1000,
-                  marginTop: '4px',
-                  maxHeight: '180px',
-                  overflowY: 'auto'
-                }}>
-                  {suggestions.map((feature, idx) => {
-                    const prop = feature.properties;
-                    const streetName = prop.name || '';
-                    const districtName = prop.district || prop.suburb || '';
-                    const cityName = prop.city || '';
-                    const label = [streetName, districtName, cityName].filter(Boolean).join(', ');
-
-                    return (
-                      <div 
-                        key={idx} 
-                        onClick={() => handleSelectSuggestion(feature)}
-                        style={{
-                          padding: '0.6rem 1rem',
-                          fontSize: '0.85rem',
-                          color: '#e0e0e0',
-                          cursor: 'pointer',
-                          borderBottom: idx < suggestions.length - 1 ? '1px solid rgba(255,255,255,0.03)' : 'none',
-                          transition: 'background 0.2s'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                      >
-                        {label}
-                      </div>
-                    );
-                  })}
+              {paymentMethod === 'dinheiro' && (
+                <div style={{ marginTop: '0.6rem' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.3rem' }}>
+                    Troco para quanto? (opcional)
+                  </label>
+                  <input
+                    type="number"
+                    className="pastel-edit-input"
+                    style={{ marginBottom: 0, maxWidth: '180px' }}
+                    placeholder="Ex: 50,00"
+                    value={changeFor}
+                    onChange={(e) => setChangeFor(e.target.value)}
+                    min="0"
+                    step="0.01"
+                  />
                 </div>
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <div className="input-group" style={{ flex: 1 }}>
-                <label htmlFor="address-number" style={{ fontSize: '0.8rem' }}>Número *</label>
-                <input 
-                  id="address-number" 
-                  type="text" 
-                  placeholder="409" 
-                  value={number} 
-                  onChange={(e) => setNumber(e.target.value)} 
-                  style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', outline: 'none', fontSize: '0.85rem' }} 
-                  required
-                />
-              </div>
-              <div className="input-group" style={{ flex: 2 }}>
-                <label htmlFor="address-neighborhood" style={{ fontSize: '0.8rem' }}>Bairro</label>
-                <input 
-                  id="address-neighborhood" 
-                  type="text" 
-                  placeholder="Campo Grande" 
-                  value={neighborhood} 
-                  onChange={(e) => setNeighborhood(e.target.value)} 
-                  style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', outline: 'none', fontSize: '0.85rem' }} 
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="input-group">
-              <label htmlFor="address-complement" style={{ fontSize: '0.8rem' }}>Complemento</label>
-              <input 
-                id="address-complement" 
-                type="text" 
-                placeholder="Apto / Bloco / Ponto de Referência" 
-                value={complement} 
-                onChange={(e) => setComplement(e.target.value)} 
-                style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', outline: 'none', fontSize: '0.85rem' }} 
-              />
-            </div>
-
-            {/* Container do Mapa (Google Maps Style - Marcador Travado ao Endereço) */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.2rem', width: '100%' }}>
-              <span style={{ fontSize: '0.8rem', color: 'var(--primary-gold)', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600 }}>
-                <span className="pulse-dot" style={{ width: '6px', height: '6px', backgroundColor: 'var(--primary-gold)', borderRadius: '50%' }}></span>
-                {geocoding ? 'Localizando endereço no mapa...' : 'Confirme a localização da entrega:'}
-              </span>
-              <div 
-                ref={mapContainerRef} 
-                style={{ 
-                  width: '100%', 
-                  height: '220px', 
-                  borderRadius: '10px', 
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  overflow: 'hidden',
-                  zIndex: 1
-                }} 
-              />
-            </div>
-
-            <button type="submit" disabled={submitting || cart.length === 0} className="auth-btn auth-btn-login" style={{ marginTop: '0.5rem', padding: '0.6rem' }}>
-              {submitting ? (
-                <>
-                  <span className="spinner"></span>
-                  <span>Confirmando...</span>
-                </>
-              ) : (
-                <span>Confirmar Pedido</span>
-              )}
+            <button
+              type="submit"
+              disabled={cart.length === 0 || (orderType === 'delivery' && !deliveryAddress)}
+              className="auth-btn auth-btn-login"
+              style={{ marginTop: '6px', padding: '0.7rem', fontSize: '0.95rem', fontWeight: 700 }}
+            >
+              <span>🛒 Ver Resumo do Pedido</span>
             </button>
           </form>
         </div>
@@ -815,7 +833,7 @@ export const ClientDashboard = ({ showOnly, isVisitor = false, onLoginRequired }
         </div>
       </div>
 
-      {/* Lightbox Modal para fotos ampliada */}
+      {/* Lightbox Modal para fotos ampliadas */}
       {zoomedImage && (
         <div className="lightbox-overlay" onClick={() => setZoomedImage(null)}>
           <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
@@ -823,6 +841,232 @@ export const ClientDashboard = ({ showOnly, isVisitor = false, onLoginRequired }
               <X size={20} />
             </button>
             <img src={zoomedImage} alt="Pastel Expandido" className="lightbox-img" />
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Resumo do Pedido */}
+      {showOrderSummary && (
+        <div
+          className="lightbox-overlay"
+          onClick={() => setShowOrderSummary(false)}
+          style={{ zIndex: 2000, alignItems: 'center', justifyContent: 'center', display: 'flex' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--bg-card)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '20px',
+              padding: '2rem',
+              width: '100%',
+              maxWidth: '480px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1.2rem',
+              boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
+              position: 'relative',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setShowOrderSummary(false)}
+              style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+            >
+              <X size={20} />
+            </button>
+
+            <div style={{ textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '1rem' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '0.3rem' }}>🧧</div>
+              <h2 style={{ margin: 0, fontSize: '1.35rem', color: '#fff' }}>Resumo do Pedido</h2>
+              <p style={{ margin: '0.3rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Confira tudo antes de confirmar</p>
+            </div>
+
+            {/* Itens */}
+            <div>
+              <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>Itens</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {cart.map((item) => (
+                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem' }}>
+                    <span style={{ color: '#fff' }}>
+                      <strong style={{ color: 'var(--primary-gold)' }}>{item.quantity}x</strong> {item.name}
+                    </span>
+                    <span style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', marginLeft: '1rem' }}>
+                      R$ {(item.price * item.quantity).toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: '0.75rem', paddingTop: '0.75rem', fontWeight: 700, fontSize: '1.05rem' }}>
+                <span>Total</span>
+                <span style={{ color: 'var(--primary-gold)' }}>R$ {cartTotal.toFixed(2).replace('.', ',')}</span>
+              </div>
+            </div>
+
+            {/* Retirada ou Entrega */}
+            <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+              <h4 style={{ margin: '0 0 0.4rem 0', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
+                {orderType === 'delivery' ? '📍 Entrega em' : '🏪 Retirada em'}
+              </h4>
+              {orderType === 'delivery' ? (
+                <>
+                  <p style={{ margin: 0, fontSize: '0.9rem', color: '#fff', fontWeight: 600 }}>
+                    {deliveryAddress?.street}{deliveryAddress?.number ? `, ${deliveryAddress.number}` : ''}
+                  </p>
+                  {deliveryAddress?.complement && (
+                    <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                      {deliveryAddress.complement}
+                    </p>
+                  )}
+                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                    {deliveryAddress?.neighborhood && `${deliveryAddress.neighborhood} · `}{deliveryAddress?.city}
+                    {deliveryAddress?.zipCode && ` · CEP ${deliveryAddress.zipCode}`}
+                  </p>
+                </>
+              ) : (
+                <p style={{ margin: 0, fontSize: '0.9rem', color: '#fff', fontWeight: 600 }}>
+                  Dona Lu Pastelaria &mdash; Rua Jícara, 239 · Campo Grande · RJ
+                </p>
+              )}
+            </div>
+
+            {/* Forma de Pagamento */}
+            <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+              <h4 style={{ margin: '0 0 0.4rem 0', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>💳 Pagamento</h4>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: '#fff', fontWeight: 600 }}>{paymentLabels[paymentMethod]}</p>
+              {paymentMethod === 'dinheiro' && changeFor && (
+                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  Troco para R$ {parseFloat(changeFor.replace(',', '.')).toFixed(2).replace('.', ',')} · Troco: R$ {Math.max(0, parseFloat(changeFor.replace(',', '.')) - cartTotal).toFixed(2).replace('.', ',')}
+                </p>
+              )}
+            </div>
+
+            {error && <div className="auth-error-message">{error}</div>}
+
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                type="button"
+                onClick={() => setShowOrderSummary(false)}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'rgba(255,255,255,0.04)',
+                  color: 'var(--text-secondary)',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontSize: '0.9rem'
+                }}
+              >
+                ← Voltar
+              </button>
+              <button
+                type="button"
+                onClick={handlePlaceOrder}
+                disabled={submitting}
+                className="auth-btn auth-btn-login"
+                style={{ flex: 2, padding: '0.75rem', fontSize: '0.95rem', fontWeight: 700 }}
+              >
+                {submitting ? (
+                  <><span className="spinner" /><span>Confirmando...</span></>
+                ) : (
+                  <span>🌟 Confirmar Pedido</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal de Solicitação de Celular */}
+      {showPhonePrompt && (
+        <div
+          className="lightbox-overlay"
+          onClick={() => setShowPhonePrompt(false)}
+          style={{ zIndex: 3000, alignItems: 'center', justifyContent: 'center', display: 'flex', position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.7)' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--bg-card)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '20px',
+              padding: '2rem',
+              width: '90%',
+              maxWidth: '420px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1.2rem',
+              boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
+              position: 'relative',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setShowPhonePrompt(false)}
+              style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+            >
+              <X size={20} />
+            </button>
+
+            <div style={{ textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '1rem' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '0.3rem' }}>📞</div>
+              <h2 style={{ margin: 0, fontSize: '1.35rem', color: '#fff' }}>Celular Obrigatório</h2>
+              <p style={{ margin: '0.3rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Precisamos do seu contato para o pedido</p>
+            </div>
+
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0, lineHeight: '1.4' }}>
+              💡 <strong>Por que informar o celular?</strong> Precisamos de um contato direto para avisar sobre o andamento do seu pedido, tirar dúvidas sobre o endereço ou em caso de qualquer imprevisto com a entrega!
+            </p>
+
+            <form onSubmit={handleSavePromptPhone} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {promptPhoneError && <div className="auth-error-message">{promptPhoneError}</div>}
+              
+              <div className="input-group">
+                <label htmlFor="prompt-phone">Celular (WhatsApp)</label>
+                <div className="input-wrapper">
+                  <span className="input-icon" style={{ fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📞</span>
+                  <input
+                    id="prompt-phone"
+                    type="tel"
+                    placeholder="(21) 99999-9999"
+                    value={promptPhone}
+                    onChange={(e) => setPromptPhone(formatPhone(e.target.value))}
+                    required
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowPhonePrompt(false)}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'rgba(255,255,255,0.04)',
+                    color: 'var(--text-secondary)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="auth-btn auth-btn-login"
+                  style={{ flex: 1.5, padding: '0.75rem', fontSize: '0.95rem', fontWeight: 700 }}
+                >
+                  Salvar e Prosseguir
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

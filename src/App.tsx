@@ -8,7 +8,8 @@ import { UserManagement } from './pages/manager/UserManagement';
 import { DeliveryActive } from './pages/delivery/DeliveryActive';
 import { DeliveryHistory } from './pages/delivery/DeliveryHistory';
 import { OrderTracking } from './pages/client/OrderTracking';
-import { ShieldCheck, ChefHat, CreditCard, Bell, ShoppingBag, Heart, FileText, Users, Navigation, CheckCircle, Clock } from 'lucide-react';
+import { DeliveryMap } from './components/DeliveryMap';
+import { ShieldCheck, ChefHat, CreditCard, Bell, ShoppingBag, Heart, FileText, Users, Navigation, CheckCircle, Clock, Map } from 'lucide-react';
 import logoDonalu from './assets/logo_donalu.png';
 
 const MainLayout = () => {
@@ -126,6 +127,11 @@ const MainLayout = () => {
     if (['developer', 'owner', 'manager'].includes(role)) {
       menuItems.push({ id: 'users', label: 'Usuários', icon: Users });
     }
+
+    // Teste de mapa — apenas developer
+    if (role === 'developer') {
+      menuItems.push({ id: 'teste_mapa', label: '🗺️ Teste Mapa', icon: Map });
+    }
   }
 
   const getRoleLabel = (r: string) => {
@@ -196,9 +202,9 @@ const MainLayout = () => {
 
         {/* 3. Content (Área de Conteúdo Direita) */}
         <main className="content-area-main">
-          {activeView === 'menu' && <ClientDashboard showOnly="menu" isVisitor={isVisitor} onLoginRequired={() => setIsVisitor(false)} />}
+          {activeView === 'menu' && <ClientDashboard showOnly="menu" isVisitor={isVisitor} onLoginRequired={() => setIsVisitor(false)} onNavigate={setActiveView} />}
           {activeView === 'tracking' && <OrderTracking />}
-          {activeView === 'fidelidade' && <ClientDashboard showOnly="loyalty" isVisitor={isVisitor} onLoginRequired={() => setIsVisitor(false)} />}
+          {activeView === 'fidelidade' && <ClientDashboard showOnly="loyalty" isVisitor={isVisitor} onLoginRequired={() => setIsVisitor(false)} onNavigate={setActiveView} />}
           {activeView === 'cozinha' && <StaffDashboard filter="cook" />}
           {activeView === 'atendimento' && <StaffDashboard filter="attendant" />}
           {activeView === 'caixa' && <StaffDashboard filter="cashier" />}
@@ -206,6 +212,15 @@ const MainLayout = () => {
           {activeView === 'entrega_finalizada' && <DeliveryHistory />}
           {activeView === 'admin' && <AdminDashboard />}
           {activeView === 'users' && <UserManagement />}
+          {activeView === 'teste_mapa' && (
+            <div style={{ maxWidth: '680px', margin: '0 auto' }}>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h2 style={{ margin: '0 0 0.25rem', color: 'var(--text-primary)' }}>🗺️ Teste do Mapa de Entrega</h2>
+                <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Valide aqui a busca de endereço e a geolocalização antes de integrar ao pedido.</p>
+              </div>
+              <DeliveryMap onAddressSelect={(addr) => console.log('Endereço selecionado:', addr)} />
+            </div>
+          )}
         </main>
       </div>
 

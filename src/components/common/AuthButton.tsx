@@ -13,11 +13,29 @@ export const AuthButton = () => {
   const [isForgotPasswordMode, setIsForgotPasswordMode] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const formatPhone = (val: string) => {
+    const digits = val.replace(/\D/g, '');
+    if (digits.length <= 10) {
+      return digits.replace(/^(\d{2})(\d{4})(\d{0,4})$/, (_, p1, p2, p3) => {
+        return `(${p1}) ${p2}${p3 ? '-' + p3 : ''}`;
+      });
+    } else {
+      return digits.slice(0, 11).replace(/^(\d{2})(\d{5})(\d{0,4})$/, (_, p1, p2, p3) => {
+        return `(${p1}) ${p2}${p3 ? '-' + p3 : ''}`;
+      });
+    }
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPhone(formatPhone(e.target.value));
+  };
 
   const getRoleBadgeStyles = (role: string) => {
     switch (role) {
@@ -76,15 +94,22 @@ export const AuthButton = () => {
       return;
     }
 
-    if (isRegisterMode && !name) {
-      setError('Por favor, informe o seu nome para cadastro.');
-      return;
+    if (isRegisterMode) {
+      if (!name) {
+        setError('Por favor, informe o seu nome para cadastro.');
+        return;
+      }
+      const cleanPhone = phone.replace(/\D/g, '');
+      if (cleanPhone.length < 10) {
+        setError('Por favor, informe um número de celular válido com DDD.');
+        return;
+      }
     }
 
     setActionLoading(true);
     try {
       if (isRegisterMode) {
-        await registerWithEmail(email, password, name);
+        await registerWithEmail(email, password, name, phone);
       } else {
         try {
           await loginWithEmail(email, password);
@@ -287,19 +312,40 @@ export const AuthButton = () => {
         {error && <div className="auth-error-message">{error}</div>}
 
         {isRegisterMode && (
-          <div className="input-group">
-            <label htmlFor="auth-name">Nome Completo</label>
-            <div className="input-wrapper">
-              <User size={18} className="input-icon" />
-              <input 
-                id="auth-name"
-                type="text" 
-                placeholder="Seu nome"
-                value={name} 
-                onChange={(e) => setName(e.target.value)} 
-              />
+          <>
+            <div className="input-group">
+              <label htmlFor="auth-name">Nome Completo</label>
+              <div className="input-wrapper">
+                <User size={18} className="input-icon" />
+                <input 
+                  id="auth-name"
+                  type="text" 
+                  placeholder="Seu nome"
+                  value={name} 
+                  onChange={(e) => setName(e.target.value)} 
+                  required
+                />
+              </div>
             </div>
-          </div>
+
+            <div className="input-group animate-fade-in">
+              <label htmlFor="auth-phone">Número de Celular (WhatsApp)</label>
+              <div className="input-wrapper">
+                <span className="input-icon" style={{ fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📞</span>
+                <input 
+                  id="auth-phone"
+                  type="tel" 
+                  placeholder="(21) 99999-9999"
+                  value={phone} 
+                  onChange={handlePhoneChange} 
+                  required
+                />
+              </div>
+              <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.75rem', color: 'var(--primary-gold)', lineHeight: '1.4' }}>
+                💡 <strong>Por que informar o celular?</strong> Precisamos de um contato direto para avisar sobre o andamento do seu pedido, tirar dúvidas sobre o endereço ou em caso de qualquer imprevisto com a entrega!
+              </p>
+            </div>
+          </>
         )}
 
         <div className="input-group">

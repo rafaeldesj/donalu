@@ -183,7 +183,7 @@ const OrderMap = ({ orderId, address, deliveryCoords, clientCoords }: OrderMapPr
 };
 
 export const OrderTracking = () => {
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const [orders, setOrders] = useState<OrderDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [simulatingOrderId, setSimulatingOrderId] = useState<string | null>(null);
@@ -303,8 +303,8 @@ export const OrderTracking = () => {
   }
 
   // Divide os pedidos em Ativos (não finalizados) e Histórico Recente
-  const activeOrders = orders.filter((o) => o.status !== 'completed');
-  const pastOrders = orders.filter((o) => o.status === 'completed').slice(0, 5); // Últimos 5 concluídos
+  const activeOrders = orders.filter((o) => o.status !== 'completed' && o.status !== 'cancelled');
+  const pastOrders = orders.filter((o) => o.status === 'completed' || o.status === 'cancelled').slice(0, 5); // Últimos 5 concluídos ou cancelados
 
   const formatOrderDate = (isoString: string) => {
     const d = new Date(isoString);
@@ -405,7 +405,17 @@ export const OrderTracking = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem' }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span className="welcome-msg" style={{ fontSize: '0.8rem' }}>Cod: #{order.id?.slice(-4).toUpperCase()}</span>
+                        <span className="welcome-msg" style={{ fontSize: '0.8rem' }}>
+                          {order.dailySeq ? (
+                            userData?.role === 'developer' ? (
+                              `Pedido ${order.dailySeq} (#${order.id?.slice(-4).toUpperCase()})`
+                            ) : (
+                              `Pedido ${order.dailySeq}`
+                            )
+                          ) : (
+                            `Cod: #${order.id?.slice(-4).toUpperCase()}`
+                          )}
+                        </span>
                         {isDelivery && order.status !== 'completed' && (
                           <button
                             type="button"
@@ -524,22 +534,49 @@ export const OrderTracking = () => {
             pastOrders.map((order) => (
               <div key={order.id} style={{
                 background: 'rgba(255, 255, 255, 0.01)',
-                border: '1px solid rgba(255, 255, 255, 0.03)',
+                border: order.status === 'cancelled' ? '1px solid rgba(239, 68, 68, 0.15)' : '1px solid rgba(255, 255, 255, 0.03)',
                 borderRadius: '12px',
                 padding: '0.85rem 1rem',
                 textAlign: 'left'
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                  <strong style={{ color: '#fff' }}>Pedido #{order.id?.slice(-4).toUpperCase()}</strong>
-                  <span style={{ color: 'var(--text-secondary)' }}>{formatOrderDate(order.createdAt)}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', alignItems: 'center' }}>
+                  <strong style={{ color: '#fff' }}>
+                    {order.dailySeq ? (
+                      userData?.role === 'developer' ? (
+                        `Pedido ${order.dailySeq} (#${order.id?.slice(-4).toUpperCase()})`
+                      ) : (
+                        `Pedido ${order.dailySeq}`
+                      )
+                    ) : (
+                      `Pedido #${order.id?.slice(-4).toUpperCase()}`
+                    )}
+                  </strong>
+                  <span style={{
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    padding: '0.1rem 0.4rem',
+                    borderRadius: '4px',
+                    backgroundColor: order.status === 'cancelled' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                    color: order.status === 'cancelled' ? '#f87171' : '#34d399'
+                  }}>
+                    {order.status === 'cancelled' ? 'Cancelado' : 'Concluído'}
+                  </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '0.85rem' }}>
+                {order.status === 'cancelled' && order.cancelReason && (
+                  <div style={{ fontSize: '0.75rem', color: '#f87171', marginTop: '0.25rem', fontStyle: 'italic' }}>
+                    Motivo: {order.cancelReason}
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '0.85rem', alignItems: 'center' }}>
                   <span style={{ color: 'var(--text-secondary)', maxWidth: '180px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {order.items.map((it) => `${it.quantity}x ${it.name}`).join(', ')}
                   </span>
-                  <strong style={{ color: 'var(--primary-gold)' }}>
-                    R$ {order.total.toFixed(2).replace('.', ',')}
-                  </strong>
+                  <div>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginRight: '0.5rem' }}>{formatOrderDate(order.createdAt)}</span>
+                    <strong style={{ color: 'var(--primary-gold)' }}>
+                      R$ {order.total.toFixed(2).replace('.', ',')}
+                    </strong>
+                  </div>
                 </div>
               </div>
             ))

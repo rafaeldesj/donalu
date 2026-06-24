@@ -6,7 +6,7 @@ import type { OrderDocument } from '../../types/order';
 import { CheckCircle, Calendar, MapPin, DollarSign } from 'lucide-react';
 
 export const DeliveryHistory = () => {
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const [historyOrders, setHistoryOrders] = useState<OrderDocument[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -125,7 +125,15 @@ export const DeliveryHistory = () => {
                       </span>
                     </td>
                     <td style={{ fontWeight: 600 }}>
-                      #{order.id?.slice(-4).toUpperCase()}
+                      {order.dailySeq ? (
+                        userData?.role === 'developer' ? (
+                          `Pedido ${order.dailySeq} (#${order.id?.slice(-4).toUpperCase()})`
+                        ) : (
+                          `Pedido ${order.dailySeq}`
+                        )
+                      ) : (
+                        `#${order.id?.slice(-4).toUpperCase()}`
+                      )}
                     </td>
                     <td>{order.clientName}</td>
                     <td>

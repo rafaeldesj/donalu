@@ -12,8 +12,9 @@ interface AuthContextType {
   loading: boolean;
   loginWithGoogle: () => Promise<void>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
-  registerWithEmail: (email: string, password: string, name: string) => Promise<void>;
+  registerWithEmail: (email: string, password: string, name: string, phoneNumber?: string) => Promise<void>;
   logout: () => Promise<void>;
+  updatePhoneNumber: (phone: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -94,7 +95,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await signInWithEmailAndPassword(auth, email, password);
   };
 
-  const registerWithEmail = async (email: string, password: string, name: string) => {
+  const registerWithEmail = async (email: string, password: string, name: string, phoneNumber?: string) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const currentUser = userCredential.user;
     
@@ -106,6 +107,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email: currentUser.email || '',
       name: name,
       role: 'client',
+      phoneNumber: phoneNumber || '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -113,12 +115,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUserData(newUserData);
   };
 
+  const updatePhoneNumber = async (phone: string) => {
+    if (!user) return;
+    const userDocRef = doc(db, 'users', user.uid);
+    await setDoc(userDocRef, { phoneNumber: phone, updatedAt: new Date().toISOString() }, { merge: true });
+    setUserData(prev => prev ? { ...prev, phoneNumber: phone } : null);
+  };
+
   const logout = async () => {
     await signOut(auth);
   };
 
   return (
-    <AuthContext.Provider value={{ user, userData, loading, loginWithGoogle, loginWithEmail, registerWithEmail, logout }}>
+    <AuthContext.Provider value={{ user, userData, loading, loginWithGoogle, loginWithEmail, registerWithEmail, logout, updatePhoneNumber }}>
       {children}
     </AuthContext.Provider>
   );
