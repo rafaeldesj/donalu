@@ -12,6 +12,8 @@ import pastelRefri from '../../assets/pastel_refri.png';
 import pastelCombo from '../../assets/pastel_combo.png';
 import { geocodeAddress } from '../../utils/geocoding';
 
+
+
 interface ClientDashboardProps {
   showOnly?: 'menu' | 'loyalty';
   isVisitor?: boolean;
@@ -58,113 +60,62 @@ export const ClientDashboard = ({ showOnly, isVisitor = false, onLoginRequired }
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Estados e referências para geolocalização e autocomplete do cliente
-  const [addressInput, setAddressInput] = useState('');
+  // Estados de endereço e mapa individuais
+  const [street, setStreet] = useState('');
+  const [number, setNumber] = useState('');
+  const [neighborhood, setNeighborhood] = useState('Campo Grande');
+
+  const DONA_LU_COORDS: [number, number] = [-22.9112951, -43.5602961];
+  const [mapCoords, setMapCoords] = useState<[number, number]>(DONA_LU_COORDS);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [addressCoords, setAddressCoords] = useState<[number, number] | null>(null);
   const [geocoding, setGeocoding] = useState(false);
-  
-  const miniMapContainerRef = useRef<HTMLDivElement>(null);
-  const miniMapInstanceRef = useRef<L.Map | null>(null);
+
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
 
-  // Algoritmo de decomposição do endereço completo (Rua, Número - Bairro)
-  const parseAddress = (inputStr: string) => {
-    let parsedStreet = '';
-    let parsedNumber = '';
-    let parsedNeighborhood = 'Campo Grande';
-
-    const parts = inputStr.split(',').map((p) => p.trim());
-    if (parts.length > 0) {
-      parsedStreet = parts[0];
-    }
-
-    for (let i = 1; i < parts.length; i++) {
-      const part = parts[i];
-      if (/^\d+/.test(part)) {
-        parsedNumber = part.split(/\s|-/)[0]; // Pega a primeira parte numérica
-      } else if (part.includes('-')) {
-        const subParts = part.split('-').map((s) => s.trim());
-        if (subParts.length > 0 && /^\d+/.test(subParts[0])) {
-          parsedNumber = subParts[0];
-        }
-        if (subParts.length > 1) {
-          parsedNeighborhood = subParts[1];
-        }
-      } else {
-        parsedNeighborhood = part;
-      }
-    }
-
-    if (!parsedNumber && inputStr.includes('-')) {
-      const partsDash = inputStr.split('-').map(p => p.trim());
-      for (const p of partsDash) {
-        if (/^\d+/.test(p)) {
-          parsedNumber = p.split(/\s/)[0];
-        }
-      }
-    }
-
-    return { street: parsedStreet, number: parsedNumber, neighborhood: parsedNeighborhood };
-  };
-
-  // Sincroniza dados do endereço ao carregar dados do usuário
+  // Autocomplete do campo Rua (Photon API)
   useEffect(() => {
-    if (userData?.clientAddress) {
-      const addr = userData.clientAddress;
-      const formatted = addr.street 
-        ? `${addr.street}${addr.number ? `, ${addr.number}` : ''}${addr.neighborhood ? ` - ${addr.neighborhood}` : ''}`
-        : '';
-      setAddressInput(formatted);
-    }
-  }, [userData]);
-
-  // Busca sugestões de ruas (Autocomplete) via Photon API
-  useEffect(() => {
-    if (!addressInput.trim() || addressInput.includes(',')) {
+    if (!street.trim() || street.includes(',')) {
       setSuggestions([]);
       setShowSuggestions(false);
       return;
     }
 
     const delayDebounceFn = setTimeout(() => {
-      const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(addressInput)}&lat=-22.9112951&lon=-43.5602961&limit=5`;
-      fetch(url)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data && data.features) {
-            const filtered = data.features.filter((f: any) => {
-              const name = f.properties.name || '';
-              return name && f.properties.countrycode === 'BR';
-            });
-            setSuggestions(filtered);
-            setShowSuggestions(filtered.length > 0);
-          }
-        })
-        .catch((err) => console.error("Erro ao buscar sugestões:", err));
-    }, 300);
+      if (street.length >= 3) {
+        const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(street)}&lat=${DONA_LU_COORDS[0]}&lon=${DONA_LU_COORDS[1]}&limit=5`;
+        fetch(url)
+          .then((res) => res.json())
+          .then((data) => {
+            if (data && data.features) {
+              const filtered = data.features.filter((f: any) => f.properties?.countrycode === 'BR');
+              setSuggestions(filtered);
+              setShowSuggestions(filtered.length > 0);
+            }
+          })
+          .catch((err) => console.error("Erro ao buscar sugestões de rua:", err));
+      }
+    }, 400);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [addressInput]);
+  }, [street]);
 
-  // Geocodificação em tempo real do endereço com debounce de 800ms ao digitar a vírgula + número
+  // Geocodificação debounced baseada nos inputs (Rua + Número + Bairro)
   useEffect(() => {
-    const parsed = parseAddress(addressInput);
-    if (!parsed.street.trim() || !parsed.number.trim()) {
-      setAddressCoords(null);
+    if (!street.trim() || !number.trim()) {
       return;
     }
 
     const delayDebounceFn = setTimeout(() => {
       setGeocoding(true);
-      geocodeAddress(parsed.street, parsed.number, parsed.neighborhood)
+      geocodeAddress(street, number, neighborhood)
         .then((coords) => {
-          setAddressCoords(coords);
+          setMapCoords(coords);
         })
         .catch((err) => {
-          console.error("Erro na geocodificação:", err);
-          setAddressCoords(null);
+          console.warn('[geocoding] Falha ao geocodificar inputs:', err);
         })
         .finally(() => {
           setGeocoding(false);
@@ -172,86 +123,99 @@ export const ClientDashboard = ({ showOnly, isVisitor = false, onLoginRequired }
     }, 800);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [addressInput]);
+  }, [street, number, neighborhood]);
 
-  // Gerencia a instância do mapa Leaflet e o marcador do endereço do cliente
+  // Inicialização e atualização do Leaflet Map (Marcador Travado)
   useEffect(() => {
-    if (!addressCoords || !miniMapContainerRef.current) {
-      if (miniMapInstanceRef.current) {
-        miniMapInstanceRef.current.remove();
-        miniMapInstanceRef.current = null;
+    if (!mapContainerRef.current) {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
         markerRef.current = null;
       }
       return;
     }
 
-    if (!miniMapInstanceRef.current) {
-      const map = L.map(miniMapContainerRef.current, {
+    if (!mapInstanceRef.current) {
+      const map = L.map(mapContainerRef.current, {
         zoomControl: true,
-        scrollWheelZoom: false
-      }).setView(addressCoords, 15);
+        scrollWheelZoom: true,
+      }).setView(mapCoords, 16);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
       }).addTo(map);
 
-      miniMapInstanceRef.current = map;
-    } else {
-      miniMapInstanceRef.current.setView(addressCoords, 15);
-    }
-
-    const map = miniMapInstanceRef.current;
-
-    if (markerRef.current) {
-      markerRef.current.setLatLng(addressCoords);
-    } else {
       const clientIcon = L.divIcon({
-        html: `<div style="font-size: 26px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); transform: translate(-2px, -6px);">📍</div>`,
+        html: `<div style="font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); transform: translate(-2px, -8px);">📍</div>`,
         className: 'leaflet-div-icon-emoji',
-        iconSize: [30, 30],
-        iconAnchor: [15, 15]
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
       });
 
-      const m = L.marker(addressCoords, { icon: clientIcon })
-        .addTo(map)
-        .bindPopup('<b>Seu Endereço de Entrega</b>');
-      markerRef.current = m;
+      // Marcador ESTÁTICO (draggable: false)
+      const marker = L.marker(mapCoords, {
+        icon: clientIcon,
+        draggable: false
+      }).addTo(map);
+
+      markerRef.current = marker;
+      mapInstanceRef.current = map;
+    } else {
+      const map = mapInstanceRef.current;
+      const marker = markerRef.current;
+
+      const currentCenter = map.getCenter();
+      const dist = Math.sqrt((currentCenter.lat - mapCoords[0]) ** 2 + (currentCenter.lng - mapCoords[1]) ** 2);
+
+      if (dist > 0.0001) {
+        map.setView(mapCoords, 16);
+      }
+      if (marker) {
+        marker.setLatLng(mapCoords);
+      }
     }
-
-    setTimeout(() => {
-      if (miniMapInstanceRef.current) {
-        miniMapInstanceRef.current.invalidateSize();
-      }
-    }, 100);
-
-  }, [addressCoords]);
-
-  // Destrói o mapa ao desmontar
-  useEffect(() => {
-    return () => {
-      if (miniMapInstanceRef.current) {
-        miniMapInstanceRef.current.remove();
-        miniMapInstanceRef.current = null;
-      }
-    };
-  }, []);
+  }, [mapCoords, cart.length]);
 
   const handleSelectSuggestion = (feature: any) => {
     const prop = feature.properties;
     const streetName = prop.name || '';
     const neighborhoodName = prop.district || prop.suburb || 'Campo Grande';
-    const formatted = `${streetName}, ${neighborhoodName}`;
-    setAddressInput(formatted);
-    setSuggestions([]);
-    setShowSuggestions(false);
 
-    // Salva imediatamente as coordenadas do Photon ao selecionar da lista
-    // (coords 100% precisas, pois vieram do resultado de autocomplete)
+    setStreet(streetName);
+    setNeighborhood(neighborhoodName);
+
     if (feature.geometry?.coordinates) {
       const [lng, lat] = feature.geometry.coordinates;
-      setAddressCoords([lat, lng]);
+      setMapCoords([lat, lng]);
     }
+
+    setSuggestions([]);
+    setShowSuggestions(false);
   };
+
+  // Sincroniza dados do endereço ao carregar dados do usuário
+  useEffect(() => {
+    if (userData?.clientAddress) {
+      setStreet(userData.clientAddress.street || '');
+      setNumber(userData.clientAddress.number || '');
+      setNeighborhood(userData.clientAddress.neighborhood || 'Campo Grande');
+      setComplement(userData.clientAddress.complement || '');
+      
+      if (userData.clientAddress.street) {
+        geocodeAddress(
+          userData.clientAddress.street,
+          userData.clientAddress.number || '',
+          userData.clientAddress.neighborhood || ''
+        ).then((coords) => {
+          setMapCoords(coords);
+        }).catch(() => {});
+      }
+    }
+  }, [userData]);
+
+
+
 
   // Manipuladores de Edição
   const startEdit = (pastel: typeof defaultPastels[0]) => {
@@ -361,15 +325,14 @@ export const ClientDashboard = ({ showOnly, isVisitor = false, onLoginRequired }
       return;
     }
 
-    const parsed = parseAddress(addressInput);
-    if (!parsed.street.trim() || !parsed.number.trim()) {
-      setError('Por favor, digite o endereço completo contendo rua e número separados por vírgula (ex: Rua Jícara, 239).');
+    if (!street.trim() || !number.trim() || !neighborhood.trim()) {
+      setError('Por favor, selecione seu endereço no mapa e preencha o número da casa/prédio.');
       return;
     }
 
     setSubmitting(true);
     try {
-      const orderData: any = {
+      const orderData = {
         clientUid: user?.uid || '',
         clientName: user?.displayName || user?.email || 'Cliente Anônimo',
         items: cart,
@@ -377,15 +340,17 @@ export const ClientDashboard = ({ showOnly, isVisitor = false, onLoginRequired }
         status: 'pending',
         createdAt: new Date().toISOString(),
         address: {
-          street: parsed.street,
-          number: parsed.number,
-          neighborhood: parsed.neighborhood,
+          street: street.trim(),
+          number: number.trim(),
+          neighborhood: neighborhood.trim(),
           city: 'Rio de Janeiro',
           zipCode: '23000-000',
-          complement,
+          complement: complement.trim(),
         },
-        // Salva as coordenadas geocodificadas para uso no mapa do entregador
-        ...(addressCoords ? { clientCoords: { lat: addressCoords[0], lng: addressCoords[1] } } : {}),
+        clientCoords: {
+          lat: mapCoords[0],
+          lng: mapCoords[1]
+        }
       };
 
       await addDoc(collection(db, 'orders'), orderData);
@@ -663,21 +628,22 @@ export const ClientDashboard = ({ showOnly, isVisitor = false, onLoginRequired }
             <h3 style={{ fontSize: '1.1rem', margin: '0' }}>Endereço de Entrega</h3>
             
             <div className="input-group" style={{ position: 'relative' }}>
-              <label htmlFor="address-autocomplete" style={{ fontSize: '0.8rem' }}>Endereço</label>
+              <label htmlFor="address-street" style={{ fontSize: '0.8rem' }}>Rua</label>
               <div className="input-wrapper">
                 <MapPin size={16} className="input-icon" />
                 <input 
-                  id="address-autocomplete" 
+                  id="address-street" 
                   type="text" 
-                  placeholder="Digite a rua, depois vírgula e número (ex: Rua Jícara, 239)" 
-                  value={addressInput} 
-                  onChange={(e) => setAddressInput(e.target.value)} 
+                  placeholder="Rua Doutor Ibraim Hannas" 
+                  value={street} 
+                  onChange={(e) => setStreet(e.target.value)} 
                   style={{ padding: '0.5rem 0.5rem 0.5rem 2.2rem', fontSize: '0.85rem' }} 
                   autoComplete="off"
+                  required
                 />
               </div>
 
-              {/* Dropdown de Sugestões Autocomplete */}
+              {/* Sugestões do Autocomplete sob o campo Rua */}
               {showSuggestions && (
                 <div style={{
                   position: 'absolute',
@@ -723,33 +689,63 @@ export const ClientDashboard = ({ showOnly, isVisitor = false, onLoginRequired }
               )}
             </div>
 
-            <div className="input-group">
-              <label htmlFor="address-complement" style={{ fontSize: '0.8rem' }}>Complemento</label>
-              <input id="address-complement" type="text" placeholder="Apto / Bloco" value={complement} onChange={(e) => setComplement(e.target.value)} style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', outline: 'none', fontSize: '0.85rem' }} />
-            </div>
-
-            {/* Minimapa para geolocalização do cliente */}
-            {(addressCoords || geocoding) && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem', width: '100%' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--primary-gold)', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600 }}>
-                  <span className="pulse-dot" style={{ width: '6px', height: '6px', backgroundColor: 'var(--primary-gold)', borderRadius: '50%' }}></span>
-                  {geocoding ? 'Localizando endereço no mapa...' : 'Confirme sua localização no mapa:'}
-                </span>
-                <div 
-                  ref={miniMapContainerRef} 
-                  style={{ 
-                    width: '100%', 
-                    height: '180px', 
-                    borderRadius: '10px', 
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    overflow: 'hidden',
-                    zIndex: 1,
-                    opacity: geocoding ? 0.6 : 1,
-                    transition: 'opacity 0.2s'
-                  }} 
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div className="input-group" style={{ flex: 1 }}>
+                <label htmlFor="address-number" style={{ fontSize: '0.8rem' }}>Número *</label>
+                <input 
+                  id="address-number" 
+                  type="text" 
+                  placeholder="409" 
+                  value={number} 
+                  onChange={(e) => setNumber(e.target.value)} 
+                  style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', outline: 'none', fontSize: '0.85rem' }} 
+                  required
                 />
               </div>
-            )}
+              <div className="input-group" style={{ flex: 2 }}>
+                <label htmlFor="address-neighborhood" style={{ fontSize: '0.8rem' }}>Bairro</label>
+                <input 
+                  id="address-neighborhood" 
+                  type="text" 
+                  placeholder="Campo Grande" 
+                  value={neighborhood} 
+                  onChange={(e) => setNeighborhood(e.target.value)} 
+                  style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', outline: 'none', fontSize: '0.85rem' }} 
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="input-group">
+              <label htmlFor="address-complement" style={{ fontSize: '0.8rem' }}>Complemento</label>
+              <input 
+                id="address-complement" 
+                type="text" 
+                placeholder="Apto / Bloco / Ponto de Referência" 
+                value={complement} 
+                onChange={(e) => setComplement(e.target.value)} 
+                style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', outline: 'none', fontSize: '0.85rem' }} 
+              />
+            </div>
+
+            {/* Container do Mapa (Google Maps Style - Marcador Travado ao Endereço) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.2rem', width: '100%' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--primary-gold)', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600 }}>
+                <span className="pulse-dot" style={{ width: '6px', height: '6px', backgroundColor: 'var(--primary-gold)', borderRadius: '50%' }}></span>
+                {geocoding ? 'Localizando endereço no mapa...' : 'Confirme a localização da entrega:'}
+              </span>
+              <div 
+                ref={mapContainerRef} 
+                style={{ 
+                  width: '100%', 
+                  height: '220px', 
+                  borderRadius: '10px', 
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  overflow: 'hidden',
+                  zIndex: 1
+                }} 
+              />
+            </div>
 
             <button type="submit" disabled={submitting || cart.length === 0} className="auth-btn auth-btn-login" style={{ marginTop: '0.5rem', padding: '0.6rem' }}>
               {submitting ? (

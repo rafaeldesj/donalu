@@ -23,13 +23,13 @@ export interface OrderDocument {
     zipCode: string;
     complement?: string;
   };
-  clientCoords?: {
-    lat: number;
-    lng: number;
-  };
   deliveryUid?: string;
   deliveryName?: string;
   deliveryCoords?: {
+    lat: number;
+    lng: number;
+  };
+  clientCoords?: {
     lat: number;
     lng: number;
   };

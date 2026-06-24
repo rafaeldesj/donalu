@@ -8,6 +8,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { geocodeAddress } from '../../utils/geocoding';
 
+
 const DONA_LU_COORDS: [number, number] = [-22.9112951, -43.5602961];
 
 // Sub-componente para isolar a renderização do mapa Leaflet para cada pedido
@@ -25,13 +26,6 @@ const OrderMap = ({ orderId, address, deliveryCoords, clientCoords }: OrderMapPr
   const markersRef = useRef<{ origin?: L.Marker; current?: L.Marker; destination?: L.Marker; polyline?: L.Polyline }>({});
   const [destCoords, setDestCoords] = useState<[number, number] | null>(null);
 
-  const getFallbackCoords = (id: string): [number, number] => {
-    const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const latOffset = ((hash % 20) - 10) / 400;
-    const lngOffset = ((hash % 17) - 8) / 400;
-    return [DONA_LU_COORDS[0] + latOffset, DONA_LU_COORDS[1] + lngOffset];
-  };
-
   useEffect(() => {
     if (clientCoords) {
       setDestCoords([clientCoords.lat, clientCoords.lng]);
@@ -39,13 +33,12 @@ const OrderMap = ({ orderId, address, deliveryCoords, clientCoords }: OrderMapPr
     }
 
     if (!address) return;
-    
     geocodeAddress(address.street, address.number, address.neighborhood)
       .then((coords) => {
         setDestCoords(coords);
       })
       .catch(() => {
-        setDestCoords(getFallbackCoords(orderId));
+        setDestCoords(DONA_LU_COORDS);
       });
   }, [address, orderId, clientCoords]);
 
@@ -200,18 +193,15 @@ export const OrderTracking = () => {
     setSimulatingOrderId(order.id!);
 
     let dest: [number, number] = DONA_LU_COORDS;
-    
     if (order.clientCoords) {
       dest = [order.clientCoords.lat, order.clientCoords.lng];
     } else {
       const addr = order.address;
       try {
         dest = await geocodeAddress(addr.street, addr.number, addr.neighborhood);
-      } catch {
-        const hash = order.id!.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        const latOffset = ((hash % 20) - 10) / 400;
-        const lngOffset = ((hash % 17) - 8) / 400;
-        dest = [DONA_LU_COORDS[0] + latOffset, DONA_LU_COORDS[1] + lngOffset];
+      } catch (err) {
+        console.warn("Erro ao geocodificar na simulação:", err);
+        dest = DONA_LU_COORDS;
       }
     }
 
