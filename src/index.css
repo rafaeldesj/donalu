@@ -50,16 +50,17 @@ body {
 
 /* 1. Header (Topo) */
 .site-header {
+  position: sticky;
+  top: 0;
   height: 65px;
-  background: rgba(11, 15, 25, 0.85);
-  backdrop-filter: blur(8px);
+  background: #0b0f19;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 2rem;
   box-sizing: border-box;
-  z-index: 10;
+  z-index: 100;
 }
 
 .header-brand {

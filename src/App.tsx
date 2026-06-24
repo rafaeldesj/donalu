@@ -3,7 +3,7 @@ import type { OrderItem } from './types/order';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AuthButton } from './components/common/AuthButton';
 import { DeliveryMap } from './components/DeliveryMap';
-import { ShieldCheck, ChefHat, CreditCard, Bell, ShoppingBag, Heart, FileText, Users, Navigation, CheckCircle, Clock, Map } from 'lucide-react';
+import { ShieldCheck, ChefHat, CreditCard, Bell, ShoppingCart, Heart, FileText, Users, Navigation, CheckCircle, Clock, Map } from 'lucide-react';
 import logoDonalu from './assets/logo_donalu.png';
 
 // Lazy-loaded components for code-splitting performance
@@ -106,7 +106,7 @@ const MainLayout = () => {
   } else {
     // Se for cliente, desenvolvedor, owner ou gerente
     if (['client', 'developer', 'owner', 'manager'].includes(role)) {
-      menuItems.push({ id: 'menu', label: 'Cardápio Digital', icon: ShoppingBag });
+      menuItems.push({ id: 'menu', label: 'Cardápio Digital', icon: ShoppingCart });
     }
 
     // Acompanhe seu pedido visível apenas para clientes logados
@@ -190,7 +190,7 @@ const MainLayout = () => {
               className={`header-cart-btn ${cart.length > 0 ? 'has-items' : ''}`}
               title="Ir para o Carrinho"
             >
-              <ShoppingBag size={18} />
+              <ShoppingCart size={18} />
               {cart.length > 0 && (
                 <span className="cart-count-badge">
                   {cart.reduce((sum, item) => sum + item.quantity, 0)}

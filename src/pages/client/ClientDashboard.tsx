@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { ShoppingBag, MapPin, Plus, Minus, Trash2, Edit2, Check, X, Upload } from 'lucide-react';
+import { ShoppingCart, MapPin, Plus, Minus, Trash2, Edit2, Check, X, Upload } from 'lucide-react';
 import { DeliveryMap } from '../../components/DeliveryMap';
 import type { MapAddress } from '../../components/DeliveryMap';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
@@ -587,7 +587,7 @@ export const ClientDashboard = ({
                         </button>
                       )}
                       <button type="button" onClick={() => addToCart(pastel)} className="add-to-cart-btn" aria-label={`Adicionar ${pastel.name} ao carrinho`}>
-                        <ShoppingBag size={18} />
+                        <ShoppingCart size={18} />
                       </button>
                     </>
                   )}
