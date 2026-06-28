@@ -59,7 +59,7 @@ export const AdminDashboard = () => {
   return (
     <div className="dashboard-layout">
       <div className="dashboard-header">
-        <h2>Painel Administrativo ({userData?.role ? userData.role.toUpperCase() : 'ADMIN'}) 📊</h2>
+        <h2>Painel Administrativo</h2>
         <p>Acompanhamento de faturamento, pedidos e controle de permissões em tempo real.</p>
       </div>
 
