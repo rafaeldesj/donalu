@@ -98,7 +98,7 @@ const MainLayout = () => {
   }
 
   // Lista dinâmica de botões de navegação conforme o nível de privilégio do usuário
-  const menuItems = [];
+  const menuItems: any[] = [];
   const isOnlyDelivery = role === 'staff' && staff?.delivery;
 
   if (isOnlyDelivery) {

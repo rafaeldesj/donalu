@@ -23,8 +23,8 @@ interface StoreConfig {
 export const SettingsPage = () => {
   const { user, userData, updatePhoneNumber } = useAuth();
   
-  // Tabs state: 'profile' (all) | 'store' (admin) | 'loyalty' (admin) | 'advanced' (dev) | 'audit_logs' (admin)
-  const [activeTab, setActiveTab] = useState<'profile' | 'store' | 'loyalty' | 'advanced' | 'audit_logs'>('profile');
+  // Tabs state: 'profile' (all) | 'store' (admin) | 'loyalty' (admin) | 'advanced' (dev) | 'audit_logs' (admin) | 'commissions'
+  const [activeTab, setActiveTab] = useState<'profile' | 'store' | 'loyalty' | 'advanced' | 'audit_logs' | 'commissions'>('profile');
   
   const role = userData?.role || 'client';
   const isAdmin = ['developer', 'owner', 'manager'].includes(role);
@@ -150,6 +150,7 @@ export const SettingsPage = () => {
       setLoadingLogs(false);
     });
 
+    return () => unsubscribe();
   }, [activeTab, isAdmin]);
 
   const [orders, setOrders] = useState<any[]>([]);
@@ -196,7 +197,7 @@ export const SettingsPage = () => {
 
   const handleSaveDevMPConfig = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isDev) return;
+    if (!isDev || !user) return;
     setSubmittingDevMP(true);
 
     try {
@@ -297,7 +298,7 @@ export const SettingsPage = () => {
   // Save store configurations
   const handleSaveStoreConfig = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAdmin) return;
+    if (!isAdmin || !user) return;
     setSubmittingStore(true);
 
     try {
