@@ -3,7 +3,7 @@ import type { OrderItem } from './types/order';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AuthButton } from './components/common/AuthButton';
 import { DeliveryMap } from './components/DeliveryMap';
-import { ShieldCheck, ChefHat, CreditCard, Bell, ShoppingCart, Heart, FileText, Users, Navigation, CheckCircle, Clock, Map, Settings } from 'lucide-react';
+import { ShieldCheck, ChefHat, CreditCard, Bell, ShoppingCart, Heart, FileText, Users, Navigation, CheckCircle, Clock, Map, Settings, Menu, ChevronDown } from 'lucide-react';
 import logoDonalu from './assets/logo_donalu.png';
 
 // Lazy-loaded components for code-splitting performance
@@ -29,6 +29,7 @@ const MainLayout = () => {
   const [activeView, setActiveView] = useState<string>('menu');
   const [isVisitor, setIsVisitor] = useState<boolean>(false);
   const [cart, setCart] = useState<OrderItem[]>([]);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
   const handleCartClick = () => {
     setActiveView('menu');
@@ -229,31 +230,56 @@ const getRoleLabel = (r: string) => {
       <div className="middle-content-area">
         {/* 2. Left Navigation (Navegação Esquerda) */}
         <aside className="left-navigation-sidebar">
-          {menuGroups.map((group) => {
-            const groupItems = menuItems.filter((item) => group.ids.includes(item.id));
-            if (groupItems.length === 0) return null;
-            return (
-              <div key={group.label} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '0.75rem' }}>
-                <div className="menu-group-label">{group.label}</div>
-                <nav className="sidebar-nav-menu">
-                  {groupItems.map((item) => {
-                    const IconComponent = item.icon;
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        className={`nav-menu-item ${activeView === item.id ? 'active' : ''}`}
-                        onClick={() => setActiveView(item.id)}
-                      >
-                        <IconComponent size={18} className="nav-icon" />
-                        <span>{item.label}</span>
-                      </button>
-                    );
-                  })}
-                </nav>
-              </div>
-            );
-          })}
+          {/* Mobile toggle button */}
+          <button 
+            type="button" 
+            className="mobile-menu-toggle-btn"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Menu size={16} />
+              <span>Navegação / Menu</span>
+            </div>
+            <ChevronDown 
+              size={16} 
+              style={{ 
+                transform: mobileMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease-in-out'
+              }} 
+            />
+          </button>
+
+          {/* Sidebar content (collapsible wrapper) */}
+          <div className={`sidebar-collapsible-wrapper ${mobileMenuOpen ? 'open' : ''}`}>
+            {menuGroups.map((group) => {
+              const groupItems = menuItems.filter((item) => group.ids.includes(item.id));
+              if (groupItems.length === 0) return null;
+              return (
+                <div key={group.label} className="sidebar-group-container">
+                  <div className="menu-group-label">{group.label}</div>
+                  <nav className="sidebar-nav-menu">
+                    {groupItems.map((item) => {
+                      const IconComponent = item.icon;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className={`nav-menu-item ${activeView === item.id ? 'active' : ''}`}
+                          onClick={() => {
+                            setActiveView(item.id);
+                            setMobileMenuOpen(false); // Close on click
+                          }}
+                        >
+                          <IconComponent size={18} className="nav-icon" />
+                          <span>{item.label}</span>
+                        </button>
+                      );
+                    })}
+                  </nav>
+                </div>
+              );
+            })}
+          </div>
         </aside>
 
         {/* 3. Content (Área de Conteúdo Direita) */}
