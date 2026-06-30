@@ -10,8 +10,7 @@ import pastelCrocante from '../../assets/pastel_crocante.png';
 import pastelFrito from '../../assets/pastel_frito.png';
 import pastelRefri from '../../assets/pastel_refri.png';
 import pastelCombo from '../../assets/pastel_combo.png';
-
-
+import { API_BASE_URL } from '../../config/api';
 
 interface ClientDashboardProps {
   showOnly?: 'menu' | 'loyalty';
@@ -341,7 +340,7 @@ export const ClientDashboard = ({
       
       interval = setInterval(async () => {
         try {
-          const res = await fetch(`/api/pagamentos/check-pix?paymentId=${pixPaymentId}&token=${token}`);
+          const res = await fetch(`${API_BASE_URL}/api/pagamentos/check-pix?paymentId=${pixPaymentId}&token=${token}`);
           const data = await res.json();
           if (data.success && data.status === 'approved') {
             setPixPaymentStatus('approved');
@@ -385,7 +384,7 @@ export const ClientDashboard = ({
         if (token === 'null' || token === 'undefined' || !token) {
           token = 'mock';
         }
-        const response = await fetch('/api/pagamentos/create-pix', {
+        const response = await fetch(`${API_BASE_URL}/api/pagamentos/create-pix`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -452,7 +451,7 @@ export const ClientDashboard = ({
           encryptedCardToken = encryptionResult.encryptedCard;
         }
 
-        const response = await fetch('/api/pagamentos/process-payment', {
+        const response = await fetch(`${API_BASE_URL}/api/pagamentos/process-payment`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

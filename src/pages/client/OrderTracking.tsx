@@ -7,6 +7,7 @@ import { Clock, ClipboardList, ChefHat, ShoppingBag, Navigation, CheckCircle } f
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { geocodeAddress } from '../../utils/geocoding';
+import { API_BASE_URL } from '../../config/api';
 
 
 const DONA_LU_COORDS: [number, number] = [-22.9112951, -43.5602961];
@@ -260,7 +261,7 @@ const OrderPaymentRetry = ({ order, userData }: PaymentRetryProps) => {
           encryptedCardToken = encryptionResult.encryptedCard;
         }
 
-        const response = await fetch('/api/pagamentos/process-payment', {
+        const response = await fetch(`${API_BASE_URL}/api/pagamentos/process-payment`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
