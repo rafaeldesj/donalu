@@ -78,5 +78,11 @@ service cloud.firestore {
       // Excluir pedido: apenas admins
       allow delete: if isAdmin();
     }
+
+    // Regras para a coleção de configurações (settings)
+    match /settings/{settingsId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }
