@@ -295,6 +295,38 @@ export const SettingsPage = () => {
     }
   };
 
+  // Toggle store open/closed status and save immediately
+  const handleToggleStoreOpen = async () => {
+    if (!isAdmin || !user || !storeConfig) return;
+    const newIsOpen = !storeConfig.isOpen;
+    
+    // 1. Atualiza o estado local imediatamente
+    setStoreConfig(prev => prev ? { ...prev, isOpen: newIsOpen } : prev);
+
+    try {
+      // 2. Grava no Firestore imediatamente
+      const docRef = doc(db, 'settings', 'store_config');
+      await updateDoc(docRef, { isOpen: newIsOpen });
+
+      // 3. Loga na auditoria
+      await logAuditAction({
+        userId: user.uid,
+        userEmail: user.email || '',
+        userName: userData?.name || user.displayName || 'Administrador',
+        actionType: 'UPDATE_STORE_CONFIG',
+        title: 'Funcionamento (Atalho)',
+        description: `O administrador alterou o status da loja diretamente para: ${newIsOpen ? 'Aberta' : 'Fechada'}.`
+      });
+
+      showFeedback('success', `Loja ${newIsOpen ? 'aberta' : 'fechada'} com sucesso!`);
+    } catch (err) {
+      console.error(err);
+      // Reverte o estado local em caso de erro
+      setStoreConfig(prev => prev ? { ...prev, isOpen: !newIsOpen } : prev);
+      showFeedback('error', 'Erro ao alterar status da loja no servidor.');
+    }
+  };
+
   // Save store configurations
   const handleSaveStoreConfig = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -826,7 +858,7 @@ export const SettingsPage = () => {
                     </div>
                     <button
                       type="button"
-                      onClick={() => setStoreConfig(prev => ({ ...prev, isOpen: !prev.isOpen }))}
+                      onClick={handleToggleStoreOpen}
                       style={{
                         background: storeConfig.isOpen ? '#059669' : '#dc2626',
                         color: '#fff',
