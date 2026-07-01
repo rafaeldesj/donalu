@@ -2171,14 +2171,14 @@ select:focus {
   background: rgba(16, 185, 129, 0.05);
 }
 
-.status-dot.status-closing {
+.status-dot.status-closing_soon {
   background-color: #f59e0b;
   --status-color-rgb: 245, 158, 11;
 }
-.status-dot.status-closing::after {
+.status-dot.status-closing_soon::after {
   background-color: #f59e0b;
 }
-.store-status-container.status-closing {
+.store-status-container.status-closing_soon {
   color: #f59e0b;
   border-color: rgba(245, 158, 11, 0.25);
   background: rgba(245, 158, 11, 0.05);
