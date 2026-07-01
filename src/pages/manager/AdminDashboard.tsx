@@ -160,7 +160,7 @@ export const AdminDashboard = () => {
           {userData?.role === 'owner' && (
             <div>
               <h3 className="text-gold flex-center">
-                <ShieldAlert size={18} style={{ marginRight: '8px' }} /> Visão do Proprietário (Owner)
+                <ShieldAlert size={18} style={{ marginRight: '8px' }} /> Visão do Proprietário
               </h3>
               <p>Você tem acesso total aos relatórios financeiros de fechamento de caixa e faturamento mensal.</p>
               <button type="button" className="setup-btn" style={{ background: 'var(--primary-gold)', color: '#000', width: '100%', padding: '0.6rem' }}>
@@ -171,7 +171,7 @@ export const AdminDashboard = () => {
 
           {userData?.role === 'manager' && (
             <div>
-              <h3>Controle do Gerente (Manager)</h3>
+              <h3>Controle do Gerente</h3>
               <p>Acesso liberado para gerenciar escala de horários de funcionários e estoque de insumos.</p>
               <button type="button" className="setup-btn" style={{ width: '100%', padding: '0.6rem' }}>
                 Gerenciar Estoque de Insumos

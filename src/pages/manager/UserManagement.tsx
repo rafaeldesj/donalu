@@ -456,7 +456,7 @@ export const UserManagement = () => {
 
       <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2>Gestão de Usuários e Permissões (RBAC) 👥</h2>
+          <h2>Gestão de Usuários e Permissões 👥</h2>
           <p>Cadastre novos colaboradores e gerencie privilégios em tempo real.</p>
         </div>
         <button type="button" onClick={openCreateForm} className="btn-small btn-primary" style={{ padding: '0.6rem 1.2rem', gap: '0.5rem', flex: 'none' }}>
