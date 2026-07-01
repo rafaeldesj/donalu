@@ -15,14 +15,15 @@ export interface OrderDocument {
   total: number;
   status: OrderStatus;
   createdAt: string;
-  address: {
+  orderType?: 'pickup' | 'delivery' | 'dine_in';
+  address?: {
     street: string;
     number: string;
     neighborhood: string;
     city: string;
     zipCode: string;
     complement?: string;
-  };
+  } | null;
   deliveryUid?: string;
   deliveryName?: string;
   deliveryCoords?: {

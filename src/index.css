@@ -1457,7 +1457,7 @@ select:focus {
 /* Painel de Botões de Ação do Pastel */
 .pastel-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 0.5rem;
   align-items: center;
   justify-content: center;

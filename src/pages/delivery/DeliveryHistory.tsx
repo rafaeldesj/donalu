@@ -139,7 +139,7 @@ export const DeliveryHistory = () => {
                     <td>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
                         <MapPin size={14} style={{ flexShrink: 0, color: '#3b82f6' }} />
-                        {order.address.street}, {order.address.number} ({order.address.neighborhood})
+                        {order.address?.street}, {order.address?.number} ({order.address?.neighborhood})
                       </span>
                     </td>
                     <td style={{ textAlign: 'right', fontWeight: 700, color: '#34d399' }}>

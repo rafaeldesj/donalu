@@ -13,6 +13,13 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
   const { userData } = useAuth();
   const staff = userData?.staffFunctions;
 
+  const getOrderTypeLabel = (order: any) => {
+    if (order.orderType === 'delivery') return '🛵 Entrega';
+    if (order.orderType === 'dine_in') return '🍽️ Comer no Local';
+    if (order.orderType === 'pickup') return '🏪 Retirada (Para Viagem)';
+    return order.address ? '🛵 Entrega' : '🏪 Retirada';
+  };
+
   const [orders, setOrders] = useState<OrderDocument[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
   
@@ -219,6 +226,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                         <div style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
                           <div>Nome: <strong style={{ color: '#fff' }}>{order.clientName}</strong></div>
                           {order.clientPhone && <div>Celular: <strong style={{ color: '#fff' }}>{order.clientPhone}</strong></div>}
+                          <div>Tipo: <strong style={{ color: '#fff' }}>{getOrderTypeLabel(order)}</strong></div>
                         </div>
                       </div>
                       <div style={{ margin: '1rem 0' }}>
@@ -275,6 +283,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                         <div style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
                           <div>Nome: <strong style={{ color: '#fff' }}>{order.clientName}</strong></div>
                           {order.clientPhone && <div>Celular: <strong style={{ color: '#fff' }}>{order.clientPhone}</strong></div>}
+                          <div>Tipo: <strong style={{ color: '#fff' }}>{getOrderTypeLabel(order)}</strong></div>
                         </div>
                       </div>
                       <div style={{ margin: '1rem 0' }}>
@@ -333,7 +342,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                           <div style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
                             <div>Nome: <strong style={{ color: '#fff' }}>{order.clientName}</strong></div>
                             {order.clientPhone && <div>Celular: <strong style={{ color: '#fff' }}>{order.clientPhone}</strong></div>}
-                            <div>Tipo: <strong style={{ color: '#fff' }}>{order.address ? '🛵 Entrega' : '🏪 Retirada'}</strong></div>
+                            <div>Tipo: <strong style={{ color: '#fff' }}>{getOrderTypeLabel(order)}</strong></div>
                             <div>Método: <strong style={{ color: 'var(--primary-gold)' }}>{order.paymentMethod === 'dinheiro' ? '💵 Dinheiro' : '💴 Cartão (maquininha)'}</strong></div>
                             {order.paymentMethod === 'dinheiro' && order.changeFor && (
                               <div style={{ color: '#ef4444' }}>Troco para: <strong>R$ {order.changeFor.toFixed(2).replace('.', ',')}</strong> (Troco: R$ {(order.changeFor - order.total).toFixed(2).replace('.', ',')})</div>

@@ -59,7 +59,7 @@ export const ClientDashboard = ({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deliveryAddress, setDeliveryAddress] = useState<MapAddress | null>(null);
-  const [orderType, setOrderType] = useState<'pickup' | 'delivery'>('pickup');
+  const [orderType, setOrderType] = useState<'pickup' | 'delivery' | 'dine_in'>('pickup');
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credito' | 'debito' | 'dinheiro'>('pix');
   const [changeFor, setChangeFor] = useState('');
   const [showOrderSummary, setShowOrderSummary] = useState(false);
@@ -858,7 +858,7 @@ export const ClientDashboard = ({
                   {editingId === pastel.id ? (
                     // Botões para salvar/cancelar em edição
                     <>
-                      <button type="button" onClick={saveEdit} className="pastel-action-btn save-btn" title="Salvar Alterações" style={{ marginBottom: '0.5rem' }}>
+                      <button type="button" onClick={saveEdit} className="pastel-action-btn save-btn" title="Salvar Alterações">
                         <Check size={18} />
                       </button>
                       <button type="button" onClick={cancelEdit} className="pastel-action-btn cancel-btn" title="Cancelar">
@@ -870,10 +870,10 @@ export const ClientDashboard = ({
                     <>
                       {canEdit && (
                         <>
-                          <button type="button" onClick={() => startEdit(pastel)} className="pastel-action-btn edit-btn" title="Editar Pastel" style={{ marginBottom: '0.5rem' }}>
+                          <button type="button" onClick={() => startEdit(pastel)} className="pastel-action-btn edit-btn" title="Editar Pastel">
                             <Edit2 size={16} />
                           </button>
-                          <button type="button" onClick={() => handleDeleteItem(pastel.id)} className="pastel-action-btn delete-btn" title="Excluir Pastel" style={{ marginBottom: '0.5rem' }}>
+                          <button type="button" onClick={() => handleDeleteItem(pastel.id)} className="pastel-action-btn delete-btn" title="Excluir Pastel">
                             <Trash2 size={16} />
                           </button>
                         </>
@@ -926,7 +926,7 @@ export const ClientDashboard = ({
             <h3 style={{ margin: 0, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span style={{ color: 'var(--primary-gold)' }}>🛵</span> Como deseja retirar?
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
               <button
                 type="button"
                 onClick={() => { setOrderType('pickup'); setDeliveryAddress(null); }}
@@ -943,11 +943,12 @@ export const ClientDashboard = ({
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  gap: '0.4rem',
+                  gap: '0.2rem',
                 }}
               >
                 <span style={{ fontSize: '1.6rem' }}>🏪</span>
-                <span>Vou na loja retirar</span>
+                <span style={{ fontWeight: 600 }}>Vou retirar na loja</span>
+                <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>(Embale para viagem)</span>
               </button>
               <button
                 type="button"
@@ -965,17 +966,46 @@ export const ClientDashboard = ({
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  gap: '0.4rem',
+                  gap: '0.2rem',
                 }}
               >
                 <span style={{ fontSize: '1.6rem' }}>🛵</span>
-                <span>Quero que me entregue</span>
+                <span style={{ fontWeight: 600 }}>Quero que entregue</span>
+                <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>(Receba em casa)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setOrderType('dine_in'); setDeliveryAddress(null); }}
+                style={{
+                  padding: '0.85rem 0.5rem',
+                  borderRadius: '12px',
+                  border: orderType === 'dine_in' ? '2px solid var(--primary-gold)' : '1px solid rgba(255,255,255,0.08)',
+                  background: orderType === 'dine_in' ? 'rgba(245,158,11,0.1)' : 'rgba(255,255,255,0.02)',
+                  color: orderType === 'dine_in' ? 'var(--primary-gold)' : 'var(--text-secondary)',
+                  fontWeight: orderType === 'dine_in' ? 700 : 400,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.2rem',
+                }}
+              >
+                <span style={{ fontSize: '1.6rem' }}>🍽️</span>
+                <span style={{ fontWeight: 600 }}>Vou comer aí</span>
+                <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>(Pode ir preparando)</span>
               </button>
             </div>
 
-            {orderType === 'pickup' && (
+            {(orderType === 'pickup' || orderType === 'dine_in') && (
               <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', padding: '0.5rem 0.75rem', lineHeight: '1.5' }}>
                 📍 <strong style={{ color: '#fff' }}>Dona Lu Pastelaria</strong> &mdash; Rua Jícara, 239 · Campo Grande · RJ
+                {orderType === 'dine_in' && (
+                  <div style={{ color: 'var(--primary-gold)', marginTop: '0.25rem', fontWeight: 600 }}>
+                    🍽️ Seu pedido será servido para consumo no local! Estamos preparando para quando você chegar.
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1265,10 +1295,9 @@ export const ClientDashboard = ({
               </div>
             </div>
 
-            {/* Retirada ou Entrega */}
             <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '10px', padding: '0.85rem 1rem' }}>
               <h4 style={{ margin: '0 0 0.4rem 0', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
-                {orderType === 'delivery' ? '📍 Entrega em' : '🏪 Retirada em'}
+                {orderType === 'delivery' ? '📍 Entrega em' : orderType === 'dine_in' ? '🍽️ Consumo Local' : '🏪 Retirada em'}
               </h4>
               {orderType === 'delivery' ? (
                 <>
@@ -1286,9 +1315,16 @@ export const ClientDashboard = ({
                   </p>
                 </>
               ) : (
-                <p style={{ margin: 0, fontSize: '0.9rem', color: '#fff', fontWeight: 600 }}>
-                  Dona Lu Pastelaria &mdash; Rua Jícara, 239 · Campo Grande · RJ
-                </p>
+                <>
+                  <p style={{ margin: 0, fontSize: '0.9rem', color: '#fff', fontWeight: 600 }}>
+                    Dona Lu Pastelaria &mdash; Rua Jícara, 239 · Campo Grande · RJ
+                  </p>
+                  {orderType === 'dine_in' && (
+                    <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.85rem', color: 'var(--primary-gold)', fontWeight: 600 }}>
+                      🍽️ Servido no local (Estou a caminho)
+                    </p>
+                  )}
+                </>
               )}
             </div>
 

@@ -510,11 +510,13 @@ export const OrderTracking = () => {
       dest = [order.clientCoords.lat, order.clientCoords.lng];
     } else {
       const addr = order.address;
-      try {
-        dest = await geocodeAddress(addr.street, addr.number, addr.neighborhood);
-      } catch (err) {
-        console.warn("Erro ao geocodificar na simulação:", err);
-        dest = DONA_LU_COORDS;
+      if (addr) {
+        try {
+          dest = await geocodeAddress(addr.street, addr.number, addr.neighborhood);
+        } catch (err) {
+          console.warn("Erro ao geocodificar na simulação:", err);
+          dest = DONA_LU_COORDS;
+        }
       }
     }
 
@@ -668,11 +670,14 @@ export const OrderTracking = () => {
   };
 
   // Status descritivo para exibir no cabeçalho do pedido
-  const getStatusText = (status: string, isDelivery: boolean) => {
+  const getStatusText = (status: string, orderType: string) => {
     switch (status) {
       case 'pending': return 'Recebido pela cozinha';
       case 'preparing': return 'Sendo preparado';
-      case 'ready': return isDelivery ? 'Pronto na expedição' : 'Aguardando retirada no balcão!';
+      case 'ready': 
+        if (orderType === 'delivery') return 'Pronto na expedição';
+        if (orderType === 'dine_in') return 'Pronto! Servido na mesa.';
+        return 'Aguardando retirada no balcão!';
       case 'delivering': return 'Saiu para entrega';
       case 'completed': return 'Finalizado com sucesso';
       default: return 'Desconhecido';
@@ -750,7 +755,7 @@ export const OrderTracking = () => {
                         )}
                       </div>
                       <h4 style={{ margin: '0.15rem 0 0 0', fontSize: '1.15rem', color: '#fff' }}>
-                        {getStatusText(order.status, isDelivery)}
+                        {getStatusText(order.status, order.orderType || (order.address ? 'delivery' : 'pickup'))}
                       </h4>
                     </div>
                     <div style={{ textAlign: 'right' }}>
@@ -799,8 +804,15 @@ export const OrderTracking = () => {
                       <div>
                         <strong>Entrega Domiciliar:</strong>
                         <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-secondary)' }}>
-                          {order.address.street}, {order.address.number} ({order.address.neighborhood})
-                          {order.address.complement && <span style={{ fontStyle: 'italic' }}> - {order.address.complement}</span>}
+                          {order.address?.street}, {order.address?.number} ({order.address?.neighborhood})
+                          {order.address?.complement && <span style={{ fontStyle: 'italic' }}> - {order.address.complement}</span>}
+                        </p>
+                      </div>
+                    ) : order.orderType === 'dine_in' ? (
+                      <div>
+                        <strong>Consumo no Local (Salão):</strong>
+                        <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-secondary)' }}>
+                          O seu pedido será servido nas mesas da Dona Lu Pastelaria (Rua Jícara, 239 - Campo Grande). Pode vir vindo!
                         </p>
                       </div>
                     ) : (

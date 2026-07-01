@@ -483,9 +483,9 @@ export const DeliveryActive = () => {
             <div style={{ background: 'rgba(0,0,0,0.15)', padding: '1rem', borderRadius: '10px' }}>
               <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>Endereço de Entrega:</h4>
               <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                {activeOrder.address.street}, {activeOrder.address.number}<br />
-                {activeOrder.address.neighborhood} — Rio de Janeiro
-                {activeOrder.address.complement && (
+                {activeOrder.address?.street}, {activeOrder.address?.number}<br />
+                {activeOrder.address?.neighborhood} — Rio de Janeiro
+                {activeOrder.address?.complement && (
                   <><br /><span>Complemento: {activeOrder.address.complement}</span></>
                 )}
               </p>
@@ -513,7 +513,7 @@ export const DeliveryActive = () => {
 
           {/* Coluna direita — mapa de rota */}
           <ActiveMap
-            address={activeOrder.address}
+            address={activeOrder.address || undefined}
             clientCoords={activeOrder.clientCoords}
             gpsCoords={gpsCoords}
           />
@@ -560,14 +560,14 @@ export const DeliveryActive = () => {
 
                   {/* Endereço resumido */}
                   <div style={{ background: 'rgba(0,0,0,0.15)', padding: '0.75rem', borderRadius: '8px', fontSize: '0.85rem' }}>
-                    <strong>Bairro:</strong> {order.address.neighborhood}<br />
+                    <strong>Bairro:</strong> {order.address?.neighborhood || ''}<br />
                     <span style={{ color: 'var(--text-secondary)' }}>
-                      {order.address.street}, {order.address.number}
+                      {order.address?.street || ''}, {order.address?.number || ''}
                     </span>
                   </div>
 
                   {/* Mini mapa — rota loja → cliente */}
-                  <MiniMap orderId={order.id!} address={order.address} clientCoords={order.clientCoords} />
+                  <MiniMap orderId={order.id!} address={order.address || undefined} clientCoords={order.clientCoords} />
 
                   {/* Itens */}
                   <div style={{ maxHeight: '80px', overflowY: 'auto', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
