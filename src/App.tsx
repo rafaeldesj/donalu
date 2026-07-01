@@ -6,6 +6,8 @@ import { DeliveryMap } from './components/DeliveryMap';
 import { ShieldCheck, ChefHat, CreditCard, Bell, ShoppingCart, Heart, FileText, Users, Navigation, CheckCircle, Clock, Map, Settings, Menu, ChevronDown } from 'lucide-react';
 import logoDonalu from './assets/logo_donalu.png';
 import logoDonaluMobile from './assets/logo_donalu_mobile.png';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from './config/firebase';
 
 // Lazy-loaded components for code-splitting performance
 const ClientDashboard = lazy(() => import('./pages/client/ClientDashboard'));
@@ -31,6 +33,81 @@ const MainLayout = () => {
   const [isVisitor, setIsVisitor] = useState<boolean>(false);
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+
+  // Real-time store configurations and status
+  const [storeConfig, setStoreConfig] = useState<any>(null);
+  const [storeStatus, setStoreStatus] = useState<{ status: 'open' | 'closing_soon' | 'closed'; label: string }>({ status: 'closed', label: 'Fechado' });
+
+  // Listen to store configurations in real-time
+  useEffect(() => {
+    const docRef = doc(db, 'settings', 'store_config');
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setStoreConfig(docSnap.data());
+      }
+    }, (err) => {
+      console.error("Erro ao escutar store_config no MainLayout:", err);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Recalculate status every 30 seconds
+  useEffect(() => {
+    const checkStatus = () => {
+      if (!storeConfig) {
+        setStoreStatus({ status: 'closed', label: 'Fechado' });
+        return;
+      }
+      if (storeConfig.isOpen === false) {
+        setStoreStatus({ status: 'closed', label: 'Fechado' });
+        return;
+      }
+
+      const now = new Date();
+      const currentHours = now.getHours();
+      const currentMinutes = now.getMinutes();
+      const currentTimeInMinutes = currentHours * 60 + currentMinutes;
+
+      const [openH, openM] = (storeConfig.openingTime || '18:00').split(':').map(Number);
+      const [closeH, closeM] = (storeConfig.closingTime || '23:30').split(':').map(Number);
+
+      const openTimeInMinutes = openH * 60 + openM;
+      let closeTimeInMinutes = closeH * 60 + closeM;
+
+      // Handle next day closing time
+      const closesNextDay = closeTimeInMinutes < openTimeInMinutes;
+
+      let isOpen = false;
+      let minutesToClose = 9999;
+
+      if (closesNextDay) {
+        if (currentTimeInMinutes >= openTimeInMinutes) {
+          isOpen = true;
+          minutesToClose = (24 * 60 - currentTimeInMinutes) + closeTimeInMinutes;
+        } else if (currentTimeInMinutes < closeTimeInMinutes) {
+          isOpen = true;
+          minutesToClose = closeTimeInMinutes - currentTimeInMinutes;
+        }
+      } else {
+        if (currentTimeInMinutes >= openTimeInMinutes && currentTimeInMinutes < closeTimeInMinutes) {
+          isOpen = true;
+          minutesToClose = closeTimeInMinutes - currentTimeInMinutes;
+        }
+      }
+
+      if (!isOpen) {
+        setStoreStatus({ status: 'closed', label: 'Fechado' });
+      } else if (minutesToClose <= 30) {
+        setStoreStatus({ status: 'closing_soon', label: 'Fecharemos em breve' });
+      } else {
+        setStoreStatus({ status: 'open', label: 'Em funcionamento' });
+      }
+    };
+
+    checkStatus();
+    const interval = setInterval(checkStatus, 30000);
+    return () => clearInterval(interval);
+  }, [storeConfig]);
 
   const handleCartClick = () => {
     setActiveView('menu');
@@ -216,6 +293,10 @@ const getRoleLabel = (r: string): React.ReactNode => {
         <div className="header-brand">
           <img src={logoDonalu} alt="Logo" decoding="async" style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid var(--primary-gold)' }} />
           <span className="brand-text">Dona Lu Pastelaria</span>
+          <div className={`store-status-container status-${storeStatus.status}`} title={storeStatus.label}>
+            <span className={`status-dot status-${storeStatus.status}`}></span>
+            <span className="store-status-text">{storeStatus.label}</span>
+          </div>
         </div>
         <div className="header-user-status">
           {['client', 'developer', 'owner', 'manager'].includes(role) && (
