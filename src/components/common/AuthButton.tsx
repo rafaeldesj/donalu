@@ -3,7 +3,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { LogIn, LogOut, User, ShieldCheck, Mail, Lock, UserPlus, Eye, EyeOff, KeyRound } from 'lucide-react';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db } from '../../config/firebase';
-import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, doc, limit } from 'firebase/firestore';
 
 export const AuthButton = () => {
   const { user, userData, loading, loginWithGoogle, loginWithEmail, registerWithEmail, logout, completeRegistration } = useAuth();
@@ -116,32 +116,40 @@ export const AuthButton = () => {
         try {
           await loginWithEmail(email, password);
         } catch (loginErr: any) {
-          // Se falhar no login normal, verifica se existe uma senha provisória definida no Firestore
-          const trimmedEmail = email.trim().toLowerCase();
-          const q = query(collection(db, 'users'), where('email', '==', trimmedEmail));
-          const querySnapshot = await getDocs(q);
-          
-          if (!querySnapshot.empty) {
-            const userDoc = querySnapshot.docs[0];
-            const uData = userDoc.data();
+          try {
+            // Se falhar no login normal, verifica se existe uma senha provisória definida no Firestore
+            const trimmedEmail = email.trim().toLowerCase();
+            const q = query(collection(db, 'users'), where('email', '==', trimmedEmail), limit(1));
+            const querySnapshot = await getDocs(q);
             
-            if (uData.tempPassword && uData.tempPassword === password.trim()) {
-              // Se tiver senha provisória e for igual à inserida pelo usuário
-              if (uData.uid && uData.uid.length === 20) {
-                // É um pré-cadastro (ID de 20 caracteres gerado pelo Firestore, ainda não logado)
-                // Registra o usuário no Firebase Auth na hora com esta senha!
-                await registerWithEmail(trimmedEmail, password, uData.name);
-                
-                // Remove a senha provisória do Firestore após registro bem-sucedido
-                await updateDoc(doc(db, 'users', userDoc.id), { tempPassword: null });
-                return;
-              } else {
-                // É um usuário já ativo (UID de 28 caracteres). Não podemos alterar no Firebase Auth client-side
-                throw new Error('TEMP_PASSWORD_ACTIVE_USER');
+            if (!querySnapshot.empty) {
+              const userDoc = querySnapshot.docs[0];
+              const uData = userDoc.data();
+              
+              if (uData.tempPassword && uData.tempPassword === password.trim()) {
+                // Se tiver senha provisória e for igual à inserida pelo usuário
+                if (uData.uid && uData.uid.length === 20) {
+                  // É um pré-cadastro (ID de 20 caracteres gerado pelo Firestore, ainda não logado)
+                  // Registra o usuário no Firebase Auth na hora com esta senha!
+                  await registerWithEmail(trimmedEmail, password, uData.name);
+                  
+                  // Remove a senha provisória do Firestore após registro bem-sucedido
+                  await updateDoc(doc(db, 'users', userDoc.id), { tempPassword: null });
+                  return;
+                } else {
+                  // É um usuário já ativo (UID de 28 caracteres). Não podemos alterar no Firebase Auth client-side
+                  throw new Error('TEMP_PASSWORD_ACTIVE_USER');
+                }
               }
             }
+          } catch (tempPassErr: any) {
+            console.error("Erro ao verificar senha provisória:", tempPassErr);
+            if (tempPassErr.message === 'TEMP_PASSWORD_ACTIVE_USER') {
+              throw tempPassErr;
+            }
+            // Se falhar a verificação de senha provisória por segurança/permissão, ignora e deixa lançar o erro original do login
           }
-          // Se não encontrou senha provisória correspondente, joga o erro original
+          // Se não encontrou senha provisória correspondente ou a busca falhou, joga o erro original
           throw loginErr;
         }
       }
