@@ -63,6 +63,14 @@ const MainLayout = () => {
         return;
       }
 
+      // Se for dev, proprietário ou gerente, e a loja estiver marcada como ABERTA nas configurações,
+      // pulamos a verificação de horário e exibimos como Aberta para permitir testes e funcionamento.
+      const isPrivilegedUser = userData && ['developer', 'owner', 'manager'].includes(userData.role);
+      if (isPrivilegedUser) {
+        setStoreStatus({ status: 'open', label: 'Em funcionamento' });
+        return;
+      }
+
       const now = new Date();
       const currentHours = now.getHours();
       const currentMinutes = now.getMinutes();
@@ -107,7 +115,7 @@ const MainLayout = () => {
     checkStatus();
     const interval = setInterval(checkStatus, 30000);
     return () => clearInterval(interval);
-  }, [storeConfig]);
+  }, [storeConfig, userData]);
 
   const handleCartClick = () => {
     setActiveView('menu');
