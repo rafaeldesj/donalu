@@ -145,6 +145,22 @@ body {
   padding: 1.5rem 1rem;
   box-sizing: border-box;
   gap: 1rem;
+  overflow-y: auto;
+}
+
+/* Custom scrollbar styling for Left Navigation to maintain dark premium aesthetics */
+.left-navigation-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+.left-navigation-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.left-navigation-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+.left-navigation-sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .sidebar-collapsible-wrapper {
@@ -1061,6 +1077,7 @@ body {
     padding: 0.75rem !important;
     gap: 0.5rem !important;
     background: rgba(11, 15, 25, 0.9) !important;
+    overflow-y: visible !important;
   }
   .mobile-menu-toggle-btn {
     display: flex !important;
