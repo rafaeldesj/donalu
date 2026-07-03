@@ -19,6 +19,7 @@ interface ClientDashboardProps {
   onNavigate?: (view: string) => void;
   cart?: OrderItem[];
   setCart?: React.Dispatch<React.SetStateAction<OrderItem[]>>;
+  storeStatus?: { status: 'open' | 'closing_soon' | 'closed'; label: string };
 }
 
 export const ClientDashboard = ({ 
@@ -27,7 +28,8 @@ export const ClientDashboard = ({
   onLoginRequired, 
   onNavigate,
   cart: externalCart,
-  setCart: externalSetCart
+  setCart: externalSetCart,
+  storeStatus
 }: ClientDashboardProps) => {
   const { user, userData, updatePhoneNumber } = useAuth();
 
@@ -51,6 +53,8 @@ export const ClientDashboard = ({
 
   const role = userData?.role || 'client';
   const canEdit = ['developer', 'owner', 'manager'].includes(role);
+  const isStoreClosed = storeStatus?.status === 'closed';
+  const isClosedForUser = isStoreClosed && !canEdit;
 
   const [localCart, setLocalCart] = useState<OrderItem[]>([]);
   const cart = externalCart !== undefined ? externalCart : localCart;
@@ -262,6 +266,10 @@ export const ClientDashboard = ({
       }
       return;
     }
+    if (isClosedForUser) {
+      alert('A pastelaria está fechada no momento e não está recebendo pedidos.');
+      return;
+    }
     setCart((prevCart) => {
       const existing = prevCart.find((i) => i.id === item.id);
       if (existing) {
@@ -414,6 +422,10 @@ export const ClientDashboard = ({
   }, [showPixLightbox, pixPaymentId, pixPaymentStatus, storeConfig, cart, cartTotal, orderType, deliveryAddress]);
 
   const handlePlaceOrder = async () => {
+    if (isClosedForUser) {
+      setError('A pastelaria está fechada no momento e não está aceitando novos pedidos.');
+      return;
+    }
     setError(null);
     setSubmitting(true);
     try {
@@ -641,6 +653,35 @@ export const ClientDashboard = ({
         <h2>Cardápio Digital 🥟</h2>
         <p>Monte seu carrinho e faça seu pedido!</p>
       </div>
+
+      {isStoreClosed && (
+        <div className="animate-fade-in" style={{
+          background: canEdit ? 'rgba(245, 158, 11, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+          borderLeft: `4px solid ${canEdit ? 'var(--primary-gold)' : '#ef4444'}`,
+          color: canEdit ? 'var(--primary-gold)' : '#ef4444',
+          padding: '1rem 1.25rem',
+          borderRadius: '12px',
+          marginBottom: '1.5rem',
+          fontSize: '0.9rem',
+          lineHeight: '1.5',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.25rem',
+          border: `1px solid ${canEdit ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.15)'}`
+        }}>
+          {canEdit ? (
+            <>
+              <strong>⚠️ Modo Administrativo / Testes Ativo:</strong>
+              <span>A pastelaria está atualmente <strong>fechada</strong> para clientes externos (fora do horário de funcionamento: {storeConfig?.openingTime || '18:00'} às {storeConfig?.closingTime || '23:30'}). No entanto, como você possui privilégios de <strong>{role === 'developer' ? 'Desenvolvedor' : role === 'owner' ? 'Proprietário' : 'Gerente'}</strong>, você pode navegar e realizar pedidos de teste normalmente.</span>
+            </>
+          ) : (
+            <>
+              <strong>🔴 Pastelaria Fechada no Momento:</strong>
+              <span>Estamos fora do horário de atendimento. Nosso horário de funcionamento é das <strong>{storeConfig?.openingTime || '18:00'}</strong> às <strong>{storeConfig?.closingTime || '23:30'}</strong>. Você pode olhar nosso cardápio, mas não será possível adicionar produtos ao carrinho ou enviar novos pedidos agora. Agradecemos a compreensão!</span>
+            </>
+          )}
+        </div>
+      )}
 
       {isVisitor && (
         <div className="alert-box animate-fade-in" style={{
@@ -878,7 +919,14 @@ export const ClientDashboard = ({
                           </button>
                         </>
                       )}
-                      <button type="button" onClick={() => addToCart(pastel)} className="add-to-cart-btn" aria-label={`Adicionar ${pastel.name} ao carrinho`}>
+                      <button 
+                        type="button" 
+                        onClick={() => addToCart(pastel)} 
+                        className="add-to-cart-btn" 
+                        aria-label={`Adicionar ${pastel.name} ao carrinho`}
+                        disabled={isClosedForUser}
+                        style={isClosedForUser ? { opacity: 0.5, cursor: 'not-allowed', background: '#4b5563' } : undefined}
+                      >
                         <ShoppingCart size={18} />
                       </button>
                     </>
@@ -1213,9 +1261,15 @@ export const ClientDashboard = ({
 
             <button
               type="submit"
-              disabled={cart.length === 0 || (orderType === 'delivery' && !deliveryAddress)}
+              disabled={cart.length === 0 || (orderType === 'delivery' && !deliveryAddress) || isClosedForUser}
               className="auth-btn auth-btn-login"
-              style={{ marginTop: '6px', padding: '0.7rem', fontSize: '0.95rem', fontWeight: 700 }}
+              style={{ 
+                marginTop: '6px', 
+                padding: '0.7rem', 
+                fontSize: '0.95rem', 
+                fontWeight: 700,
+                ...(isClosedForUser ? { opacity: 0.5, cursor: 'not-allowed', background: '#4b5563' } : {})
+              }}
             >
               <span>🛒 Ver Resumo do Pedido</span>
             </button>

@@ -63,13 +63,8 @@ const MainLayout = () => {
         return;
       }
 
-      // Se for dev, proprietário ou gerente, e a loja estiver marcada como ABERTA nas configurações,
-      // pulamos a verificação de horário e exibimos como Aberta para permitir testes e funcionamento.
-      const isPrivilegedUser = userData && ['developer', 'owner', 'manager'].includes(userData.role);
-      if (isPrivilegedUser) {
-        setStoreStatus({ status: 'open', label: 'Em funcionamento' });
-        return;
-      }
+      // A verificação de horário agora é executada para todos os usuários para mostrar a situação real da loja no badge.
+      // Usuários privilegiados (dev, owner, manager) ainda conseguem realizar pedidos de teste no cardápio mesmo com a loja fechada.
 
       const now = new Date();
       const currentHours = now.getHours();
@@ -395,9 +390,9 @@ const getRoleLabel = (r: string): React.ReactNode => {
         {/* 3. Content (Área de Conteúdo Direita) */}
         <main className="content-area-main">
           <Suspense fallback={<ViewLoader />}>
-            {activeView === 'menu' && <ClientDashboard showOnly="menu" isVisitor={isVisitor} onLoginRequired={() => setIsVisitor(false)} onNavigate={setActiveView} cart={cart} setCart={setCart} />}
+            {activeView === 'menu' && <ClientDashboard showOnly="menu" isVisitor={isVisitor} onLoginRequired={() => setIsVisitor(false)} onNavigate={setActiveView} cart={cart} setCart={setCart} storeStatus={storeStatus} />}
             {activeView === 'tracking' && <OrderTracking />}
-            {activeView === 'fidelidade' && <ClientDashboard showOnly="loyalty" isVisitor={isVisitor} onLoginRequired={() => setIsVisitor(false)} onNavigate={setActiveView} cart={cart} setCart={setCart} />}
+            {activeView === 'fidelidade' && <ClientDashboard showOnly="loyalty" isVisitor={isVisitor} onLoginRequired={() => setIsVisitor(false)} onNavigate={setActiveView} cart={cart} setCart={setCart} storeStatus={storeStatus} />}
             {activeView === 'cozinha' && <StaffDashboard filter="cook" />}
             {activeView === 'atendimento' && <StaffDashboard filter="attendant" />}
             {activeView === 'caixa' && <StaffDashboard filter="cashier" />}
