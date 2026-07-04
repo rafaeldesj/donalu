@@ -221,13 +221,14 @@ export const ClientDashboard = ({
   const [error, setError] = useState<string | null>(null);
   const [deliveryAddress, setDeliveryAddress] = useState<MapAddress | null>(null);
   const [routeDistance, setRouteDistance] = useState<number | null>(null);
-  const [orderType, setOrderType] = useState<'pickup' | 'delivery' | 'dine_in'>('pickup');
+  const [orderType, setOrderType] = useState<'pickup' | 'delivery' | 'dine_in' | 'dine_in_table'>('pickup');
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credito' | 'debito' | 'dinheiro'>('pix');
   const [changeFor, setChangeFor] = useState('');
   const [noChangeNeeded, setNoChangeNeeded] = useState(false);
   const [showOrderSummary, setShowOrderSummary] = useState(false);
   const [categories, setCategories] = useState<string[]>(['Pastéis Gourmet Especiais', 'Bebidas']);
   const [activeCategory, setActiveCategory] = useState<string>('Pastéis Gourmet Especiais');
+  const [waiveServiceFee, setWaiveServiceFee] = useState(false);
 
   // PagBank Credit Card Form States
   const [useSavedCard, setUseSavedCard] = useState(true);
@@ -351,6 +352,10 @@ export const ClientDashboard = ({
       setClientCpf(userData.cpf);
     }
   }, [userData]);
+
+  useEffect(() => {
+    setWaiveServiceFee(false);
+  }, [orderType]);
 
   const [showPhonePrompt, setShowPhonePrompt] = useState(false);
   const [promptPhone, setPromptPhone] = useState('');
@@ -527,7 +532,11 @@ export const ClientDashboard = ({
     ? (routeDistance / 1000 <= 3 ? 5.00 : 5.00 + Math.floor(routeDistance / 1000 - 3.0) * 1.00)
     : 0;
 
-  const finalTotal = cartTotal + deliveryFee;
+  const serviceFee = (orderType === 'dine_in_table' && !waiveServiceFee)
+    ? parseFloat((cartTotal * 0.10).toFixed(2))
+    : 0;
+
+  const finalTotal = cartTotal + deliveryFee + serviceFee;
 
   const paymentLabels: Record<string, string> = {
     pix: 'Pix',
@@ -602,6 +611,7 @@ export const ClientDashboard = ({
       items: cart,
       total: finalTotal,
       deliveryFee: orderType === 'delivery' ? deliveryFee : 0,
+      serviceFee: orderType === 'dine_in_table' ? serviceFee : 0,
       status: 'preparing',
       createdAt: new Date().toISOString(),
       orderType,
@@ -803,6 +813,7 @@ export const ClientDashboard = ({
         items: cart,
         total: finalTotal,
         deliveryFee: orderType === 'delivery' ? deliveryFee : 0,
+        serviceFee: orderType === 'dine_in_table' ? serviceFee : 0,
         status: finalStatus,
         createdAt: new Date().toISOString(),
         orderType,
@@ -1277,6 +1288,86 @@ export const ClientDashboard = ({
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
               <button
                 type="button"
+                onClick={() => { setOrderType('dine_in_table'); setDeliveryAddress(null); setRouteDistance(null); }}
+                style={{
+                  padding: '0.85rem 0.5rem',
+                  borderRadius: '12px',
+                  border: orderType === 'dine_in_table' ? '2px solid var(--primary-gold)' : '1px solid rgba(255,255,255,0.08)',
+                  background: orderType === 'dine_in_table' ? 'rgba(245,158,11,0.1)' : 'rgba(255,255,255,0.02)',
+                  color: orderType === 'dine_in_table' ? 'var(--primary-gold)' : 'var(--text-secondary)',
+                  fontWeight: orderType === 'dine_in_table' ? 700 : 400,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.2rem',
+                }}
+              >
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  width="28" 
+                  height="28" 
+                  viewBox="0 0 24 24" 
+                  fill="none"
+                  style={{ marginBottom: '0.1rem', marginTop: '0.1rem', flexShrink: 0 }}
+                >
+                  {/* Behind Chairs (2 Backrests) */}
+                  <rect x="7" y="4" width="3" height="7" rx="0.5" fill="#92400e" stroke="#78350f" strokeWidth="1" />
+                  <line x1="8.5" y1="4" x2="8.5" y2="11" stroke="#78350f" strokeWidth="0.8" />
+                  
+                  <rect x="14" y="4" width="3" height="7" rx="0.5" fill="#92400e" stroke="#78350f" strokeWidth="1" />
+                  <line x1="15.5" y1="4" x2="15.5" y2="11" stroke="#78350f" strokeWidth="0.8" />
+
+                  {/* Side Chairs Seats and Legs */}
+                  {/* Left Side Chair */}
+                  <rect x="1" y="10" width="3.5" height="1.5" rx="0.5" fill="#b45309" stroke="#78350f" strokeWidth="1" />
+                  <rect x="1" y="4" width="1" height="6" rx="0.3" fill="#b45309" stroke="#78350f" strokeWidth="0.8" />
+                  <line x1="1.5" y1="11.5" x2="1.5" y2="20" stroke="#78350f" strokeWidth="1.2" strokeLinecap="round" />
+                  <line x1="3.5" y1="11.5" x2="3.5" y2="20" stroke="#78350f" strokeWidth="1.2" strokeLinecap="round" />
+
+                  {/* Right Side Chair */}
+                  <rect x="19.5" y="10" width="3.5" height="1.5" rx="0.5" fill="#b45309" stroke="#78350f" strokeWidth="1" />
+                  <rect x="22" y="4" width="1" height="6" rx="0.3" fill="#b45309" stroke="#78350f" strokeWidth="0.8" />
+                  <line x1="20" y1="11.5" x2="20" y2="20" stroke="#78350f" strokeWidth="1.2" strokeLinecap="round" />
+                  <line x1="22" y1="11.5" x2="22" y2="20" stroke="#78350f" strokeWidth="1.2" strokeLinecap="round" />
+
+                  {/* Table Legs (Behind Table Top) */}
+                  <rect x="6.5" y="11" width="1.5" height="9" rx="0.3" fill="#78350f" />
+                  <rect x="16" y="11" width="1.5" height="9" rx="0.3" fill="#78350f" />
+
+                  {/* Table Top */}
+                  <rect x="4.5" y="9.5" width="15" height="2" rx="0.5" fill="#d97706" stroke="#92400e" strokeWidth="1" />
+                </svg>
+                <span style={{ fontWeight: 600 }}>Comer à mesa</span>
+                <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>(Servido na mesa)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setOrderType('dine_in'); setDeliveryAddress(null); setRouteDistance(null); }}
+                style={{
+                  padding: '0.85rem 0.5rem',
+                  borderRadius: '12px',
+                  border: orderType === 'dine_in' ? '2px solid var(--primary-gold)' : '1px solid rgba(255,255,255,0.08)',
+                  background: orderType === 'dine_in' ? 'rgba(245,158,11,0.1)' : 'rgba(255,255,255,0.02)',
+                  color: orderType === 'dine_in' ? 'var(--primary-gold)' : 'var(--text-secondary)',
+                  fontWeight: orderType === 'dine_in' ? 700 : 400,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.2rem',
+                }}
+              >
+                <span style={{ fontSize: '1.6rem' }}>🍽️</span>
+                <span style={{ fontWeight: 600 }}>Vou comer aí</span>
+                <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>(Pode ir preparando)</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => { setOrderType('pickup'); setDeliveryAddress(null); setRouteDistance(null); }}
                 style={{
                   padding: '0.85rem 0.5rem',
@@ -1321,37 +1412,19 @@ export const ClientDashboard = ({
                 <span style={{ fontWeight: 600 }}>Quero que entregue</span>
                 <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>(Receba em casa)</span>
               </button>
-              <button
-                type="button"
-                onClick={() => { setOrderType('dine_in'); setDeliveryAddress(null); setRouteDistance(null); }}
-                style={{
-                  padding: '0.85rem 0.5rem',
-                  borderRadius: '12px',
-                  border: orderType === 'dine_in' ? '2px solid var(--primary-gold)' : '1px solid rgba(255,255,255,0.08)',
-                  background: orderType === 'dine_in' ? 'rgba(245,158,11,0.1)' : 'rgba(255,255,255,0.02)',
-                  color: orderType === 'dine_in' ? 'var(--primary-gold)' : 'var(--text-secondary)',
-                  fontWeight: orderType === 'dine_in' ? 700 : 400,
-                  fontSize: '0.9rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '0.2rem',
-                }}
-              >
-                <span style={{ fontSize: '1.6rem' }}>🍽️</span>
-                <span style={{ fontWeight: 600 }}>Vou comer aí</span>
-                <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>(Pode ir preparando)</span>
-              </button>
             </div>
 
-            {(orderType === 'pickup' || orderType === 'dine_in') && (
+            {(orderType === 'pickup' || orderType === 'dine_in' || orderType === 'dine_in_table') && (
               <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', padding: '0.5rem 0.75rem', lineHeight: '1.5' }}>
                 📍 <strong style={{ color: '#fff' }}>Dona Lu Pastelaria</strong> &mdash; Rua Jícara, 239 · Campo Grande · RJ
                 {orderType === 'dine_in' && (
                   <div style={{ color: 'var(--primary-gold)', marginTop: '0.25rem', fontWeight: 600 }}>
                     🍽️ Seu pedido será servido para consumo no local! Estamos preparando para quando você chegar.
+                  </div>
+                )}
+                {orderType === 'dine_in_table' && (
+                  <div style={{ color: 'var(--primary-gold)', marginTop: '0.25rem', fontWeight: 600 }}>
+                    🪑 Seu pedido será servido na mesa!
                   </div>
                 )}
               </div>
@@ -1688,6 +1761,39 @@ export const ClientDashboard = ({
                     <span style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', marginLeft: '1rem' }}>
                       R$ {deliveryFee.toFixed(2).replace('.', ',')}
                     </span>
+                  </div>
+                )}
+                {orderType === 'dine_in_table' && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem', borderTop: '1px dashed rgba(255,255,255,0.08)', paddingTop: '0.5rem', marginTop: '0.25rem' }}>
+                    <span style={{ color: '#fff' }}>
+                      <strong style={{ color: 'var(--primary-gold)' }}>1x</strong> Taxa de Serviço (10%){waiveServiceFee && ' (Isento)'}
+                    </span>
+                    <span style={{ color: waiveServiceFee ? '#ef4444' : 'var(--text-secondary)', textDecoration: waiveServiceFee ? 'line-through' : 'none', whiteSpace: 'nowrap', marginLeft: '1rem' }}>
+                      R$ {serviceFee.toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+                )}
+                {orderType === 'dine_in_table' && canEdit && (
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.5rem', 
+                    marginTop: '0.5rem', 
+                    padding: '0.4rem 0.6rem', 
+                    borderRadius: '8px', 
+                    background: 'rgba(245, 158, 11, 0.08)', 
+                    border: '1px solid rgba(245, 158, 11, 0.15)' 
+                  }}>
+                    <input
+                      type="checkbox"
+                      id="waive-service-fee-checkbox"
+                      checked={waiveServiceFee}
+                      onChange={(e) => setWaiveServiceFee(e.target.checked)}
+                      style={{ cursor: 'pointer', width: '15px', height: '15px' }}
+                    />
+                    <label htmlFor="waive-service-fee-checkbox" style={{ fontSize: '0.78rem', color: 'var(--primary-gold)', cursor: 'pointer', fontWeight: 600, userSelect: 'none' }}>
+                      Isentar taxa de 10% (Solicitação verbal)
+                    </label>
                   </div>
                 )}
               </div>

@@ -16,6 +16,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
   const getOrderTypeLabel = (order: any) => {
     if (order.orderType === 'delivery') return '🛵 Entrega';
     if (order.orderType === 'dine_in') return '🍽️ Comer no Local';
+    if (order.orderType === 'dine_in_table') return '🪑 Comer à Mesa';
     if (order.orderType === 'pickup') return '🏪 Retirada (Para Viagem)';
     return order.address ? '🛵 Entrega' : '🏪 Retirada';
   };
@@ -72,6 +73,22 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
     } catch (err) {
       console.error('Erro ao reprovar pedido no caixa:', err);
       alert('Erro ao reprovar pedido. Tente novamente.');
+    }
+  };
+
+  const handleWaiveServiceFee = async (order: OrderDocument) => {
+    if (!order.id || !order.serviceFee) return;
+    if (window.confirm("Deseja realmente isentar a taxa de serviço de 10% deste pedido?")) {
+      try {
+        const orderRef = doc(db, 'orders', order.id);
+        await updateDoc(orderRef, {
+          total: order.total - order.serviceFee,
+          serviceFee: 0
+        });
+      } catch (err) {
+        console.error("Erro ao isentar taxa de serviço:", err);
+        alert("Erro ao remover taxa. Verifique suas permissões.");
+      }
     }
   };
 
@@ -238,6 +255,11 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                             🛵 Taxa de Entrega: R$ {(order.deliveryFee ?? 0).toFixed(2).replace('.', ',')}
                           </p>
                         )}
+                        {(order.serviceFee ?? 0) > 0 && (
+                          <p className="order-desc" style={{ fontSize: '0.9rem', color: 'var(--primary-gold)', fontStyle: 'italic', margin: '0.2rem 0' }}>
+                            🪑 Taxa de Serviço (10%): R$ {(order.serviceFee ?? 0).toFixed(2).replace('.', ',')}
+                          </p>
+                        )}
                       </div>
                       {order.address && (
                         <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', background: 'rgba(0,0,0,0.15)', padding: '0.5rem', borderRadius: '8px', marginBottom: '1rem' }}>
@@ -298,6 +320,11 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                         {(order.deliveryFee ?? 0) > 0 && (
                           <p className="order-desc" style={{ fontSize: '0.9rem', color: 'var(--primary-gold)', fontStyle: 'italic', margin: '0.2rem 0' }}>
                             🛵 Taxa de Entrega: R$ {(order.deliveryFee ?? 0).toFixed(2).replace('.', ',')}
+                          </p>
+                        )}
+                        {(order.serviceFee ?? 0) > 0 && (
+                          <p className="order-desc" style={{ fontSize: '0.9rem', color: 'var(--primary-gold)', fontStyle: 'italic', margin: '0.2rem 0' }}>
+                            🪑 Taxa de Serviço (10%): R$ {(order.serviceFee ?? 0).toFixed(2).replace('.', ',')}
                           </p>
                         )}
                       </div>
@@ -368,8 +395,13 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                               🛵 Taxa de Entrega: R$ {(order.deliveryFee ?? 0).toFixed(2).replace('.', ',')}
                             </p>
                           )}
+                          {(order.serviceFee ?? 0) > 0 && (
+                            <p style={{ fontSize: '0.9rem', margin: '0.2rem 0', color: 'var(--primary-gold)', fontStyle: 'italic' }}>
+                              🪑 Taxa de Serviço (10%): R$ {(order.serviceFee ?? 0).toFixed(2).replace('.', ',')}
+                            </p>
+                          )}
                         </div>
-                        <div className="order-actions" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '0.75rem' }}>
+                        <div className="order-actions" style={{ display: 'grid', gridTemplateColumns: (order.serviceFee ?? 0) > 0 ? '1fr 1fr 1fr' : '1fr 1fr', gap: '0.5rem', marginTop: '0.75rem' }}>
                           <button 
                             type="button" 
                             onClick={() => handleApproveCashierOrder(order)} 
@@ -378,6 +410,29 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                           >
                             ✓ Aprovar
                           </button>
+                          {(order.serviceFee ?? 0) > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handleWaiveServiceFee(order)}
+                              className="btn-small"
+                              style={{ 
+                                width: '100%', 
+                                padding: '0.6rem', 
+                                background: 'rgba(245, 158, 11, 0.1)', 
+                                color: 'var(--primary-gold)', 
+                                border: '1px dashed var(--primary-gold)', 
+                                borderRadius: '8px', 
+                                cursor: 'pointer', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center', 
+                                gap: '0.3rem', 
+                                fontWeight: 700 
+                              }}
+                            >
+                              Isentar 10%
+                            </button>
+                          )}
                           <button 
                             type="button" 
                             onClick={() => { if (order.id) { setReprovingOrderId(order.id); setReprovingOrderSeq(order.dailySeq || getOrderSequenceNumber(order.id, order.createdAt)); } }} 
