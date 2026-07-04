@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { doc, getDoc, setDoc, updateDoc, collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { User, Store, Shield, CreditCard, Save, Trash2, Clock, MapPin, AlertCircle, History, FileText, KeyRound, Plus } from 'lucide-react';
+import { User, Store, Shield, CreditCard, Save, Trash2, Clock, MapPin, AlertCircle, History, FileText, KeyRound, Plus, Camera } from 'lucide-react';
 import { logAuditAction } from '../utils/audit';
+import { SecurityCameraSettings } from '../components/SecurityCameraSettings';
 
 interface StoreConfig {
   isOpen: boolean;
@@ -23,8 +24,8 @@ interface StoreConfig {
 export const SettingsPage = () => {
   const { user, userData, updatePhoneNumber } = useAuth();
   
-  // Tabs state: 'profile' (all) | 'store' (admin) | 'loyalty' (admin) | 'advanced' (dev) | 'audit_logs' (admin) | 'commissions'
-  const [activeTab, setActiveTab] = useState<'profile' | 'store' | 'loyalty' | 'advanced' | 'audit_logs' | 'commissions'>('profile');
+  // Tabs state: 'profile' (all) | 'store' (admin) | 'loyalty' (admin) | 'advanced' (dev) | 'audit_logs' (admin) | 'commissions' | 'security'
+  const [activeTab, setActiveTab] = useState<'profile' | 'store' | 'loyalty' | 'advanced' | 'audit_logs' | 'commissions' | 'security'>('profile');
   
   const role = userData?.role || 'client';
   const isAdmin = ['developer', 'owner', 'manager'].includes(role);
@@ -596,28 +597,53 @@ export const SettingsPage = () => {
           )}
 
           {(isDev || role === 'owner') && (
-            <button
-              type="button"
-              onClick={() => setActiveTab('advanced')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.85rem 1rem',
-                borderRadius: '12px',
-                border: activeTab === 'advanced' ? '1px solid var(--primary-gold)' : '1px solid rgba(255,255,255,0.05)',
-                background: activeTab === 'advanced' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(255,255,255,0.02)',
-                color: activeTab === 'advanced' ? 'var(--primary-gold)' : 'var(--text-secondary)',
-                cursor: 'pointer',
-                fontWeight: 600,
-                fontSize: '0.9rem',
-                transition: 'all 0.2s',
-                textAlign: 'left'
-              }}
-            >
-              <Shield size={16} style={{ color: '#a855f7' }} />
-              <span>Avançado (Dev)</span>
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setActiveTab('security')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.85rem 1rem',
+                  borderRadius: '12px',
+                  border: activeTab === 'security' ? '1px solid var(--primary-gold)' : '1px solid rgba(255,255,255,0.05)',
+                  background: activeTab === 'security' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(255,255,255,0.02)',
+                  color: activeTab === 'security' ? 'var(--primary-gold)' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  transition: 'all 0.2s',
+                  textAlign: 'left'
+                }}
+              >
+                <Camera size={16} style={{ color: '#10b981' }} />
+                <span>Segurança</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('advanced')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.85rem 1rem',
+                  borderRadius: '12px',
+                  border: activeTab === 'advanced' ? '1px solid var(--primary-gold)' : '1px solid rgba(255,255,255,0.05)',
+                  background: activeTab === 'advanced' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(255,255,255,0.02)',
+                  color: activeTab === 'advanced' ? 'var(--primary-gold)' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  transition: 'all 0.2s',
+                  textAlign: 'left'
+                }}
+              >
+                <Shield size={16} style={{ color: '#a855f7' }} />
+                <span>Avançado (Dev)</span>
+              </button>
+            </>
           )}
 
           {isAdmin && (
@@ -1413,6 +1439,11 @@ export const SettingsPage = () => {
               </div>
             );
           })()}
+
+          {/* Aba 7: Segurança e Câmeras IP */}
+          {activeTab === 'security' && (isDev || role === 'owner') && (
+            <SecurityCameraSettings />
+          )}
 
         </main>
       </div>

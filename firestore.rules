@@ -88,6 +88,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Regras para a coleção de câmeras de segurança (cameras)
+    match /cameras/{cameraId} {
+      allow read: if request.auth != null && (getRole() == 'owner' || getRole() == 'developer');
+      allow write: if request.auth != null && getRole() == 'developer';
+    }
+
     // Regras para a coleção de logs de auditoria (audit_logs)
     match /audit_logs/{logId} {
       allow read, write: if true;
