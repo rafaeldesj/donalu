@@ -233,6 +233,11 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                         {order.items.map((item, index) => (
                           <p key={index} className="order-desc" style={{ fontSize: '1.05rem' }}>{item.quantity}x <strong>{item.name}</strong></p>
                         ))}
+                        {order.deliveryFee > 0 && (
+                          <p className="order-desc" style={{ fontSize: '0.9rem', color: 'var(--primary-gold)', fontStyle: 'italic', margin: '0.2rem 0' }}>
+                            🛵 Taxa de Entrega: R$ {order.deliveryFee.toFixed(2).replace('.', ',')}
+                          </p>
+                        )}
                       </div>
                       {order.address && (
                         <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', background: 'rgba(0,0,0,0.15)', padding: '0.5rem', borderRadius: '8px', marginBottom: '1rem' }}>
@@ -290,6 +295,11 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                         {order.items.map((item, index) => (
                           <p key={index} className="order-desc">{item.quantity}x {item.name}</p>
                         ))}
+                        {order.deliveryFee > 0 && (
+                          <p className="order-desc" style={{ fontSize: '0.9rem', color: 'var(--primary-gold)', fontStyle: 'italic', margin: '0.2rem 0' }}>
+                            🛵 Taxa de Entrega: R$ {order.deliveryFee.toFixed(2).replace('.', ',')}
+                          </p>
+                        )}
                       </div>
                       {order.address && (
                         <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', background: 'rgba(59, 130, 246, 0.05)', padding: '0.5rem', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.1)', marginBottom: '1rem' }}>
@@ -353,6 +363,11 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                           {order.items.map((item, index) => (
                             <p key={index} style={{ fontSize: '0.9rem', margin: '0.2rem 0', color: 'var(--text-secondary)' }}>{item.quantity}x {item.name}</p>
                           ))}
+                          {order.deliveryFee > 0 && (
+                            <p style={{ fontSize: '0.9rem', margin: '0.2rem 0', color: 'var(--primary-gold)', fontStyle: 'italic' }}>
+                              🛵 Taxa de Entrega: R$ {order.deliveryFee.toFixed(2).replace('.', ',')}
+                            </p>
+                          )}
                         </div>
                         <div className="order-actions" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '0.75rem' }}>
                           <button 
@@ -458,6 +473,11 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                         {order.items.map((item, index) => (
                           <p key={index} className="order-desc" style={{ fontSize: '1.05rem' }}>{item.quantity}x <strong>{item.name}</strong></p>
                         ))}
+                        {order.deliveryFee > 0 && (
+                          <p className="order-desc" style={{ fontSize: '0.9rem', color: 'var(--primary-gold)', fontStyle: 'italic', margin: '0.2rem 0' }}>
+                            🛵 Taxa de Entrega: R$ {order.deliveryFee.toFixed(2).replace('.', ',')}
+                          </p>
+                        )}
                       </div>
                       {order.address && (
                         <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', background: 'rgba(59, 130, 246, 0.05)', padding: '0.5rem', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.1)', marginBottom: '1rem' }}>
@@ -495,7 +515,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
         <div
           className="lightbox-overlay"
           onClick={() => { setCancelOrderId(null); setCancelOrderSeq(null); setCustomCancelReason(''); }}
-          style={{ zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.7)' }}
+          style={{ zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)' }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -632,7 +652,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
         <div
           className="lightbox-overlay"
           onClick={() => { setReprovingOrderId(null); setReprovingOrderSeq(null); }}
-          style={{ zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.7)' }}
+          style={{ zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)' }}
         >
           <div
             onClick={(e) => e.stopPropagation()}

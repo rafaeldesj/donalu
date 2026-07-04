@@ -1,16 +1,173 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { ShoppingCart, MapPin, Plus, Minus, Trash2, Edit2, Check, X, Upload } from 'lucide-react';
 import { DeliveryMap } from '../../components/DeliveryMap';
 import type { MapAddress } from '../../components/DeliveryMap';
 import { collection, addDoc, query, where, getDocs, doc, updateDoc, getDoc, onSnapshot, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { geocodeAddress } from '../../utils/geocoding';
 import type { OrderItem } from '../../types/order';
 import pastelCrocante from '../../assets/pastel_crocante.png';
 import pastelFrito from '../../assets/pastel_frito.png';
 import pastelRefri from '../../assets/pastel_refri.png';
 import pastelCombo from '../../assets/pastel_combo.png';
 import { API_BASE_URL } from '../../config/api';
+
+const DONA_LU_COORDS: [number, number] = [-22.9112951, -43.5602961];
+
+interface SummaryMiniMapProps {
+  address: MapAddress | null;
+  onDistanceCalculated?: (meters: number) => void;
+}
+
+const SummaryMiniMap = ({ address, onDistanceCalculated }: SummaryMiniMapProps) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const markersRef = useRef<{ origin?: L.Marker; dest?: L.Marker; poly?: L.Polyline }>({});
+  const [destCoords, setDestCoords] = useState<[number, number] | null>(null);
+
+  // Resolve as coordenadas do destino
+  useEffect(() => {
+    if (!address) return;
+    if (address.lat !== undefined && address.lng !== undefined) {
+      setDestCoords([address.lat, address.lng]);
+      return;
+    }
+    geocodeAddress(address.street, address.number, address.neighborhood)
+      .then(setDestCoords)
+      .catch(() => setDestCoords(DONA_LU_COORDS));
+  }, [address]);
+
+  // Inicializa / atualiza o mapa
+  useEffect(() => {
+    if (!containerRef.current || !destCoords) return;
+
+    if (!mapRef.current) {
+      const map = L.map(containerRef.current, {
+        zoomControl: false,
+        scrollWheelZoom: false,
+        dragging: false,
+        doubleClickZoom: false,
+      }).setView(DONA_LU_COORDS, 13);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+      }).addTo(map);
+
+      mapRef.current = map;
+    }
+
+    const map = mapRef.current;
+
+    // Remove camadas antigas
+    if (markersRef.current.origin) map.removeLayer(markersRef.current.origin);
+    if (markersRef.current.dest)   map.removeLayer(markersRef.current.dest);
+    if (markersRef.current.poly)   map.removeLayer(markersRef.current.poly);
+
+    const mkOrigin = L.divIcon({
+      html: `<div style="font-size:20px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));transform:translate(-2px,-4px)">🏠</div>`,
+      className: 'leaflet-div-icon-emoji',
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+    });
+    const mkDest = L.divIcon({
+      html: `<div style="font-size:20px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));transform:translate(-2px,-4px)">📍</div>`,
+      className: 'leaflet-div-icon-emoji',
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+    });
+
+    markersRef.current.origin = L.marker(DONA_LU_COORDS, { icon: mkOrigin })
+      .addTo(map).bindPopup('<b>Dona Lu Pastelaria</b>');
+    markersRef.current.dest = L.marker(destCoords, { icon: mkDest })
+      .addTo(map).bindPopup('<b>Destino de Entrega</b>');
+
+    // Rota via OSRM
+    const coordsStr = `${DONA_LU_COORDS[1]},${DONA_LU_COORDS[0]};${destCoords[1]},${destCoords[0]}`;
+    fetch(`https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=full&geometries=geojson`)
+      .then(r => r.json())
+      .then(data => {
+        let pts: [number, number][] = [DONA_LU_COORDS, destCoords];
+        let distance = 0;
+        if (data.routes?.length) {
+          pts = data.routes[0].geometry.coordinates.map((c: any) => [c[1], c[0]]);
+          distance = data.routes[0].distance;
+        } else {
+          distance = L.latLng(DONA_LU_COORDS).distanceTo(L.latLng(destCoords));
+        }
+        if (markersRef.current.poly) map.removeLayer(markersRef.current.poly);
+        markersRef.current.poly = L.polyline(pts, { color: '#e28743', weight: 4, opacity: 0.85 }).addTo(map);
+        map.fitBounds(L.latLngBounds(pts), { padding: [20, 20] });
+        onDistanceCalculated?.(distance);
+      })
+      .catch(() => {
+        const pts: [number, number][] = [DONA_LU_COORDS, destCoords];
+        if (markersRef.current.poly) map.removeLayer(markersRef.current.poly);
+        markersRef.current.poly = L.polyline(pts, { color: '#e28743', weight: 4, opacity: 0.85 }).addTo(map);
+        map.fitBounds(L.latLngBounds(pts), { padding: [20, 20] });
+        const distance = L.latLng(DONA_LU_COORDS).distanceTo(L.latLng(destCoords));
+        onDistanceCalculated?.(distance);
+      });
+
+    // Clique abre Google Maps com rota configurada + navegação
+    map.off('click');
+    map.on('click', () => {
+      window.open(
+        `https://www.google.com/maps/dir/?api=1&origin=${DONA_LU_COORDS[0]},${DONA_LU_COORDS[1]}&destination=${destCoords[0]},${destCoords[1]}&travelmode=driving`,
+        '_blank'
+      );
+    });
+
+    // Forçar atualização do tamanho do mapa após montagem
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [destCoords]);
+
+  // Destrói ao desmontar
+  useEffect(() => {
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, []);
+
+  return (
+    <div
+      title="Clique para abrir rota no Google Maps"
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '140px',
+        borderRadius: '10px',
+        overflow: 'hidden',
+        border: '1px solid rgba(255,255,255,0.07)',
+        cursor: 'pointer',
+        zIndex: 1,
+        marginTop: '0.75rem'
+      }}
+    >
+      <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+      <div style={{
+        position: 'absolute', bottom: 5, right: 5, zIndex: 999,
+        background: 'rgba(10,7,7,0.85)', padding: '0.2rem 0.5rem',
+        borderRadius: '12px', fontSize: '0.65rem',
+        color: 'var(--primary-gold)', border: '1px solid rgba(245,158,11,0.3)',
+        pointerEvents: 'none', fontWeight: 600,
+      }}>
+        Ver no Maps 🗺️
+      </div>
+    </div>
+  );
+};
 
 interface ClientDashboardProps {
   showOnly?: 'menu' | 'loyalty';
@@ -63,6 +220,7 @@ export const ClientDashboard = ({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deliveryAddress, setDeliveryAddress] = useState<MapAddress | null>(null);
+  const [routeDistance, setRouteDistance] = useState<number | null>(null);
   const [orderType, setOrderType] = useState<'pickup' | 'delivery' | 'dine_in'>('pickup');
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credito' | 'debito' | 'dinheiro'>('pix');
   const [changeFor, setChangeFor] = useState('');
@@ -294,6 +452,20 @@ export const ClientDashboard = ({
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
+  const formatDistance = (meters: number) => {
+    if (meters < 1000) {
+      return `${Math.round(meters)} metros`;
+    }
+    const km = meters / 1000;
+    return `${km.toFixed(1).replace('.', ',')} km`;
+  };
+
+  const deliveryFee = (orderType === 'delivery' && routeDistance !== null)
+    ? (routeDistance / 1000 <= 3 ? 5.00 : 5.00 + Math.floor(routeDistance / 1000 - 3.0) * 1.00)
+    : 0;
+
+  const finalTotal = cartTotal + deliveryFee;
+
   const paymentLabels: Record<string, string> = {
     pix: 'Pix',
     credito: 'Cartão de Crédito',
@@ -365,7 +537,8 @@ export const ClientDashboard = ({
       clientName: user?.displayName || user?.email || 'Cliente Anônimo',
       clientPhone: userData?.phoneNumber || '',
       items: cart,
-      total: cartTotal,
+      total: finalTotal,
+      deliveryFee: orderType === 'delivery' ? deliveryFee : 0,
       status: 'preparing',
       createdAt: new Date().toISOString(),
       orderType,
@@ -387,6 +560,7 @@ export const ClientDashboard = ({
     await addDoc(collection(db, 'orders'), orderData);
     setCart([]);
     setDeliveryAddress(null);
+    setRouteDistance(null);
     setShowOrderSummary(false);
     setPaymentMethod('pix');
     setChangeFor('');
@@ -424,7 +598,7 @@ export const ClientDashboard = ({
       }, 3000);
     }
     return () => clearInterval(interval);
-  }, [showPixLightbox, pixPaymentId, pixPaymentStatus, storeConfig, cart, cartTotal, orderType, deliveryAddress]);
+  }, [showPixLightbox, pixPaymentId, pixPaymentStatus, storeConfig, cart, cartTotal, finalTotal, deliveryFee, orderType, deliveryAddress]);
 
   const handlePlaceOrder = async () => {
     if (isClosedForUser) {
@@ -461,7 +635,7 @@ export const ClientDashboard = ({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             token,
-            amount: cartTotal,
+            amount: finalTotal,
             email: user?.email || 'cliente@email.com',
             name: user?.displayName || user?.email || 'Cliente',
             cpf: userData?.cpf || '45678912364'
@@ -530,7 +704,7 @@ export const ClientDashboard = ({
             encryptedCard: isUsingSavedCard ? undefined : encryptedCardToken,
             cpf: isUsingSavedCard ? undefined : clientCpf.replace(/\D/g, ''),
             saveCard: isUsingSavedCard ? false : saveCardConsent,
-            orderTotal: cartTotal,
+            orderTotal: finalTotal,
             clientName: user?.displayName || user?.email || 'Cliente',
             clientEmail: user?.email || '',
             useSavedCard: isUsingSavedCard,
@@ -564,7 +738,8 @@ export const ClientDashboard = ({
         clientName: user?.displayName || user?.email || 'Cliente Anônimo',
         clientPhone: userData?.phoneNumber || '',
         items: cart,
-        total: cartTotal,
+        total: finalTotal,
+        deliveryFee: orderType === 'delivery' ? deliveryFee : 0,
         status: finalStatus,
         createdAt: new Date().toISOString(),
         orderType,
@@ -586,6 +761,7 @@ export const ClientDashboard = ({
       await addDoc(collection(db, 'orders'), orderData);
       setCart([]);
       setDeliveryAddress(null);
+      setRouteDistance(null);
       setShowOrderSummary(false);
       setPaymentMethod('pix');
       setChangeFor('');
@@ -983,7 +1159,7 @@ export const ClientDashboard = ({
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
               <button
                 type="button"
-                onClick={() => { setOrderType('pickup'); setDeliveryAddress(null); }}
+                onClick={() => { setOrderType('pickup'); setDeliveryAddress(null); setRouteDistance(null); }}
                 style={{
                   padding: '0.85rem 0.5rem',
                   borderRadius: '12px',
@@ -1029,7 +1205,7 @@ export const ClientDashboard = ({
               </button>
               <button
                 type="button"
-                onClick={() => { setOrderType('dine_in'); setDeliveryAddress(null); }}
+                onClick={() => { setOrderType('dine_in'); setDeliveryAddress(null); setRouteDistance(null); }}
                 style={{
                   padding: '0.85rem 0.5rem',
                   borderRadius: '12px',
@@ -1075,7 +1251,7 @@ export const ClientDashboard = ({
                 </h3>
 
                 <DeliveryMap
-                  onAddressSelect={(addr) => setDeliveryAddress(addr)}
+                  onAddressSelect={(addr) => { setDeliveryAddress(addr); setRouteDistance(null); }}
                 />
 
                 {deliveryAddress && (
@@ -1346,10 +1522,10 @@ export const ClientDashboard = ({
               background: 'var(--bg-card)',
               border: '1px solid rgba(255,255,255,0.08)',
               borderRadius: '20px',
-              padding: '2rem',
-              width: '100%',
+              padding: '1.5rem',
+              width: '90%',
               maxWidth: '480px',
-              maxHeight: '90vh',
+              maxHeight: 'min(85vh, 85dvh)',
               overflowY: 'auto',
               display: 'flex',
               flexDirection: 'column',
@@ -1386,11 +1562,36 @@ export const ClientDashboard = ({
                     </span>
                   </div>
                 ))}
+                {orderType === 'delivery' && deliveryFee > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem', borderTop: '1px dashed rgba(255,255,255,0.08)', paddingTop: '0.5rem', marginTop: '0.25rem' }}>
+                    <span style={{ color: '#fff' }}>
+                      <strong style={{ color: 'var(--primary-gold)' }}>1x</strong> Taxa de Entrega ({formatDistance(routeDistance || 0)})
+                    </span>
+                    <span style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', marginLeft: '1rem' }}>
+                      R$ {deliveryFee.toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+                )}
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: '0.75rem', paddingTop: '0.75rem', fontWeight: 700, fontSize: '1.05rem' }}>
                 <span>Total</span>
-                <span style={{ color: 'var(--primary-gold)' }}>R$ {cartTotal.toFixed(2).replace('.', ',')}</span>
+                <span style={{ color: 'var(--primary-gold)' }}>R$ {finalTotal.toFixed(2).replace('.', ',')}</span>
               </div>
+            </div>
+
+            {/* Forma de Pagamento */}
+            <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+              <h4 style={{ margin: '0 0 0.4rem 0', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>💳 Pagamento</h4>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: '#fff', fontWeight: 600 }}>{paymentLabels[paymentMethod]}</p>
+              {paymentMethod === 'dinheiro' && (
+                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  {changeFor ? (
+                    <>Troco para R$ {parseFloat(changeFor.replace(',', '.')).toFixed(2).replace('.', ',')} · Troco: R$ {Math.max(0, parseFloat(changeFor.replace(',', '.')) - finalTotal).toFixed(2).replace('.', ',')}</>
+                  ) : (
+                    <>Não preciso de troco</>
+                  )}
+                </p>
+              )}
             </div>
 
             <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '10px', padding: '0.85rem 1rem' }}>
@@ -1411,6 +1612,17 @@ export const ClientDashboard = ({
                     {deliveryAddress?.neighborhood && `${deliveryAddress.neighborhood} · `}{deliveryAddress?.city}
                     {deliveryAddress?.zipCode && ` · CEP ${deliveryAddress.zipCode}`}
                   </p>
+                  <SummaryMiniMap address={deliveryAddress} onDistanceCalculated={setRouteDistance} />
+                  {routeDistance !== null && (
+                    <>
+                      <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem', color: '#fff', fontWeight: 600 }}>
+                        📍 <span style={{ color: 'var(--primary-gold)' }}>Distancia: {formatDistance(routeDistance)}</span>
+                      </p>
+                      <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: '1.4' }}>
+                        * Taxa de entrega: R$ 5,00 até 3 km + R$ 1,00 por km adicional completo.
+                      </p>
+                    </>
+                  )}
                 </>
               ) : (
                 <>
@@ -1426,24 +1638,9 @@ export const ClientDashboard = ({
               )}
             </div>
 
-            {/* Forma de Pagamento */}
-            <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '10px', padding: '0.85rem 1rem' }}>
-              <h4 style={{ margin: '0 0 0.4rem 0', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>💳 Pagamento</h4>
-              <p style={{ margin: 0, fontSize: '0.9rem', color: '#fff', fontWeight: 600 }}>{paymentLabels[paymentMethod]}</p>
-              {paymentMethod === 'dinheiro' && (
-                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                  {changeFor ? (
-                    <>Troco para R$ {parseFloat(changeFor.replace(',', '.')).toFixed(2).replace('.', ',')} · Troco: R$ {Math.max(0, parseFloat(changeFor.replace(',', '.')) - cartTotal).toFixed(2).replace('.', ',')}</>
-                  ) : (
-                    <>Não preciso de troco</>
-                  )}
-                </p>
-              )}
-            </div>
-
             {error && <div className="auth-error-message">{error}</div>}
 
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
               <button
                 type="button"
                 onClick={() => setShowOrderSummary(false)}
@@ -1475,6 +1672,8 @@ export const ClientDashboard = ({
                 )}
               </button>
             </div>
+            {/* Espaçador para garantir respiro no final da rolagem no celular */}
+            <div style={{ minHeight: '0.5rem', height: '0.5rem', flexShrink: 0 }} />
           </div>
         </div>
       )}
@@ -1578,11 +1777,6 @@ export const ClientDashboard = ({
             alignItems: 'center',
             justifyContent: 'center',
             display: 'flex',
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
             background: 'rgba(5, 5, 8, 0.85)',
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)'
@@ -1593,9 +1787,11 @@ export const ClientDashboard = ({
               background: 'linear-gradient(135deg, #16121e 0%, #0d0a11 100%)',
               border: '1px solid rgba(245, 158, 11, 0.2)',
               borderRadius: '24px',
-              padding: '2rem 1.75rem',
+              padding: '1.5rem',
               width: '90%',
               maxWidth: '430px',
+              maxHeight: 'min(90vh, 90dvh)',
+              overflowY: 'auto',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -1782,6 +1978,8 @@ export const ClientDashboard = ({
             >
               Cancelar e voltar
             </button>
+            {/* Espaçador para garantir respiro no final da rolagem no celular */}
+            <div style={{ minHeight: '0.5rem', height: '0.5rem', flexShrink: 0 }} />
           </div>
         </div>
       )}

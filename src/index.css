@@ -27,6 +27,36 @@
   --text-secondary: #a3a3a3;
 }
 
+/* Custom Scrollbar Styles for the entire app */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(10, 7, 7, 0.4);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-gold);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Firefox standard scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) rgba(10, 7, 7, 0.4);
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -1542,8 +1572,11 @@ select:focus {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
   background: rgba(7, 5, 5, 0.95);
   backdrop-filter: blur(8px);
   display: flex;
@@ -1788,8 +1821,9 @@ select:focus {
 .map-search-bar {
   position: relative;
   display: flex;
+  flex-direction: column;
   gap: 0.5rem;
-  align-items: center;
+  align-items: stretch;
 }
 
 .map-search-input-wrapper {
@@ -1859,6 +1893,7 @@ select:focus {
 .map-locate-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem;
   padding: 0.6rem 0.9rem;
   background: rgba(59, 130, 246, 0.1);
@@ -1871,7 +1906,8 @@ select:focus {
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
-  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .map-locate-btn:hover:not(:disabled) {
