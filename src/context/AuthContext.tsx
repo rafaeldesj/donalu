@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { onAuthStateChanged, signInWithPopup, signInWithRedirect, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import type { User } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc, limit } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc, limit, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import type { UserDocument } from '../types/user';
 
@@ -26,56 +26,76 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        try {
-          const userDocRef = doc(db, 'users', currentUser.uid);
-          let userDocSnap = await getDoc(userDocRef);
-          
-          if (userDocSnap.exists()) {
-            setUserData(userDocSnap.data() as UserDocument);
-          } else {
-            let foundPreRegistration = false;
-            if (currentUser.email) {
-              const preRegQuery = query(collection(db, 'users'), where('email', '==', currentUser.email), limit(1));
-              const querySnapshot = await getDocs(preRegQuery);
-              
-              if (!querySnapshot.empty) {
-                const preRegDoc = querySnapshot.docs[0];
-                const preRegData = preRegDoc.data() as UserDocument;
-                
-                const finalUserData: UserDocument = {
-                  ...preRegData,
-                  uid: currentUser.uid,
-                  updatedAt: new Date().toISOString(),
-                };
-                
-                await setDoc(userDocRef, finalUserData);
-                if (preRegDoc.id !== currentUser.uid) {
-                  await deleteDoc(doc(db, 'users', preRegDoc.id));
-                }
-                
-                setUserData(finalUserData);
-                foundPreRegistration = true;
-              }
-            }
+    let unsubscribeUserDoc: (() => void) | null = null;
 
-            if (!foundPreRegistration) {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      
+      // Limpa listener do documento anterior caso exista
+      if (unsubscribeUserDoc) {
+        unsubscribeUserDoc();
+        unsubscribeUserDoc = null;
+      }
+
+      if (currentUser) {
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        
+        // Escuta o perfil do usuário em tempo real
+        unsubscribeUserDoc = onSnapshot(userDocRef, async (docSnap) => {
+          if (docSnap.exists()) {
+            setUserData(docSnap.data() as UserDocument);
+          } else {
+            // Se o documento não existir no banco, busca pré-cadastro
+            try {
+              let foundPreRegistration = false;
+              if (currentUser.email) {
+                const preRegQuery = query(collection(db, 'users'), where('email', '==', currentUser.email), limit(1));
+                const querySnapshot = await getDocs(preRegQuery);
+                
+                if (!querySnapshot.empty) {
+                  const preRegDoc = querySnapshot.docs[0];
+                  const preRegData = preRegDoc.data() as UserDocument;
+                  
+                  const finalUserData: UserDocument = {
+                    ...preRegData,
+                    uid: currentUser.uid,
+                    updatedAt: new Date().toISOString(),
+                  };
+                  
+                  await setDoc(userDocRef, finalUserData);
+                  if (preRegDoc.id !== currentUser.uid) {
+                    await deleteDoc(doc(db, 'users', preRegDoc.id));
+                  }
+                  
+                  setUserData(finalUserData);
+                  foundPreRegistration = true;
+                }
+              }
+
+              if (!foundPreRegistration) {
+                setUserData(null);
+              }
+            } catch (err) {
+              console.error("Erro ao buscar pré-cadastro do usuário:", err);
               setUserData(null);
             }
           }
-        } catch (error) {
-          console.error("Erro ao buscar/criar dados do usuário no Firestore:", error);
-          setUserData(null);
-        }
+          setLoading(false);
+        }, (error) => {
+          console.error("Erro na escuta em tempo real do perfil do usuário:", error);
+          setLoading(false);
+        });
+
       } else {
         setUserData(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeUserDoc) unsubscribeUserDoc();
+    };
   }, []);
 
   const loginWithGoogle = async () => {

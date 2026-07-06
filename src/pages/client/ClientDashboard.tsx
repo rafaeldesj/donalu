@@ -262,21 +262,56 @@ export const ClientDashboard = ({
     fetchStoreConfig();
   }, []);
 
+  // 1. Sincroniza a mesa identificada localmente com a conta do usuário
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const mesa = params.get('mesa') || params.get('table');
+
+    const saveTableToDb = async (m: string) => {
+      if (user) {
+        try {
+          const userDocRef = doc(db, 'users', user.uid);
+          await updateDoc(userDocRef, {
+            tableNumber: m,
+            updatedAt: new Date().toISOString()
+          });
+        } catch (err) {
+          console.error("Erro ao salvar mesa no banco:", err);
+        }
+      }
+    };
+
     if (mesa) {
       setTableNumber(mesa);
       setOrderType('dine_in_table');
       sessionStorage.setItem('donalu_mesa', mesa);
+      saveTableToDb(mesa);
     } else {
       const savedMesa = sessionStorage.getItem('donalu_mesa');
       if (savedMesa) {
         setTableNumber(savedMesa);
         setOrderType('dine_in_table');
+        saveTableToDb(savedMesa);
       }
     }
-  }, []);
+  }, [user]);
+
+  // 2. Sincroniza em tempo real as mudanças de mesa de outros dispositivos pela conta do usuário
+  useEffect(() => {
+    if (userData) {
+      if (userData.tableNumber) {
+        setTableNumber(userData.tableNumber);
+        setOrderType('dine_in_table');
+        sessionStorage.setItem('donalu_mesa', userData.tableNumber);
+      } else {
+        setTableNumber(null);
+        sessionStorage.removeItem('donalu_mesa');
+        if (orderType === 'dine_in_table') {
+          setOrderType('pickup');
+        }
+      }
+    }
+  }, [userData]);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'menu_categories'), (docSnap) => {
@@ -570,7 +605,7 @@ export const ClientDashboard = ({
     }
   };
 
-  const handleChangeTable = () => {
+  const handleChangeTable = async () => {
     const input = window.prompt("Para qual mesa você mudou? (Digite o número da nova mesa de 1 a 99)");
     if (input === null) return;
     const cleaned = input.trim();
@@ -579,9 +614,41 @@ export const ClientDashboard = ({
       setTableNumber(cleaned);
       sessionStorage.setItem('donalu_mesa', cleaned);
       setOrderType('dine_in_table');
+
+      if (user) {
+        try {
+          const userDocRef = doc(db, 'users', user.uid);
+          await updateDoc(userDocRef, {
+            tableNumber: cleaned,
+            updatedAt: new Date().toISOString()
+          });
+        } catch (err) {
+          console.error("Erro ao atualizar mesa no banco:", err);
+        }
+      }
       window.alert("Ok, sua mesa foi atualizada com sucesso!");
     } else {
       window.alert("Por favor, digite um número de mesa válido (1 a 99).");
+    }
+  };
+
+  const handleClearTable = async () => {
+    if (window.confirm("Deseja realmente desvincular seu celular desta mesa?")) {
+      setTableNumber(null);
+      sessionStorage.removeItem('donalu_mesa');
+      setOrderType('pickup');
+
+      if (user) {
+        try {
+          const userDocRef = doc(db, 'users', user.uid);
+          await updateDoc(userDocRef, {
+            tableNumber: null,
+            updatedAt: new Date().toISOString()
+          });
+        } catch (err) {
+          console.error("Erro ao limpar mesa no banco:", err);
+        }
+      }
     }
   };
 
@@ -1660,24 +1727,44 @@ export const ClientDashboard = ({
                   <div>
                     ⚠️ <strong>Aviso:</strong> Você escaneou a <strong>Mesa {tableNumber}</strong>, mas escolheu outra opção. Seu pedido <strong>NÃO</strong> será servido na mesa!
                   </div>
-                  <button 
-                    type="button" 
-                    onClick={() => setOrderType('dine_in_table')}
-                    style={{
-                      background: 'none',
-                      border: '1px solid #ef4444',
-                      color: '#ef4444',
-                      padding: '0.35rem 0.75rem',
-                      borderRadius: '8px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      fontSize: '0.8rem',
-                      transition: 'all 0.2s',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    Comer na Mesa {tableNumber}
-                  </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <button 
+                      type="button" 
+                      onClick={() => setOrderType('dine_in_table')}
+                      style={{
+                        background: 'none',
+                        border: '1px solid #ef4444',
+                        color: '#ef4444',
+                        padding: '0.35rem 0.75rem',
+                        borderRadius: '8px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        fontSize: '0.8rem',
+                        transition: 'all 0.2s',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      Comer na Mesa {tableNumber}
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={handleClearTable}
+                      style={{
+                        background: 'none',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        color: 'var(--text-secondary)',
+                        padding: '0.35rem 0.75rem',
+                        borderRadius: '8px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        fontSize: '0.8rem',
+                        transition: 'all 0.2s',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      Liberar Mesa
+                    </button>
+                  </div>
                 </div>
               )
             )}
