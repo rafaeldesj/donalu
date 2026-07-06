@@ -686,6 +686,8 @@ export const ClientDashboard = ({
         environment: import.meta.env.VITE_GOOGLE_PAY_ENVIRONMENT || 'PRODUCTION'
       });
 
+      const isProduction = (import.meta.env.VITE_GOOGLE_PAY_ENVIRONMENT || 'PRODUCTION') === 'PRODUCTION';
+
       const paymentDataRequest = {
         apiVersion: 2,
         apiVersionMinor: 0,
@@ -710,8 +712,8 @@ export const ClientDashboard = ({
           countryCode: 'BR'
         },
         merchantInfo: {
-          merchantId: import.meta.env.VITE_GOOGLE_PAY_MERCHANT_ID || 'BCR2DN5TW6HJ3ZQL',
-          merchantName: 'Dona Lu Pastelaria'
+          merchantName: 'Dona Lu Pastelaria',
+          ...(isProduction ? { merchantId: import.meta.env.VITE_GOOGLE_PAY_MERCHANT_ID || 'BCR2DN5TW6HJ3ZQL' } : {})
         }
       };
 
@@ -1440,6 +1442,8 @@ export const ClientDashboard = ({
           environment: import.meta.env.VITE_GOOGLE_PAY_ENVIRONMENT || 'PRODUCTION'
         });
 
+        const isProduction = (import.meta.env.VITE_GOOGLE_PAY_ENVIRONMENT || 'PRODUCTION') === 'PRODUCTION';
+
         const paymentDataRequest = {
           apiVersion: 2,
           apiVersionMinor: 0,
@@ -1464,8 +1468,8 @@ export const ClientDashboard = ({
             countryCode: 'BR'
           },
           merchantInfo: {
-            merchantId: import.meta.env.VITE_GOOGLE_PAY_MERCHANT_ID || 'BCR2DN5TW6HJ3ZQL',
-            merchantName: 'Dona Lu Pastelaria'
+            merchantName: 'Dona Lu Pastelaria',
+            ...(isProduction ? { merchantId: import.meta.env.VITE_GOOGLE_PAY_MERCHANT_ID || 'BCR2DN5TW6HJ3ZQL' } : {})
           }
         };
 
