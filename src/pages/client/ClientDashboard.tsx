@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { ShoppingCart, MapPin, Plus, Minus, Trash2, Edit2, Check, X, Upload } from 'lucide-react';
+import { ShoppingCart, MapPin, Plus, Minus, Trash2, Edit2, Check, X, Upload, Camera, QrCode } from 'lucide-react';
+import { Html5Qrcode } from 'html5-qrcode';
 import { DeliveryMap } from '../../components/DeliveryMap';
 import type { MapAddress } from '../../components/DeliveryMap';
 import { collection, addDoc, query, where, getDocs, doc, updateDoc, getDoc, onSnapshot, setDoc, deleteDoc } from 'firebase/firestore';
@@ -223,13 +224,19 @@ export const ClientDashboard = ({
   const [routeDistance, setRouteDistance] = useState<number | null>(null);
   const [orderType, setOrderType] = useState<'pickup' | 'delivery' | 'dine_in' | 'dine_in_table'>('pickup');
   const [tableNumber, setTableNumber] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credito' | 'debito' | 'dinheiro' | 'pagar_final'>('pix');
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credito' | 'debito' | 'dinheiro' | 'pagar_final' | 'google_pay'>('pix');
   const [changeFor, setChangeFor] = useState('');
   const [noChangeNeeded, setNoChangeNeeded] = useState(false);
   const [showOrderSummary, setShowOrderSummary] = useState(false);
   const [categories, setCategories] = useState<string[]>(['Pastéis Gourmet Especiais', 'Bebidas']);
   const [activeCategory, setActiveCategory] = useState<string>('Pastéis Gourmet Especiais');
   const [waiveServiceFee, setWaiveServiceFee] = useState(false);
+
+  // States para scanner da mesa
+  const [showTableScannerModal, setShowTableScannerModal] = useState(false);
+  const [manualTableInput, setManualTableInput] = useState('');
+  const [scannerError, setScannerError] = useState<string | null>(null);
+  const [activeTablesCount, setActiveTablesCount] = useState<number>(10);
 
   // PagBank Credit Card Form States
   const [useSavedCard, setUseSavedCard] = useState(true);
@@ -252,7 +259,7 @@ export const ClientDashboard = ({
   const [showCloseBillModal, setShowCloseBillModal] = useState(false);
   const [tableOrders, setTableOrders] = useState<any[]>([]);
   const [loadingBill, setLoadingBill] = useState(false);
-  const [billPaymentMethod, setBillPaymentMethod] = useState<'pix' | 'credito' | 'dinheiro' | 'debito'>('pix');
+  const [billPaymentMethod, setBillPaymentMethod] = useState<'pix' | 'credito' | 'dinheiro' | 'debito' | 'google_pay'>('pix');
   const [billChangeFor, setBillChangeFor] = useState('');
   const [billNoChangeNeeded, setBillNoChangeNeeded] = useState(false);
   const [billSubmitting, setBillSubmitting] = useState(false);
@@ -332,6 +339,146 @@ export const ClientDashboard = ({
 
     return () => clearInterval(interval);
   }, [billPixPaymentId, billPixPaymentStatus, tableOrders, tableNumber, storeConfig]);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'tables_config'), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (typeof data.activeTablesCount === 'number') {
+          setActiveTablesCount(data.activeTablesCount);
+        }
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  // Efeito para carregar o SDK do Google Pay
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://pay.google.com/gp/p/js/pay.js';
+    script.async = true;
+    script.onload = () => {
+      console.log("SDK do Google Pay carregado com sucesso!");
+    };
+    script.onerror = (e) => {
+      console.error("Falha ao carregar SDK do Google Pay:", e);
+    };
+    document.body.appendChild(script);
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, []);
+
+  const handleLinkTable = async (tableNumStr: string) => {
+    if (!user) {
+      alert("Por favor, faça login antes de vincular uma mesa.");
+      return;
+    }
+    
+    const tableNum = parseInt(tableNumStr, 10);
+    if (isNaN(tableNum) || tableNum < 1 || tableNum > activeTablesCount) {
+      alert(`A Mesa ${tableNumStr} não está em serviço no momento. Por favor, selecione ou escaneie uma mesa válida (1 a ${activeTablesCount}).`);
+      return;
+    }
+
+    try {
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, {
+        tableNumber: tableNumStr,
+        updatedAt: new Date().toISOString()
+      });
+      setTableNumber(tableNumStr);
+      setOrderType('dine_in_table');
+      sessionStorage.setItem('donalu_mesa', tableNumStr);
+
+      // Sincronizar pedidos ativos locais para a nova mesa
+      const q = query(
+        collection(db, 'orders'),
+        where('clientUid', '==', user.uid),
+        where('status', 'in', ['pending', 'preparing', 'ready', 'delivering'])
+      );
+      const querySnapshot = await getDocs(q);
+      const updatePromises = querySnapshot.docs.map(orderDoc => {
+        const o = orderDoc.data();
+        if (o.orderType === 'dine_in' || o.orderType === 'dine_in_table') {
+          return updateDoc(doc(db, 'orders', orderDoc.id), {
+            tableNumber: tableNumStr,
+            orderType: 'dine_in_table',
+            updatedAt: new Date().toISOString()
+          });
+        }
+        return Promise.resolve();
+      });
+      await Promise.all(updatePromises);
+
+      alert(`Mesa ${tableNumStr} vinculada com sucesso!`);
+    } catch (err) {
+      console.error("Erro ao vincular mesa:", err);
+      alert("Não foi possível vincular a mesa. Tente novamente.");
+    }
+  };
+
+  useEffect(() => {
+    let html5QrCode: any = null;
+    if (showTableScannerModal) {
+      setScannerError(null);
+      const startScanner = async () => {
+        try {
+          html5QrCode = new Html5Qrcode("qr-reader");
+          await html5QrCode.start(
+            { facingMode: "environment" },
+            {
+              fps: 10,
+              qrbox: { width: 220, height: 220 }
+            },
+            async (decodedText: string) => {
+              try {
+                const url = new URL(decodedText);
+                const mesaParam = url.searchParams.get('mesa');
+                if (mesaParam) {
+                  await handleLinkTable(mesaParam);
+                  await html5QrCode.stop();
+                  setShowTableScannerModal(false);
+                } else {
+                  const match = decodedText.match(/\d+/);
+                  if (match) {
+                    await handleLinkTable(match[0]);
+                    await html5QrCode.stop();
+                    setShowTableScannerModal(false);
+                  } else {
+                    setScannerError("QR Code lido, mas não contém uma mesa válida.");
+                  }
+                }
+              } catch (e) {
+                const match = decodedText.trim();
+                if (/^\d+$/.test(match)) {
+                  await handleLinkTable(match);
+                  await html5QrCode.stop();
+                  setShowTableScannerModal(false);
+                } else {
+                  setScannerError("QR Code inválido. Deve ser o link da mesa ou o número.");
+                }
+              }
+            },
+            () => {}
+          );
+        } catch (err: any) {
+          console.error("Erro ao iniciar câmera para QR Code:", err);
+          setScannerError("Não foi possível acessar a câmera. Use o campo abaixo para digitar a mesa.");
+        }
+      };
+      
+      startScanner();
+    }
+    
+    return () => {
+      if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().catch((err: any) => console.error("Erro ao parar scanner:", err));
+      }
+    };
+  }, [showTableScannerModal]);
 
   const handleOpenCloseBillModal = async () => {
     if (!tableNumber) {
@@ -513,6 +660,87 @@ export const ClientDashboard = ({
     } catch (err: any) {
       console.error(err);
       setBillError(err.message || "Erro ao processar o pagamento. Tente novamente.");
+    } finally {
+      setBillSubmitting(false);
+    }
+  };
+
+  const handleCloseBillGooglePay = async () => {
+    if (!(window as any).google || !(window as any).google.payments) {
+      alert('O SDK do Google Pay não está carregado. Por favor, recarregue a página.');
+      return;
+    }
+    
+    setBillError(null);
+    setBillSubmitting(true);
+
+    try {
+      const unpaid = tableOrders.filter(o => 
+        o.paymentMethod === 'pagar_final' || 
+        o.paymentMethod === 'dinheiro' || 
+        o.paymentMethod === 'debito'
+      );
+      const amountToPay = unpaid.reduce((sum, o) => sum + o.total, 0);
+
+      const paymentsClient = new (window as any).google.payments.api.PaymentsClient({
+        environment: 'TEST'
+      });
+
+      const paymentDataRequest = {
+        apiVersion: 2,
+        apiVersionMinor: 0,
+        allowedPaymentMethods: [{
+          type: 'CARD',
+          parameters: {
+            allowedAuthMethods: ["PAN_ONLY", "CRYPTOGRAM_3DS"],
+            allowedCardNetworks: ["VISA", "MASTERCARD", "AMEX"]
+          },
+          tokenizationSpecification: {
+            type: 'PAYMENT_GATEWAY',
+            parameters: {
+              gateway: 'example',
+              gatewayMerchantId: 'exampleGatewayMerchantId'
+            }
+          }
+        }],
+        transactionInfo: {
+          totalPriceStatus: 'FINAL',
+          totalPrice: amountToPay.toFixed(2),
+          currencyCode: 'BRL',
+          countryCode: 'BR'
+        },
+        merchantInfo: {
+          merchantName: 'Dona Lu Pastelaria'
+        }
+      };
+
+      const paymentData = await paymentsClient.loadPaymentData(paymentDataRequest);
+      console.log("Token Google Pay para Fechamento recebido:", paymentData.paymentMethodData.tokenizationData.token);
+
+      const batchPromises = unpaid.map(order => 
+        updateDoc(doc(db, 'orders', order.id), {
+          status: 'completed',
+          updatedAt: new Date().toISOString()
+        })
+      );
+      await Promise.all(batchPromises);
+
+      if (user) {
+        const userDocRef = doc(db, 'users', user.uid);
+        await updateDoc(userDocRef, {
+          tableNumber: null,
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      alert("Conta fechada e paga com sucesso via Google Pay!");
+      setShowCloseBillModal(false);
+    } catch (err: any) {
+      if (err.statusCode === 'CANCELED') {
+        return;
+      }
+      console.error("Erro no Google Pay:", err);
+      setBillError(err.message || "Erro ao processar o pagamento com Google Pay.");
     } finally {
       setBillSubmitting(false);
     }
@@ -1020,6 +1248,7 @@ export const ClientDashboard = ({
   const paymentLabels: Record<string, string> = {
     pix: 'Pix',
     credito: 'Cartão de Crédito',
+    google_pay: 'Google Pay 📱',
     debito: 'Cartão de Débito',
     dinheiro: 'Dinheiro',
     pagar_final: 'Pagar no Final (na Mesa) 🍽️',
@@ -1155,11 +1384,15 @@ export const ClientDashboard = ({
   }, [showPixLightbox, pixPaymentId, pixPaymentStatus, storeConfig, cart, cartTotal, finalTotal, deliveryFee, orderType, deliveryAddress]);
 
   const handlePlaceOrder = async () => {
+    setError(null);
     if (isClosedForUser) {
       setError('A pastelaria está fechada no momento e não está aceitando novos pedidos.');
       return;
     }
-    setError(null);
+    if (orderType === 'dine_in_table' && !tableNumber) {
+      setError('Você precisa estar vinculado a uma mesa (escanear o QR Code da mesa) para realizar o pedido de consumo local.');
+      return;
+    }
     setSubmitting(true);
     try {
       // Calcula o número sequencial do pedido para o dia de negócios atual (inicia às 6h da manhã)
@@ -1197,7 +1430,62 @@ export const ClientDashboard = ({
 
       let finalStatus = 'pending';
 
-      if (paymentMethod === 'pix') {
+      if (paymentMethod === 'google_pay') {
+        if (!(window as any).google || !(window as any).google.payments) {
+          throw new Error('O SDK do Google Pay não está carregado. Por favor, recarregue a página.');
+        }
+
+        const paymentsClient = new (window as any).google.payments.api.PaymentsClient({
+          environment: 'TEST'
+        });
+
+        const paymentDataRequest = {
+          apiVersion: 2,
+          apiVersionMinor: 0,
+          allowedPaymentMethods: [{
+            type: 'CARD',
+            parameters: {
+              allowedAuthMethods: ["PAN_ONLY", "CRYPTOGRAM_3DS"],
+              allowedCardNetworks: ["VISA", "MASTERCARD", "AMEX"]
+            },
+            tokenizationSpecification: {
+              type: 'PAYMENT_GATEWAY',
+              parameters: {
+                gateway: 'example',
+                gatewayMerchantId: 'exampleGatewayMerchantId'
+              }
+            }
+          }],
+          transactionInfo: {
+            totalPriceStatus: 'FINAL',
+            totalPrice: finalTotal.toFixed(2),
+            currencyCode: 'BRL',
+            countryCode: 'BR'
+          },
+          merchantInfo: {
+            merchantName: 'Dona Lu Pastelaria'
+          }
+        };
+
+        try {
+          const paymentData = await paymentsClient.loadPaymentData(paymentDataRequest);
+          console.log("Token do Google Pay recebido com sucesso:", paymentData.paymentMethodData.tokenizationData.token);
+          
+          if (orderType === 'dine_in_table') {
+            finalStatus = 'pending';
+          } else {
+            finalStatus = 'aguardando_caixa';
+          }
+        } catch (err: any) {
+          if (err.statusCode === 'CANCELED') {
+            setError('Pagamento via Google Pay cancelado pelo usuário.');
+            setSubmitting(false);
+            return;
+          }
+          console.error("Erro no Google Pay:", err);
+          throw new Error(err.message || 'Falha ao processar o pagamento com Google Pay. Tente novamente.');
+        }
+      } else if (paymentMethod === 'pix') {
         let token = storeConfig?.storeOwnerAccessToken || storeConfig?.devAccessToken || 'mock';
         if (token === 'null' || token === 'undefined' || !token) {
           token = 'mock';
@@ -1919,7 +2207,23 @@ export const ClientDashboard = ({
               </button>
               <button
                 type="button"
-                onClick={() => { setOrderType('dine_in'); setDeliveryAddress(null); setRouteDistance(null); }}
+                onClick={async () => {
+                  setOrderType('dine_in');
+                  setDeliveryAddress(null);
+                  setRouteDistance(null);
+                  setTableNumber(null);
+                  sessionStorage.removeItem('donalu_mesa');
+                  if (user) {
+                    try {
+                      await updateDoc(doc(db, 'users', user.uid), {
+                        tableNumber: null,
+                        updatedAt: new Date().toISOString()
+                      });
+                    } catch (err) {
+                      console.error("Erro ao desvincular mesa ao selecionar comer ai:", err);
+                    }
+                  }
+                }}
                 style={{
                   padding: '0.85rem 0.5rem',
                   borderRadius: '12px',
@@ -2060,7 +2364,7 @@ export const ClientDashboard = ({
                   border: '1px solid rgba(239, 68, 68, 0.15)'
                 }}>
                   <div>
-                    ⚠️ <strong>Aviso:</strong> Você escaneou a <strong>Mesa {tableNumber}</strong>, mas escolheu outra opção. Seu pedido <strong>NÃO</strong> será servido na mesa!
+                    ⚠️ <strong>Aviso:</strong> Você escaneou a <strong>Mesa {tableNumber}</strong>, mas escolheu outra opção. Seu pedido <strong>NÃO</strong> será servido na mesa, será embrulhado para a viagem e entregue!
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                     <button 
@@ -2150,8 +2454,8 @@ export const ClientDashboard = ({
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                 {(orderType === 'dine_in_table'
-                  ? ([['pix','Pix 🟡'],['credito','Crédito 💳'],['pagar_final','Pagar no Final 🍽️']] as const)
-                  : ([['pix','Pix 🟡'],['credito','Crédito 💳'],['debito','Débito 💴'],['dinheiro','Dinheiro 💵']] as const)
+                  ? ([['pix','Pix 🟡'],['credito','Crédito 💳'],['google_pay','Google Pay 📱'],['pagar_final','Pagar no Final 🍽️']] as const)
+                  : ([['pix','Pix 🟡'],['credito','Crédito 💳'],['google_pay','Google Pay 📱'],['debito','Débito 💴'],['dinheiro','Dinheiro 💵']] as const)
                 ).map(([val, label]) => (
                   <button
                     key={val}
@@ -2524,9 +2828,36 @@ export const ClientDashboard = ({
             </div>
 
             <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '10px', padding: '0.85rem 1rem' }}>
-              <h4 style={{ margin: '0 0 0.4rem 0', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
-                {orderType === 'delivery' ? '📍 Entrega em' : orderType === 'dine_in' ? '🍽️ Consumo Local' : '🏪 Retirada em'}
-              </h4>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                <h4 style={{ margin: 0, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
+                  {orderType === 'delivery' ? '📍 Entrega em' : orderType === 'dine_in' ? '🍽️ Consumo Local (A Caminho)' : orderType === 'dine_in_table' ? `🪑 Consumo na Mesa ${tableNumber || '---'}` : '🏪 Retirada em'}
+                </h4>
+                {orderType === 'dine_in_table' && (
+                  <button
+                    type="button"
+                    onClick={() => setShowTableScannerModal(true)}
+                    style={{
+                      background: 'rgba(245, 158, 11, 0.1)',
+                      border: '1px solid rgba(245, 158, 11, 0.25)',
+                      borderRadius: '8px',
+                      padding: '0.25rem 0.5rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      color: 'var(--primary-gold)',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      outline: 'none'
+                    }}
+                  >
+                    <Camera size={13} style={{ flexShrink: 0 }} />
+                    <QrCode size={13} style={{ flexShrink: 0 }} />
+                    <span>Escanear Mesa</span>
+                  </button>
+                )}
+              </div>
               {orderType === 'delivery' ? (
                 <>
                   <p style={{ margin: 0, fontSize: '0.9rem', color: '#fff', fontWeight: 600 }}>
@@ -2561,6 +2892,11 @@ export const ClientDashboard = ({
                   {orderType === 'dine_in' && (
                     <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.85rem', color: 'var(--primary-gold)', fontWeight: 600 }}>
                       🍽️ Servido no local (Estou a caminho)
+                    </p>
+                  )}
+                  {orderType === 'dine_in_table' && (
+                    <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.85rem', color: 'var(--primary-gold)', fontWeight: 600 }}>
+                      🪑 Servido na Mesa: {tableNumber ? `Mesa ${tableNumber}` : 'Mesa não identificada ⚠️'}
                     </p>
                   )}
                 </>
@@ -3079,7 +3415,7 @@ export const ClientDashboard = ({
                       <div>
                         <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em', display: 'block', marginBottom: '0.4rem' }}>Pagar Saldo Devedor Via</span>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
-                          {([['pix','Pix 🟡'],['credito','Crédito 💳'],['debito','Débito 💴'],['dinheiro','Dinheiro 💵']] as const).map(([val, label]) => (
+                          {([['pix','Pix 🟡'],['credito','Crédito 💳'],['google_pay','Google Pay 📱'],['debito','Débito 💴'],['dinheiro','Dinheiro 💵']] as const).map(([val, label]) => (
                             <button
                               key={val}
                               type="button"
@@ -3262,6 +3598,16 @@ export const ClientDashboard = ({
                         >
                           {billSubmitting ? 'Processando Cartão...' : `Pagar R$ ${totalToPay.toFixed(2).replace('.', ',')} via Cartão`}
                         </button>
+                      ) : billPaymentMethod === 'google_pay' ? (
+                        <button
+                          type="button"
+                          onClick={handleCloseBillGooglePay}
+                          disabled={billSubmitting}
+                          className="auth-btn"
+                          style={{ background: 'linear-gradient(135deg, #000000 0%, #202020 100%)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontWeight: 700, padding: '0.7rem' }}
+                        >
+                          {billSubmitting ? 'Iniciando Google Pay...' : `Pagar R$ ${totalToPay.toFixed(2).replace('.', ',')} via Google Pay`}
+                        </button>
                       ) : (
                         <button
                           type="button"
@@ -3343,6 +3689,195 @@ export const ClientDashboard = ({
               style={{ padding: '0.5rem', fontSize: '0.85rem' }}
             >
               Voltar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showTableScannerModal && (
+        <div
+          className="lightbox-overlay animate-fade-in"
+          style={{
+            zIndex: 4000,
+            alignItems: 'center',
+            justifyContent: 'center',
+            display: 'flex',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(5, 5, 8, 0.85)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)'
+          }}
+          onClick={() => setShowTableScannerModal(false)}
+        >
+          <div
+            style={{
+              background: 'linear-gradient(135deg, #16121e 0%, #0d0a11 100%)',
+              border: '1px solid rgba(245, 158, 11, 0.2)',
+              borderRadius: '24px',
+              padding: '1.5rem',
+              width: '90%',
+              maxWidth: '400px',
+              maxHeight: 'min(90vh, 90dvh)',
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1.25rem',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.8)',
+              position: 'relative',
+              color: '#fff'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Fechar */}
+            <button
+              type="button"
+              onClick={() => setShowTableScannerModal(false)}
+              style={{
+                position: 'absolute',
+                top: '1.25rem',
+                right: '1.25rem',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer'
+              }}
+            >
+              <X size={16} />
+            </button>
+
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--primary-gold)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                Leitura de QR Code
+              </span>
+              <h3 style={{ margin: '0.2rem 0 0.4rem', fontSize: '1.3rem', color: '#fff', fontWeight: 800 }}>
+                Escaneie o QR Code da Mesa
+              </h3>
+              <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.82rem', lineHeight: '1.4' }}>
+                Aponte a câmera para o QR Code localizado na sua mesa.
+              </p>
+            </div>
+
+            {/* Container do Scanner da Câmera */}
+            <div 
+              style={{ 
+                width: '100%', 
+                borderRadius: '16px', 
+                overflow: 'hidden', 
+                background: '#000', 
+                border: '1px solid rgba(255,255,255,0.08)',
+                position: 'relative',
+                aspectRatio: '1'
+              }}
+            >
+              <div id="qr-reader" style={{ width: '100%', height: '100%' }}></div>
+              {scannerError && (
+                <div style={{ 
+                  position: 'absolute', 
+                  top: 0, 
+                  left: 0, 
+                  width: '100%', 
+                  height: '100%', 
+                  background: 'rgba(0,0,0,0.85)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  padding: '1.5rem', 
+                  textAlign: 'center',
+                  color: '#f87171',
+                  fontSize: '0.85rem',
+                  lineHeight: '1.4'
+                }}>
+                  <div>
+                    <span style={{ fontSize: '2rem', display: 'block', marginBottom: '0.5rem' }}>📷</span>
+                    {scannerError}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Alternativa: Seleção Manual */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                Dificuldade para escanear? Escolha a mesa abaixo:
+              </span>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <select
+                  value={manualTableInput}
+                  onChange={(e) => setManualTableInput(e.target.value)}
+                  style={{
+                    flex: 1.2,
+                    background: 'rgba(0,0,0,0.25)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '10px',
+                    padding: '0.65rem 0.85rem',
+                    fontSize: '0.9rem',
+                    color: '#fff',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="" style={{ background: '#0d0a11', color: 'var(--text-secondary)' }}>Mesa...</option>
+                  {Array.from({ length: activeTablesCount }, (_, i) => i + 1).map((num) => (
+                    <option key={num} value={String(num)} style={{ background: '#0d0a11', color: '#fff' }}>
+                      Mesa {num}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const tableVal = manualTableInput.trim();
+                    if (!tableVal) {
+                      alert('Por favor, selecione uma mesa.');
+                      return;
+                    }
+                    await handleLinkTable(tableVal);
+                    setShowTableScannerModal(false);
+                    setManualTableInput('');
+                  }}
+                  style={{
+                    flex: 1,
+                    background: 'var(--primary-gold)',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '0.65rem 0.75rem',
+                    color: '#000',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowTableScannerModal(false)}
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '10px',
+                padding: '0.65rem',
+                color: 'var(--text-secondary)',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                textAlign: 'center'
+              }}
+            >
+              Cancelar
             </button>
           </div>
         </div>

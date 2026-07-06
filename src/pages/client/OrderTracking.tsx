@@ -3,7 +3,8 @@ import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/f
 import { db } from '../../config/firebase';
 import { useAuth } from '../../hooks/useAuth';
 import type { OrderDocument } from '../../types/order';
-import { Clock, ClipboardList, ChefHat, ShoppingBag, Navigation, CheckCircle } from 'lucide-react';
+import { Clock, ClipboardList, ChefHat, ShoppingBag, Navigation, CheckCircle, Camera, QrCode, X } from 'lucide-react';
+import { Html5Qrcode } from 'html5-qrcode';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { geocodeAddress } from '../../utils/geocoding';
@@ -552,6 +553,116 @@ export const OrderTracking = () => {
   const [loading, setLoading] = useState(true);
   const [simulatingOrderId, setSimulatingOrderId] = useState<string | null>(null);
 
+  const [showTableScannerModal, setShowTableScannerModal] = useState(false);
+  const [scannerError, setScannerError] = useState<string | null>(null);
+  const [activeTablesCount, setActiveTablesCount] = useState<number>(10);
+  const [scanningOrderId, setScanningOrderId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'tables_config'), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (typeof data.activeTablesCount === 'number') {
+          setActiveTablesCount(data.activeTablesCount);
+        }
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const handleLinkOrderTable = async (tableNumStr: string) => {
+    if (!user || !scanningOrderId) return;
+
+    const tableNum = parseInt(tableNumStr, 10);
+    if (isNaN(tableNum) || tableNum < 1 || tableNum > activeTablesCount) {
+      alert(`A Mesa ${tableNumStr} não está em serviço no momento. Escaneie uma mesa válida de 1 a ${activeTablesCount}.`);
+      return;
+    }
+
+    try {
+      // 1. Atualizar o pedido para dine_in_table e mesa correspondente
+      const orderDocRef = doc(db, 'orders', scanningOrderId);
+      await updateDoc(orderDocRef, {
+        tableNumber: tableNumStr,
+        orderType: 'dine_in_table',
+        updatedAt: new Date().toISOString()
+      });
+
+      // 2. Atualizar o perfil do usuário para esta mesa
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, {
+        tableNumber: tableNumStr,
+        updatedAt: new Date().toISOString()
+      });
+
+      sessionStorage.setItem('donalu_mesa', tableNumStr);
+      alert(`Você vinculou seu pedido à Mesa ${tableNumStr} com sucesso!`);
+    } catch (err) {
+      console.error("Erro ao vincular mesa ao pedido ativo:", err);
+      alert("Não foi possível vincular a mesa. Tente novamente.");
+    }
+  };
+
+  useEffect(() => {
+    let html5QrCode: any = null;
+    if (showTableScannerModal) {
+      setScannerError(null);
+      const startScanner = async () => {
+        try {
+          html5QrCode = new Html5Qrcode("qr-reader-tracking");
+          await html5QrCode.start(
+            { facingMode: "environment" },
+            {
+              fps: 10,
+              qrbox: { width: 220, height: 220 }
+            },
+            async (decodedText: string) => {
+              try {
+                const url = new URL(decodedText);
+                const mesaParam = url.searchParams.get('mesa');
+                if (mesaParam) {
+                  await handleLinkOrderTable(mesaParam);
+                  await html5QrCode.stop();
+                  setShowTableScannerModal(false);
+                } else {
+                  const match = decodedText.match(/\d+/);
+                  if (match) {
+                    await handleLinkOrderTable(match[0]);
+                    await html5QrCode.stop();
+                    setShowTableScannerModal(false);
+                  } else {
+                    setScannerError("QR Code lido, mas não contém uma mesa válida.");
+                  }
+                }
+              } catch (e) {
+                const match = decodedText.trim();
+                if (/^\d+$/.test(match)) {
+                  await handleLinkOrderTable(match);
+                  await html5QrCode.stop();
+                  setShowTableScannerModal(false);
+                } else {
+                  setScannerError("QR Code inválido. Deve ser o link da mesa ou o número.");
+                }
+              }
+            },
+            () => {}
+          );
+        } catch (err: any) {
+          console.error("Erro ao iniciar câmera para QR Code:", err);
+          setScannerError("Não foi possível acessar a câmera do celular.");
+        }
+      };
+      
+      startScanner();
+    }
+    
+    return () => {
+      if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().catch((err: any) => console.error("Erro ao parar scanner:", err));
+      }
+    };
+  }, [showTableScannerModal]);
+
   const startSimulation = async (order: OrderDocument) => {
     if (simulatingOrderId) return;
     setSimulatingOrderId(order.id!);
@@ -712,7 +823,7 @@ export const OrderTracking = () => {
       let activeIndex = 0;
       if (order.status === 'preparing') activeIndex = 1;
       else if (order.status === 'ready') activeIndex = 2;
-      else if (order.status === 'completed') activeIndex = 3;
+      else if (order.status === 'delivering' || order.status === 'completed') activeIndex = 3;
 
       const progressWidth = `${(activeIndex / (steps.length - 1)) * 100}%`;
 
@@ -729,7 +840,9 @@ export const OrderTracking = () => {
         if (orderType === 'delivery') return 'Pronto na expedição';
         if (orderType === 'dine_in' || orderType === 'dine_in_table') return 'Pronto! Servido na mesa.';
         return 'Aguardando retirada no balcão!';
-      case 'delivering': return 'Saiu para entrega';
+      case 'delivering': 
+        if (orderType === 'dine_in_table') return 'Entregue na mesa!';
+        return 'Saiu para entrega';
       case 'completed': return 'Finalizado com sucesso';
       default: return 'Desconhecido';
     }
@@ -865,6 +978,36 @@ export const OrderTracking = () => {
                         <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-secondary)' }}>
                           O seu pedido será servido nas mesas da Dona Lu Pastelaria {order.tableNumber ? `(Mesa ${order.tableNumber})` : ''} (Rua Jícara, 239 - Campo Grande). Pode vir vindo!
                         </p>
+                        {order.orderType === 'dine_in' && !order.tableNumber && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setScanningOrderId(order.id!);
+                              setShowTableScannerModal(true);
+                            }}
+                            style={{
+                              marginTop: '0.75rem',
+                              background: 'rgba(245, 158, 11, 0.1)',
+                              border: '1px solid rgba(245, 158, 11, 0.3)',
+                              borderRadius: '8px',
+                              padding: '0.5rem 1rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '0.5rem',
+                              color: 'var(--primary-gold)',
+                              fontSize: '0.82rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              width: '100%',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            <Camera size={14} style={{ flexShrink: 0 }} />
+                            <QrCode size={14} style={{ flexShrink: 0 }} />
+                            <span>Cheguei no Salão: Vincular Mesa via Câmera</span>
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <div>
@@ -964,6 +1107,138 @@ export const OrderTracking = () => {
         </div>
 
       </div>
+
+      {showTableScannerModal && (
+        <div
+          className="lightbox-overlay animate-fade-in"
+          style={{
+            zIndex: 4000,
+            alignItems: 'center',
+            justifyContent: 'center',
+            display: 'flex',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(5, 5, 8, 0.85)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)'
+          }}
+          onClick={() => setShowTableScannerModal(false)}
+        >
+          <div
+            style={{
+              background: 'linear-gradient(135deg, #16121e 0%, #0d0a11 100%)',
+              border: '1px solid rgba(245, 158, 11, 0.2)',
+              borderRadius: '24px',
+              padding: '1.5rem',
+              width: '90%',
+              maxWidth: '400px',
+              maxHeight: 'min(90vh, 90dvh)',
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1.25rem',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.8)',
+              position: 'relative',
+              color: '#fff'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Fechar */}
+            <button
+              type="button"
+              onClick={() => setShowTableScannerModal(false)}
+              style={{
+                position: 'absolute',
+                top: '1.25rem',
+                right: '1.25rem',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer'
+              }}
+            >
+              <X size={16} />
+            </button>
+
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--primary-gold)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                Cheguei no Salão
+              </span>
+              <h3 style={{ margin: '0.2rem 0 0.4rem', fontSize: '1.3rem', color: '#fff', fontWeight: 800 }}>
+                Escaneie o QR Code da Mesa
+              </h3>
+              <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.82rem', lineHeight: '1.4' }}>
+                Para vincular seu pedido e sermos capazes de te servir na mesa, aponte a câmera para o QR Code da mesa.
+              </p>
+            </div>
+
+            {/* Container do Scanner da Câmera */}
+            <div 
+              style={{ 
+                width: '100%', 
+                borderRadius: '16px', 
+                overflow: 'hidden', 
+                background: '#000', 
+                border: '1px solid rgba(255,255,255,0.08)',
+                position: 'relative',
+                aspectRatio: '1'
+              }}
+            >
+              <div id="qr-reader-tracking" style={{ width: '100%', height: '100%' }}></div>
+              {scannerError && (
+                <div style={{ 
+                  position: 'absolute', 
+                  top: 0, 
+                  left: 0, 
+                  width: '100%', 
+                  height: '100%', 
+                  background: 'rgba(0,0,0,0.85)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  padding: '1.5rem', 
+                  textAlign: 'center',
+                  color: '#f87171',
+                  fontSize: '0.85rem',
+                  lineHeight: '1.4'
+                }}>
+                  <div>
+                    <span style={{ fontSize: '2rem', display: 'block', marginBottom: '0.5rem' }}>📷</span>
+                    {scannerError}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowTableScannerModal(false)}
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '10px',
+                padding: '0.65rem',
+                color: 'var(--text-secondary)',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                textAlign: 'center'
+              }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

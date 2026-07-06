@@ -177,6 +177,31 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
     }
   };
 
+  const handleMarkAsDelivered = async (order: OrderDocument) => {
+    if (!order.id) return;
+    try {
+      let nextStatus = 'completed';
+
+      // Se for pedido de mesa e ainda não foi pago online (Pix/Cartão):
+      if (order.orderType === 'dine_in_table' && 
+          order.paymentMethod !== 'pix' && 
+          order.paymentMethod !== 'credito') {
+        nextStatus = 'delivering'; // Fica como Entregue na Mesa (ativo para fechamento)
+      }
+
+      const orderDocRef = doc(db, 'orders', order.id);
+      await updateDoc(orderDocRef, {
+        status: nextStatus,
+        deliveredAt: new Date().toISOString()
+      });
+
+      alert('Pedido marcado como entregue!');
+    } catch (err) {
+      console.error("Erro ao marcar pedido como entregue:", err);
+      alert('Erro ao atualizar status do pedido.');
+    }
+  };
+
   const handleCancelOrder = async () => {
     if (!cancelOrderId) return;
     const reason = cancelReasonOption === 'Outro motivo...' ? customCancelReason.trim() : cancelReasonOption;
@@ -394,13 +419,48 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                           {order.address.street}, {order.address.number} ({order.address.neighborhood})
                         </div>
                       )}
-                      {isAuthorizedCancel && (
-                        <div className="order-actions" style={{ marginTop: '0.75rem' }}>
-                          <button type="button" onClick={() => { if (order.id) { setCancelOrderId(order.id); setCancelOrderSeq(order.dailySeq || getOrderSequenceNumber(order.id, order.createdAt)); } }} className="btn-small btn-danger" style={{ width: '100%', padding: '0.6rem', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>
-                            Cancelar Pedido
+                      <div className="order-actions" style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          type="button"
+                          onClick={() => order.id && handleMarkAsDelivered(order)}
+                          className="btn-small btn-success"
+                          style={{
+                            flex: 1.5,
+                            padding: '0.6rem',
+                            background: '#10b981',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.3rem'
+                          }}
+                        >
+                          <Check size={14} style={{ flexShrink: 0 }} /> Entregue
+                        </button>
+                        {isAuthorizedCancel && (
+                          <button
+                            type="button"
+                            onClick={() => { if (order.id) { setCancelOrderId(order.id); setCancelOrderSeq(order.dailySeq || getOrderSequenceNumber(order.id, order.createdAt)); } }}
+                            className="btn-small btn-danger"
+                            style={{
+                              flex: 1,
+                              padding: '0.6rem',
+                              background: '#dc2626',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              fontWeight: 600
+                            }}
+                          >
+                            Cancelar
                           </button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   ))
                 )}
