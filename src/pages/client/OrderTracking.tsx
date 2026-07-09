@@ -3,6 +3,7 @@ import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/f
 import { db } from '../../config/firebase';
 import { useAuth } from '../../hooks/useAuth';
 import type { OrderDocument } from '../../types/order';
+import { GooglePayLogo } from '../../components/GooglePayLogo';
 import { Clock, ClipboardList, ChefHat, ShoppingBag, Navigation, CheckCircle, Camera, QrCode, X } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import L from 'leaflet';
@@ -790,10 +791,22 @@ export const OrderTracking = () => {
 
   const getPaymentLabel = (method: string | null | undefined) => {
     if (!method) return 'Pendente ⏳';
+    if (method === 'google_pay') {
+      return (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+          Google Pay <GooglePayLogo height="13px" />
+        </span>
+      );
+    }
+    if (method === 'pix') {
+      return (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+          Pix <QrCode size={13} style={{ color: 'var(--primary-gold)' }} />
+        </span>
+      );
+    }
     const labels: Record<string, string> = {
-      pix: 'Pix 🟡',
       credito: 'Cartão de Crédito 💳',
-      google_pay: 'Google Pay 📱',
       debito: 'Cartão de Débito 💴',
       dinheiro: 'Dinheiro 💵',
       pagar_final: 'Pagar no Final (na Mesa) 🍽️',

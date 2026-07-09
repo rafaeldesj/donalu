@@ -3,6 +3,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { ShoppingCart, MapPin, Plus, Minus, Trash2, Edit2, Check, X, Upload, Camera, QrCode } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { DeliveryMap } from '../../components/DeliveryMap';
+import { GooglePayLogo } from '../../components/GooglePayLogo';
 import type { MapAddress } from '../../components/DeliveryMap';
 import { collection, addDoc, query, where, getDocs, doc, updateDoc, getDoc, onSnapshot, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -222,7 +223,11 @@ export const ClientDashboard = ({
   const [error, setError] = useState<string | null>(null);
   const [deliveryAddress, setDeliveryAddress] = useState<MapAddress | null>(null);
   const [routeDistance, setRouteDistance] = useState<number | null>(null);
-  const [orderType, setOrderType] = useState<'pickup' | 'delivery' | 'dine_in' | 'dine_in_table'>('pickup');
+  const [orderType, setOrderType] = useState<'pickup' | 'delivery' | 'dine_in' | 'dine_in_table'>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hasTable = params.has('mesa') || params.has('table');
+    return hasTable ? 'dine_in_table' : 'delivery';
+  });
   const [tableNumber, setTableNumber] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credito' | 'debito' | 'dinheiro' | 'pagar_final' | 'google_pay'>('pix');
   const [changeFor, setChangeFor] = useState('');
@@ -862,7 +867,7 @@ export const ClientDashboard = ({
         setTableNumber(null);
         sessionStorage.removeItem('donalu_mesa');
         if (orderType === 'dine_in_table') {
-          setOrderType('pickup');
+          setOrderType('delivery');
         }
       }
     }
@@ -1251,7 +1256,7 @@ export const ClientDashboard = ({
   const paymentLabels: Record<string, string> = {
     pix: 'Pix',
     credito: 'Cartão de Crédito',
-    google_pay: 'Google Pay 📱',
+    google_pay: 'Google Pay',
     debito: 'Cartão de Débito',
     dinheiro: 'Dinheiro',
     pagar_final: 'Pagar no Final (na Mesa) 🍽️',
@@ -2473,22 +2478,37 @@ export const ClientDashboard = ({
                     }}
                     style={{
                       padding: '0.6rem 0.5rem',
-                      borderRadius: '10px',
+                      borderRadius: '30px',
                       border: paymentMethod === val
                         ? '2px solid var(--primary-gold)'
-                        : '1px solid rgba(255,255,255,0.08)',
+                        : '1px solid rgba(255,255,255,0.15)',
                       background: paymentMethod === val
-                        ? 'rgba(245,158,11,0.12)'
-                        : 'rgba(255,255,255,0.02)',
-                      color: paymentMethod === val ? 'var(--primary-gold)' : 'var(--text-secondary)',
-                      fontWeight: paymentMethod === val ? 700 : 400,
+                        ? 'rgba(245,158,11,0.16)'
+                        : '#000000',
+                      color: paymentMethod === val ? 'var(--primary-gold)' : '#ffffff',
+                      fontWeight: 700,
                       fontSize: '0.85rem',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
                       textAlign: 'center',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.35rem',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                     }}
                   >
-                    {label}
+                    {val === 'google_pay' ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: '#ffffff' }}>
+                        Pagar com <GooglePayLogo height="14px" color="#ffffff" />
+                      </span>
+                    ) : val === 'pix' ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                        Pix <QrCode size={14} style={{ color: paymentMethod === val ? 'var(--primary-gold)' : '#ffffff' }} />
+                      </span>
+                    ) : (
+                      label
+                    )}
                   </button>
                 ))}
               </div>
@@ -2821,7 +2841,38 @@ export const ClientDashboard = ({
             {/* Forma de Pagamento */}
             <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '10px', padding: '0.85rem 1rem' }}>
               <h4 style={{ margin: '0 0 0.4rem 0', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>💳 Pagamento</h4>
-              <p style={{ margin: 0, fontSize: '0.9rem', color: '#fff', fontWeight: 600 }}>{paymentLabels[paymentMethod]}</p>
+              {paymentMethod === 'google_pay' ? (
+                <div style={{ marginTop: '0.25rem' }}>
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      background: '#000000',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      color: '#ffffff',
+                      borderRadius: '30px',
+                      padding: '0.5rem 1.2rem',
+                      fontSize: '0.9rem',
+                      fontWeight: 700,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.35rem',
+                      userSelect: 'none',
+                    }}
+                  >
+                    Pagar com <GooglePayLogo height="16px" color="#ffffff" />
+                  </div>
+                </div>
+              ) : (
+                <p style={{ margin: 0, fontSize: '0.9rem', color: '#fff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  {paymentMethod === 'pix' ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                      Pix <QrCode size={15} style={{ color: 'var(--primary-gold)' }} />
+                    </span>
+                  ) : (
+                    paymentLabels[paymentMethod]
+                  )}
+                </p>
+              )}
               {paymentMethod === 'dinheiro' && (
                 <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                   {changeFor ? (
@@ -3432,16 +3483,31 @@ export const ClientDashboard = ({
                               }}
                               style={{
                                 padding: '0.5rem',
-                                borderRadius: '8px',
-                                border: billPaymentMethod === val ? '2px solid var(--primary-gold)' : '1px solid rgba(255,255,255,0.06)',
-                                background: billPaymentMethod === val ? 'rgba(245,158,11,0.1)' : 'rgba(255,255,255,0.02)',
-                                color: billPaymentMethod === val ? 'var(--primary-gold)' : 'var(--text-secondary)',
-                                fontWeight: billPaymentMethod === val ? 700 : 400,
+                                borderRadius: '30px',
+                                border: billPaymentMethod === val ? '2px solid var(--primary-gold)' : '1px solid rgba(255,255,255,0.15)',
+                                background: billPaymentMethod === val ? 'rgba(245,158,11,0.16)' : '#000000',
+                                color: billPaymentMethod === val ? 'var(--primary-gold)' : '#ffffff',
+                                fontWeight: 700,
                                 fontSize: '0.8rem',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.35rem',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
                               }}
                             >
-                              {label}
+                              {val === 'google_pay' ? (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: '#ffffff' }}>
+                                  Pagar com <GooglePayLogo height="12px" color="#ffffff" />
+                                </span>
+                              ) : val === 'pix' ? (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                                  Pix <QrCode size={12} style={{ color: billPaymentMethod === val ? 'var(--primary-gold)' : '#ffffff' }} />
+                                </span>
+                              ) : (
+                                label
+                              )}
                             </button>
                           ))}
                         </div>
