@@ -45,6 +45,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               emailVerified: true
             } as any);
             setLoading(false);
+
+            // Estabelece sessão silenciosa no Firebase Auth no F5 se houver senha salva no Firestore
+            if (uData.email && uData.password) {
+              signInWithEmailAndPassword(auth, uData.email, uData.password).catch(authErr => {
+                console.warn("Falha ao reestabelecer Auth silencioso no F5:", authErr);
+              });
+            }
             return true;
           }
         } catch (sessionErr) {
@@ -229,6 +236,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (userDocData.password || userDocData.tempPassword) {
         const dbPass = userDocData.password || userDocData.tempPassword;
         if (dbPass === password) {
+          // Autentica de verdade no Firebase Auth para liberar privilégios administrativos
+          try {
+            await signInWithEmailAndPassword(auth, userDocData.email, password);
+          } catch (authErr) {
+            console.warn("Sessão Auth paralela não pôde ser estabelecida, operando com sessão Firestore local:", authErr);
+          }
+
           const mockUser = {
             uid: userDocData.uid || userDocId,
             email: userDocData.email,
