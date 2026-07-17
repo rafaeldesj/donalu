@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { onAuthStateChanged, signInWithPopup, signInWithRedirect, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import type { User } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc, limit, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc, limit, onSnapshot, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import type { UserDocument } from '../types/user';
 
@@ -43,7 +43,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Escuta o perfil do usuário em tempo real
         unsubscribeUserDoc = onSnapshot(userDocRef, async (docSnap) => {
           if (docSnap.exists()) {
-            setUserData(docSnap.data() as UserDocument);
+            const uData = docSnap.data() as UserDocument;
+            setUserData(uData);
+
+            // Sincroniza e-mail no Firebase Auth caso o gerente o tenha alterado no Firestore
+            if (currentUser.email && uData.email && currentUser.email.toLowerCase() !== uData.email.toLowerCase()) {
+              try {
+                const { updateEmail } = await import('firebase/auth');
+                await updateEmail(currentUser, uData.email.toLowerCase());
+                await updateDoc(userDocRef, { authEmail: uData.email.toLowerCase() });
+                console.log("E-mail de autenticação sincronizado com sucesso no Firebase Auth!");
+              } catch (authErr) {
+                console.warn("Não foi possível atualizar e-mail no Auth silenciosamente (exige reautenticação recente):", authErr);
+              }
+            }
           } else {
             // Se o documento não existir no banco, busca pré-cadastro
             try {
@@ -133,6 +146,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const newUserData: UserDocument = {
       uid: currentUser.uid,
       email: currentUser.email || '',
+      authEmail: currentUser.email || '',
       name: name,
       role: 'client',
       phoneNumber: phoneNumber || '',

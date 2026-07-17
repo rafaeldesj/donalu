@@ -232,27 +232,11 @@ export const UserManagement = () => {
       if (editUser) {
         const isEmailChanged = email.trim().toLowerCase() !== editUser.email;
 
-        if (isEmailChanged) {
-          // Se o e-mail mudou, deletamos o vínculo com o UID antigo e criamos um novo pré-cadastro
-          // de forma que o cliente precise se cadastrar/logar com o novo e-mail para ter acesso.
-          await deleteDoc(doc(db, 'users', editUser.uid));
-
-          const targetTempPassword = editUser.tempPassword || 'donalu123';
-          await createSecondaryAuthUser(email.trim().toLowerCase(), targetTempPassword);
-
-          const docRef = await addDoc(collection(db, 'users'), {
-            ...payload,
-            tempPassword: targetTempPassword,
-            uid: '' // Reseta o UID para aguardar o primeiro login com o novo e-mail
-          });
-          await updateDoc(doc(db, 'users', docRef.id), { uid: docRef.id });
-
-          setSuccess('E-mail alterado! A conta de acesso temporária foi ativada com o novo e-mail e senha provisória.');
-        } else {
-          // Se o e-mail continuou o mesmo, apenas atualiza em tempo real
-          await updateDoc(doc(db, 'users', editUser.uid), payload as any);
-          setSuccess('Usuário atualizado com sucesso!');
-        }
+        // Se o e-mail mudou, a gente apenas atualiza no Firestore.
+        // A lógica de login e onSnapshot do app do cliente se encarrega de sincronizar o Auth
+        // na primeira oportunidade e usar o authEmail anterior por debaixo dos panos para logar.
+        await updateDoc(doc(db, 'users', editUser.uid), payload as any);
+        setSuccess('Usuário atualizado com sucesso!');
         
         if (user) {
           await logAuditAction({
@@ -273,6 +257,7 @@ export const UserManagement = () => {
         // Pré-cadastro do usuário (gerará um ID temporário aleatório no Firestore)
         const docRef = await addDoc(collection(db, 'users'), {
           ...payload,
+          authEmail: email.trim().toLowerCase(),
           tempPassword: initialPassword.trim(),
           uid: '' // UID será preenchido quando o usuário fizer login
         });

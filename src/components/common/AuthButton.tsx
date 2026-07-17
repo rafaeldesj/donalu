@@ -114,7 +114,24 @@ export const AuthButton = () => {
         await registerWithEmail(email, password, name, phone);
       } else {
         try {
-          await loginWithEmail(email, password);
+          const trimmedEmail = email.trim().toLowerCase();
+          let authEmailToLogin = trimmedEmail;
+
+          // Busca no Firestore para ver se existe esse e-mail como cadastro e pega o authEmail correspondente
+          try {
+            const q = query(collection(db, 'users'), where('email', '==', trimmedEmail), limit(1));
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) {
+              const uDoc = querySnapshot.docs[0].data();
+              if (uDoc.authEmail) {
+                authEmailToLogin = uDoc.authEmail;
+              }
+            }
+          } catch (dbErr) {
+            console.error("Erro ao buscar authEmail no Firestore:", dbErr);
+          }
+
+          await loginWithEmail(authEmailToLogin, password);
         } catch (loginErr: any) {
           try {
             // Se falhar no login normal, verifica se existe uma senha provisória definida no Firestore
@@ -134,7 +151,7 @@ export const AuthButton = () => {
                   await registerWithEmail(trimmedEmail, password, uData.name);
                   
                   // Remove a senha provisória do Firestore após registro bem-sucedido
-                  await updateDoc(doc(db, 'users', userDoc.id), { tempPassword: null });
+                  await updateDoc(doc(db, 'users', userDoc.id), { tempPassword: null, authEmail: trimmedEmail });
                   return;
                 } else {
                   // É um usuário já ativo (UID de 28 caracteres). Não podemos alterar no Firebase Auth client-side
