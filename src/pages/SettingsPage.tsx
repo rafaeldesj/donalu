@@ -26,7 +26,7 @@ export const SettingsPage = () => {
   const { user, userData, updatePhoneNumber } = useAuth();
   
   // Tabs state: 'profile' (all) | 'store' (admin) | 'loyalty' (admin) | 'advanced' (dev) | 'audit_logs' (admin) | 'commissions' | 'security'
-  const [activeTab, setActiveTab] = useState<'profile' | 'store' | 'loyalty' | 'advanced' | 'audit_logs' | 'commissions' | 'security' | 'mesas'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'store' | 'loyalty' | 'advanced' | 'audit_logs' | 'commissions' | 'security' | 'mesas' | 'point_guide'>('profile');
   
   const role = userData?.role || 'client';
   const isAdmin = ['developer', 'owner', 'manager'].includes(role);
@@ -719,6 +719,31 @@ export const SettingsPage = () => {
               <span>Fechamento de Comissão</span>
             </button>
           )}
+
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('point_guide')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                padding: '0.85rem 1rem',
+                borderRadius: '12px',
+                border: activeTab === 'point_guide' ? '1px solid #3b82f6' : '1px solid rgba(255,255,255,0.05)',
+                background: activeTab === 'point_guide' ? 'rgba(59,130,246,0.12)' : 'rgba(255,255,255,0.02)',
+                color: activeTab === 'point_guide' ? '#60a5fa' : 'var(--text-secondary)',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                transition: 'all 0.2s',
+                textAlign: 'left'
+              }}
+            >
+              <CreditCard size={16} style={{ color: '#3b82f6' }} />
+              <span>📟 Guia Maquininha</span>
+            </button>
+          )}
         </aside>
 
         {/* Formulários de Configurações */}
@@ -727,6 +752,136 @@ export const SettingsPage = () => {
           {/* Aba Mesas & QR Codes */}
           {activeTab === 'mesas' && isAdmin && (
             <TableQrCodeGenerator />
+          )}
+
+          {/* Aba Guia Maquininha Point */}
+          {activeTab === 'point_guide' && isAdmin && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+              <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '1rem' }}>
+                <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '1.15rem' }}>
+                  📟 Guia de Configuração — Maquininha Mercado Pago Point
+                </h3>
+                <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                  Siga este guia passo a passo para ativar o pagamento por débito automático via maquininha.
+                  O cliente seleciona "Débito" no app e a maquininha ativa sozinha esperando o cartão.
+                </p>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+                  <span style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: '#60a5fa', borderRadius: '20px', padding: '0.25rem 0.75rem', fontSize: '0.78rem', fontWeight: 600 }}>✅ Point Smart 2</span>
+                  <span style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: '#60a5fa', borderRadius: '20px', padding: '0.25rem 0.75rem', fontSize: '0.78rem', fontWeight: 600 }}>✅ Point Pro 3</span>
+                  <span style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', color: '#34d399', borderRadius: '20px', padding: '0.25rem 0.75rem', fontSize: '0.78rem', fontWeight: 600 }}>⏱ ~20 min para configurar</span>
+                </div>
+              </div>
+
+              {/* PASSO 1 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '14px', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)', color: '#fff', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', flexShrink: 0 }}>1</span>
+                  <h4 style={{ margin: 0, fontSize: '1rem' }}>Acesse o painel de desenvolvedor do Mercado Pago</h4>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                  Abra o navegador e acesse: <a href="https://mercadopago.com.br/developers/panel/app" target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', textDecoration: 'underline' }}>mercadopago.com.br/developers/panel/app</a><br />
+                  Faça login com a conta Mercado Pago da pastelaria.<br />
+                  Clique em <strong style={{ color: '#fff' }}>&quot;Criar aplicação&quot;</strong> como mostrado na imagem abaixo.
+                </p>
+                <img src="/guide_step1.png" alt="Painel de Desenvolvedor Mercado Pago" style={{ width: '100%', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', marginTop: '0.5rem' }} />
+                <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '8px', padding: '0.6rem 1rem', fontSize: '0.82rem', color: '#fcd34d' }}>
+                  💡 <strong>Dica:</strong> Se já tiver uma aplicação criada antes, pode usar ela. Basta clicar nela para acessar as credenciais.
+                </div>
+              </div>
+
+              {/* PASSO 2 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '14px', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)', color: '#fff', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', flexShrink: 0 }}>2</span>
+                  <h4 style={{ margin: 0, fontSize: '1rem' }}>Copie o Access Token de produção</h4>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                  Dentro da aplicação, vá na aba <strong style={{ color: '#fff' }}>Credenciais</strong>.<br />
+                  Em <strong style={{ color: '#fff' }}>&quot;Credenciais de produção&quot;</strong>, clique no ícone de copiar ao lado do campo <strong style={{ color: '#fff' }}>Access Token</strong>.<br />
+                  Ele começa com <code style={{ background: 'rgba(255,255,255,0.08)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.8rem' }}>APP_USR-</code> e é bem longo.
+                </p>
+                <img src="/guide_step2.png" alt="Copiar Access Token Mercado Pago" style={{ width: '100%', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', marginTop: '0.5rem' }} />
+                <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.6rem 1rem', fontSize: '0.82rem', color: '#fca5a5' }}>
+                  ⚠️ <strong>Atenção:</strong> Use apenas o token de <strong>produção</strong> (não o de teste). O token de teste começa com <code style={{ background: 'rgba(255,255,255,0.08)', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>TEST-</code>.
+                </div>
+              </div>
+
+              {/* PASSO 3 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '14px', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)', color: '#fff', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', flexShrink: 0 }}>3</span>
+                  <h4 style={{ margin: 0, fontSize: '1rem' }}>Cadastre a loja e os caixas (maquininhas)</h4>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                  Acesse: <a href="https://mercadopago.com.br/pointsmartintegration" target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', textDecoration: 'underline' }}>mercadopago.com.br/pointsmartintegration</a><br />
+                  No menu lateral, clique em <strong style={{ color: '#fff' }}>Seu negócio → Lojas e caixas</strong>.<br />
+                  <strong style={{ color: '#fff' }}>1.</strong> Crie uma loja chamada <em>&quot;Dona Lu Pastelaria&quot;</em>.<br />
+                  <strong style={{ color: '#fff' }}>2.</strong> Dentro da loja, clique em <strong style={{ color: '#fff' }}>&quot;Adicionar caixa&quot;</strong> e cadastre uma para a <em>Point Smart 2</em> e outra para a <em>Point Pro 3</em>.
+                </p>
+                <img src="/guide_step3.png" alt="Lojas e Caixas Mercado Pago" style={{ width: '100%', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', marginTop: '0.5rem' }} />
+                <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '8px', padding: '0.6rem 1rem', fontSize: '0.82rem', color: '#fcd34d' }}>
+                  💡 <strong>Dica:</strong> Dê nomes claros para cada caixa, como &quot;Caixa 1 - Smart 2&quot; e &quot;Caixa 2 - Pro 3&quot;, para facilitar identificar depois.
+                </div>
+              </div>
+
+              {/* PASSO 4 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '14px', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)', color: '#fff', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', flexShrink: 0 }}>4</span>
+                  <h4 style={{ margin: 0, fontSize: '1rem' }}>Ative o Modo PDV nas maquininhas</h4>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                  Faça isso em <strong style={{ color: '#fff' }}>cada uma</strong> das maquininhas (Smart 2 e Pro 3):<br />
+                  <strong style={{ color: '#fff' }}>1.</strong> Na tela inicial da maquininha, toque nos <strong style={{ color: '#fff' }}>3 pontinhos</strong> ou vá em <strong style={{ color: '#fff' }}>Configurações</strong>.<br />
+                  <strong style={{ color: '#fff' }}>2.</strong> Procure a opção <strong style={{ color: '#fff' }}>&quot;Modo PDV&quot;</strong> ou <strong style={{ color: '#fff' }}>&quot;Integração com sistema&quot;</strong>.<br />
+                  <strong style={{ color: '#fff' }}>3.</strong> Ative o toggle. A tela vai mostrar uma mensagem de &quot;Aguardando integração&quot; — isso é correto.
+                </p>
+                <img src="/guide_step4.png" alt="Ativar Modo PDV na maquininha" style={{ width: '100%', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', marginTop: '0.5rem' }} />
+                <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.6rem 1rem', fontSize: '0.82rem', color: '#fca5a5' }}>
+                  ⚠️ <strong>Importante:</strong> Com o Modo PDV ativado, a maquininha <strong>não funciona mais de forma independente</strong> para passar cartão manualmente — ela passa a receber ordens do sistema. Se precisar usar manualmente, desative o modo PDV.
+                </div>
+              </div>
+
+              {/* PASSO 5 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '14px', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)', color: '#fff', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', flexShrink: 0 }}>5</span>
+                  <h4 style={{ margin: 0, fontSize: '1rem' }}>Copie o ID do caixa (external_id / pos_id)</h4>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                  De volta no painel do Mercado Pago, em <strong style={{ color: '#fff' }}>Lojas e caixas</strong>, clique no caixa que você criou.<br />
+                  Copie o valor do campo <strong style={{ color: '#fff' }}>external_id</strong> ou <strong style={{ color: '#fff' }}>ID do caixa</strong>.<br />
+                  Exemplo: <code style={{ background: 'rgba(255,255,255,0.08)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.8rem' }}>CAIXA_001</code> ou um número como <code style={{ background: 'rgba(255,255,255,0.08)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.8rem' }}>123456789</code>.
+                </p>
+                <img src="/guide_step5.png" alt="Copiar external_id do caixa" style={{ width: '100%', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', marginTop: '0.5rem' }} />
+              </div>
+
+              {/* PASSO 6 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(16,185,129,0.06)', borderRadius: '14px', padding: '1.25rem', border: '1px solid rgba(16,185,129,0.2)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', flexShrink: 0 }}>6</span>
+                  <h4 style={{ margin: 0, fontSize: '1rem', color: '#34d399' }}>Informe os dados ao desenvolvedor</h4>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                  Passe os seguintes dados para o desenvolvedor cadastrar no sistema:
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {[
+                    { label: '🔑 Access Token (produção)', hint: 'Começa com APP_USR-...' },
+                    { label: '📟 ID do Caixa — Point Smart 2', hint: 'external_id do caixa 1' },
+                    { label: '📟 ID do Caixa — Point Pro 3', hint: 'external_id do caixa 2' },
+                  ].map(item => (
+                    <div key={item.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '8px', padding: '0.6rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>{item.label}</span>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{item.hint}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: '8px', padding: '0.6rem 1rem', fontSize: '0.82rem', color: '#34d399' }}>
+                  ✅ Com essas informações, o desenvolvedor faz a integração e o débito passa a funcionar automaticamente quando o cliente selecionar essa opção no app!
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Aba 1: Meu Perfil */}
