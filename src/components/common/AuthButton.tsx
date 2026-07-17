@@ -119,7 +119,12 @@ export const AuthButton = () => {
       if (err.message === 'TEMP_PASSWORD_ACTIVE_USER') {
         setError('Esta senha provisória foi cadastrada no banco, mas sua conta anterior no Firebase ainda está ativa. Por favor, utilize o "Esqueceu a senha?" acima para redefinir ou peça ao administrador para recriar sua conta.');
       } else {
-        setError(mapAuthErrorToPortuguese(err.code || ''));
+        const friendlyMsg = mapAuthErrorToPortuguese(err.code || '');
+        if (friendlyMsg === 'Ocorreu um erro inesperado. Tente novamente.') {
+          setError(`Erro: ${err.message || err.toString() || 'Erro inesperado'}`);
+        } else {
+          setError(friendlyMsg);
+        }
       }
     } finally {
       setActionLoading(false);
