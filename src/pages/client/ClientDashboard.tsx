@@ -2835,31 +2835,24 @@ export const ClientDashboard = ({
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                 {(() => {
                   const isPointConfigured = !!(storeConfig?.pointSmart2Id || storeConfig?.pointPro3Id || storeConfig?.pointAir2Id || storeConfig?.pointMiniNfc2Id);
-                  const hasSavedCard = !!userData?.pagbank_card_token;
 
                   if (orderType === 'dine_in_table') {
-                    const base = [
+                    return [
                       ['pix', 'Pix 🟡'],
+                      ['credito', 'Crédito Online 💳'],
                       ['google_pay', 'Google Pay 📱'],
                       ['pagar_final', 'Pagar no Final 🍽️']
-                    ];
-                    if (hasSavedCard) {
-                      base.splice(1, 0, ['credito', 'Cartão Salvo 💳']);
-                    }
-                    return base as any;
+                    ] as any;
                   }
 
                   if (isPointConfigured) {
-                    const options = [
+                    return [
                       ['pix', 'Pix 🟡'],
+                      ['credito', 'Crédito Online 💳'],
                       ['google_pay', 'Google Pay 📱'],
                       ['debito_point', 'Débito Maquininha 💴'],
                       ['credito_point', 'Crédito Maquininha 💳']
-                    ];
-                    if (hasSavedCard) {
-                      options.splice(2, 0, ['credito', 'Cartão Salvo 💳']);
-                    }
-                    return options as any;
+                    ] as any;
                   } else {
                     return [
                       ['pix', 'Pix 🟡'],
@@ -2957,18 +2950,6 @@ export const ClientDashboard = ({
 
               {paymentMethod === 'credito' && (
                 <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '1rem' }}>
-                  {(() => {
-                    const isPointConfigured = !!(storeConfig?.pointSmart2Id || storeConfig?.pointPro3Id || storeConfig?.pointAir2Id || storeConfig?.pointMiniNfc2Id);
-                    if (isPointConfigured && !userData?.pagbank_card_token) {
-                      return (
-                        <p style={{ margin: 0, fontSize: '0.82rem', color: '#fca5a5', textAlign: 'center' }}>
-                          Para pagar no crédito físico, por favor selecione a opção <strong>Crédito Maquininha</strong>. A opção online fica reservada para cartões salvos.
-                        </p>
-                      );
-                    }
-                    return null;
-                  })()}
-
                   {userData?.pagbank_card_token ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: useSavedCard ? '0' : '0.5rem' }}>
                       <input
@@ -2984,7 +2965,7 @@ export const ClientDashboard = ({
                     </div>
                   ) : null}
 
-                  {(!userData?.pagbank_card_token || !useSavedCard) && !(storeConfig?.pointSmart2Id || storeConfig?.pointPro3Id || storeConfig?.pointAir2Id || storeConfig?.pointMiniNfc2Id) && (
+                  {(!userData?.pagbank_card_token || !useSavedCard) && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                       <div className="input-group">
                         <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Número do Cartão</label>
@@ -4164,24 +4145,20 @@ export const ClientDashboard = ({
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
                           {(() => {
                             const isPointConfigured = !!(storeConfig?.pointSmart2Id || storeConfig?.pointPro3Id || storeConfig?.pointAir2Id || storeConfig?.pointMiniNfc2Id);
-                            const hasSavedCard = !!userData?.pagbank_card_token;
 
                             if (isPointConfigured) {
-                              const options = [
+                              return [
                                 ['pix', 'Pix 🟡'],
+                                ['credito', 'Crédito Online 💳'],
                                 ['google_pay', 'Google Pay 📱'],
                                 ['debito_point', 'Débito Maquininha 💴'],
                                 ['credito_point', 'Crédito Maquininha 💳'],
                                 ['dinheiro', 'Dinheiro 💵']
-                              ];
-                              if (hasSavedCard) {
-                                options.splice(2, 0, ['credito', 'Cartão Salvo 💳']);
-                              }
-                              return options as any;
+                              ] as any;
                             } else {
                               return [
                                 ['pix', 'Pix 🟡'],
-                                ['credito', 'Crédito 💳'],
+                                ['credito', 'Crédito Online 💳'],
                                 ['google_pay', 'Google Pay 📱'],
                                 ['debito', 'Débito 💴'],
                                 ['dinheiro', 'Dinheiro 💵']
