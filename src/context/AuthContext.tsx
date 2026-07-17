@@ -28,7 +28,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let unsubscribeUserDoc: (() => void) | null = null;
 
+    const loadSession = async () => {
+      const savedSession = localStorage.getItem('donalu_session');
+      if (savedSession) {
+        try {
+          const { uid } = JSON.parse(savedSession);
+          const userDocRef = doc(db, 'users', uid);
+          const docSnap = await getDoc(userDocRef);
+          if (docSnap.exists()) {
+            const uData = docSnap.data() as UserDocument;
+            setUserData(uData);
+            setUser({
+              uid: uData.uid || uid,
+              email: uData.email,
+              displayName: uData.name,
+              emailVerified: true
+            } as any);
+            setLoading(false);
+            return true;
+          }
+        } catch (sessionErr) {
+          console.error("Erro ao carregar sessão do localStorage:", sessionErr);
+        }
+      }
+      return false;
+    };
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+      const sessionLoaded = await loadSession();
+      if (sessionLoaded) return;
+
       setUser(currentUser);
       
       // Limpa listener do documento anterior caso exista
@@ -132,8 +161,87 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const loginWithEmail = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+  const loginWithEmail = async (emailOrPhone: string, password: string) => {
+    const trimmed = emailOrPhone.trim();
+    let userDocData: any = null;
+    let userDocId = '';
+
+    const usersRef = collection(db, 'users');
+
+    if (trimmed.includes('@')) {
+      const q = query(usersRef, where('email', '==', trimmed.toLowerCase()), limit(1));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        userDocData = snap.docs[0].data();
+        userDocId = snap.docs[0].id;
+      }
+    } else {
+      const clean = trimmed.replace(/\D/g, '');
+      const qClean = query(usersRef, where('phoneNumber', '==', clean), limit(1));
+      const snapClean = await getDocs(qClean);
+      if (!snapClean.empty) {
+        userDocData = snapClean.docs[0].data();
+        userDocId = snapClean.docs[0].id;
+      } else {
+        const formatPhoneFilter = (numbers: string) => {
+          if (numbers.length === 11) {
+            return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
+          } else if (numbers.length === 10) {
+            return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(6)}`;
+          }
+          return numbers;
+        };
+        const formatted = formatPhoneFilter(clean);
+        const qFormat = query(usersRef, where('phoneNumber', '==', formatted), limit(1));
+        const snapFormat = await getDocs(qFormat);
+        if (!snapFormat.empty) {
+          userDocData = snapFormat.docs[0].data();
+          userDocId = snapFormat.docs[0].id;
+        }
+      }
+    }
+
+    if (userDocData) {
+      if (userDocData.password || userDocData.tempPassword) {
+        const dbPass = userDocData.password || userDocData.tempPassword;
+        if (dbPass === password) {
+          const mockUser = {
+            uid: userDocData.uid || userDocId,
+            email: userDocData.email,
+            displayName: userDocData.name,
+            emailVerified: true
+          } as any;
+
+          setUser(mockUser);
+          setUserData(userDocData);
+          localStorage.setItem('donalu_session', JSON.stringify({ uid: userDocData.uid || userDocId }));
+          return;
+        } else {
+          throw { code: 'auth/wrong-password', message: 'Senha incorreta.' };
+        }
+      } else {
+        try {
+          const credential = await signInWithEmailAndPassword(auth, userDocData.email, password);
+          await updateDoc(doc(db, 'users', userDocId), { password });
+          const updatedData = { ...userDocData, password };
+          setUser(credential.user);
+          setUserData(updatedData);
+          localStorage.setItem('donalu_session', JSON.stringify({ uid: userDocId }));
+          return;
+        } catch (authErr) {
+          throw authErr;
+        }
+      }
+    }
+
+    if (trimmed.includes('@')) {
+      const credential = await signInWithEmailAndPassword(auth, trimmed.toLowerCase(), password);
+      setUser(credential.user);
+      localStorage.setItem('donalu_session', JSON.stringify({ uid: credential.user.uid }));
+      return;
+    }
+
+    throw { code: 'auth/user-not-found', message: 'Usuário não encontrado.' };
   };
 
   const registerWithEmail = async (email: string, password: string, name: string, phoneNumber?: string) => {
@@ -150,11 +258,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       name: name,
       role: 'client',
       phoneNumber: phoneNumber || '',
+      password: password,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     await setDoc(userDocRef, newUserData);
     setUserData(newUserData);
+    localStorage.setItem('donalu_session', JSON.stringify({ uid: currentUser.uid }));
   };
 
   const updatePhoneNumber = async (phone: string) => {
@@ -197,10 +307,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     await setDoc(userDocRef, finalUserData);
     setUserData(finalUserData);
+    localStorage.setItem('donalu_session', JSON.stringify({ uid: user.uid }));
   };
 
   const logout = async () => {
+    localStorage.removeItem('donalu_session');
     await signOut(auth);
+    setUser(null);
+    setUserData(null);
   };
 
   return (
