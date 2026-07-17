@@ -1495,11 +1495,118 @@ export const ClientDashboard = ({
     if (storeConfig?.pointMiniNfc2Id) devices.push({ id: storeConfig.pointMiniNfc2Id, label: 'Point Mini NFC 2' });
 
     if (devices.length === 0) {
-      const errMsg = 'Integração de maquininha ativa, porém nenhum ID de Caixa foi cadastrado. Por favor, configure os IDs nas configurações.';
       if (callback === 'close_bill') {
-        setBillError(errMsg);
+        setBillError(null);
+        setBillSubmitting(true);
+        try {
+          const unpaid = tableOrders.filter(o => 
+            o.paymentMethod === 'pagar_final' || 
+            o.paymentMethod === 'dinheiro' || 
+            o.paymentMethod === 'debito'
+          );
+
+          const batchPromises = unpaid.map(order => 
+            updateDoc(doc(db, 'orders', order.id), {
+              status: 'aguardando_caixa',
+              paymentMethod: type,
+              updatedAt: new Date().toISOString()
+            })
+          );
+          await Promise.all(batchPromises);
+
+          alert(`Solicitação de fechamento enviada ao Caixa! Por favor, aguarde o garçom trazer a maquininha para pagar seu saldo em ${type === 'debito' ? 'Débito' : 'Crédito'}.`);
+          setShowCloseBillModal(false);
+        } catch (err: any) {
+          console.error(err);
+          setBillError(err.message || 'Erro ao processar solicitação de pagamento.');
+        } finally {
+          setBillSubmitting(false);
+        }
       } else {
-        setError(errMsg);
+        setError(null);
+        setSubmitting(true);
+        try {
+          const now = new Date();
+          const businessStart = new Date(now);
+          if (now.getHours() < 6) {
+            businessStart.setDate(now.getDate() - 1);
+          }
+          businessStart.setHours(6, 0, 0, 0);
+
+          let dailySeq = 1;
+          try {
+            const qDaily = query(
+              collection(db, 'orders'),
+              where('createdAt', '>=', businessStart.toISOString())
+            );
+            const dailySnap = await getDocs(qDaily);
+            dailySeq = dailySnap.size + 1;
+          } catch (errSeq) {
+            dailySeq = Math.floor(Math.random() * 900) + 100;
+          }
+
+          const orderData: any = {
+            clientUid: user?.uid || '',
+            clientName: user?.displayName || user?.email || 'Cliente Anônimo',
+            clientPhone: userData?.phoneNumber || '',
+            items: cart.map(item => {
+              let customSuffix = '';
+              const details: string[] = [];
+              if (item.category === 'Pastéis Salgados') {
+                if (item.withCatupiry) details.push('Catupiry');
+                if (item.withBorda) details.push('Borda de Queijo');
+                if (item.ingredients && item.ingredients.length > 0) {
+                  details.push(`Adicionais: ${item.ingredients.join(', ')}`);
+                }
+              }
+              if (details.length > 0) {
+                customSuffix = ` (${details.join(' + ')})`;
+              }
+              return {
+                id: item.id,
+                name: `${item.name}${customSuffix}`,
+                price: item.price,
+                quantity: item.quantity
+              };
+            }),
+            total: finalTotal,
+            deliveryFee: orderType === 'delivery' ? deliveryFee : 0,
+            serviceFee: orderType === 'dine_in_table' ? serviceFee : 0,
+            status: 'aguardando_caixa',
+            createdAt: new Date().toISOString(),
+            orderType,
+            tableNumber: orderType === 'dine_in_table' ? tableNumber : null,
+            paymentMethod: type,
+            dailySeq,
+            address: orderType === 'delivery' ? {
+              street: deliveryAddress!.street,
+              number: deliveryAddress!.number || '',
+              neighborhood: deliveryAddress!.neighborhood || '',
+              city: deliveryAddress!.city || 'Rio de Janeiro',
+              zipCode: deliveryAddress!.zipCode || '',
+              complement: deliveryAddress!.complement || '',
+              lat: deliveryAddress!.lat,
+              lng: deliveryAddress!.lng,
+            } : null,
+          };
+
+          await addDoc(collection(db, 'orders'), orderData);
+          setCart([]);
+          setDeliveryAddress(null);
+          setRouteDistance(null);
+          setShowOrderSummary(false);
+          setPaymentMethod('pix');
+          setChangeFor('');
+          setOrderType('pickup');
+
+          alert(`Pedido enviado com sucesso! Por favor, aguarde o garçom/entregador trazer a maquininha para passar seu cartão em ${type === 'debito' ? 'Débito' : 'Crédito'}.`);
+          setOrderPlaced(true);
+        } catch (err: any) {
+          console.error(err);
+          setError(err.message || 'Erro ao enviar pedido.');
+        } finally {
+          setSubmitting(false);
+        }
       }
       return;
     }
@@ -2834,33 +2941,24 @@ export const ClientDashboard = ({
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                 {(() => {
-                  const isPointConfigured = !!(storeConfig?.pointSmart2Id || storeConfig?.pointPro3Id || storeConfig?.pointAir2Id || storeConfig?.pointMiniNfc2Id);
-
                   if (orderType === 'dine_in_table') {
                     return [
                       ['pix', 'Pix 🟡'],
                       ['credito', 'Crédito Online 💳'],
                       ['google_pay', 'Google Pay 📱'],
+                      ['debito_point', 'Débito Maquininha 💴'],
+                      ['credito_point', 'Crédito Maquininha 💳'],
                       ['pagar_final', 'Pagar no Final 🍽️']
                     ] as any;
                   }
 
-                  if (isPointConfigured) {
-                    return [
-                      ['pix', 'Pix 🟡'],
-                      ['credito', 'Crédito Online 💳'],
-                      ['google_pay', 'Google Pay 📱'],
-                      ['debito_point', 'Débito Maquininha 💴'],
-                      ['credito_point', 'Crédito Maquininha 💳']
-                    ] as any;
-                  } else {
-                    return [
-                      ['pix', 'Pix 🟡'],
-                      ['credito', 'Crédito 💳'],
-                      ['google_pay', 'Google Pay 📱'],
-                      ['debito', 'Débito 💴']
-                    ] as any;
-                  }
+                  return [
+                    ['pix', 'Pix 🟡'],
+                    ['credito', 'Crédito Online 💳'],
+                    ['google_pay', 'Google Pay 📱'],
+                    ['debito_point', 'Débito Maquininha 💴'],
+                    ['credito_point', 'Crédito Maquininha 💳']
+                  ] as any;
                 })().map(([val, label]: [string, string]) => (
                   <button
                     key={val}
@@ -4144,26 +4242,14 @@ export const ClientDashboard = ({
                         <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em', display: 'block', marginBottom: '0.4rem' }}>Pagar Saldo Devedor Via</span>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
                           {(() => {
-                            const isPointConfigured = !!(storeConfig?.pointSmart2Id || storeConfig?.pointPro3Id || storeConfig?.pointAir2Id || storeConfig?.pointMiniNfc2Id);
-
-                            if (isPointConfigured) {
-                              return [
-                                ['pix', 'Pix 🟡'],
-                                ['credito', 'Crédito Online 💳'],
-                                ['google_pay', 'Google Pay 📱'],
-                                ['debito_point', 'Débito Maquininha 💴'],
-                                ['credito_point', 'Crédito Maquininha 💳'],
-                                ['dinheiro', 'Dinheiro 💵']
-                              ] as any;
-                            } else {
-                              return [
-                                ['pix', 'Pix 🟡'],
-                                ['credito', 'Crédito Online 💳'],
-                                ['google_pay', 'Google Pay 📱'],
-                                ['debito', 'Débito 💴'],
-                                ['dinheiro', 'Dinheiro 💵']
-                              ] as any;
-                            }
+                            return [
+                              ['pix', 'Pix 🟡'],
+                              ['credito', 'Crédito Online 💳'],
+                              ['google_pay', 'Google Pay 📱'],
+                              ['debito_point', 'Débito Maquininha 💴'],
+                              ['credito_point', 'Crédito Maquininha 💳'],
+                              ['dinheiro', 'Dinheiro 💵']
+                            ] as any;
                           })().map(([val, label]: [string, string]) => (
                             <button
                               key={val}
