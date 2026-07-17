@@ -36,6 +36,25 @@ export const AuthButton = () => {
     setPhone(formatPhone(e.target.value));
   };
 
+  const handleEmailOrPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+
+    if (isRegisterMode) {
+      setEmail(val);
+      return;
+    }
+
+    const clean = val.replace(/\D/g, '');
+    const hasLetters = /[a-zA-Z]/.test(val);
+    const hasAtSymbol = val.includes('@');
+
+    if (clean.length > 0 && !hasLetters && !hasAtSymbol) {
+      setEmail(formatPhone(val));
+    } else {
+      setEmail(val);
+    }
+  };
+
   const getRoleBadgeStyles = (role: string) => {
     switch (role) {
       case 'developer':
@@ -456,7 +475,7 @@ export const AuthButton = () => {
               type={isRegisterMode ? 'email' : 'text'} 
               placeholder={isRegisterMode ? 'exemplo@email.com' : 'Digite seu e-mail, celular ou nome'} 
               value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
+              onChange={handleEmailOrPhoneChange} 
               required
             />
           </div>
