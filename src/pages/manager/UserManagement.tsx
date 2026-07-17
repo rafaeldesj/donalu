@@ -3,7 +3,7 @@ import { collection, query, onSnapshot, doc, addDoc, updateDoc, deleteDoc } from
 import { db, auth } from '../../config/firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import type { UserDocument, UserRole, StaffFunctions } from '../../types/user';
-import { Plus, Edit2, Trash2, X, Search, KeyRound, Eye, EyeOff, Filter } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Search, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { logAuditAction } from '../../utils/audit';
 
@@ -12,12 +12,16 @@ export const UserManagement = () => {
   const [users, setUsers] = useState<UserDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+
+  // Ordenamento states
+  const [sortBy, setSortBy] = useState<'name' | 'role' | 'patente' | 'createdAt'>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Excel-like filter states
   const [selectedRoles, setSelectedRoles] = useState<UserRole[]>([]);
   const [selectedFunctions, setSelectedFunctions] = useState<string[]>([]);
-  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
-  const [showFuncDropdown, setShowFuncDropdown] = useState(false);
+
 
   // Estados do formulário
   const [showForm, setShowForm] = useState(false);
@@ -71,6 +75,7 @@ export const UserManagement = () => {
     setAttendant(false);
     setCashier(false);
     setDelivery(false);
+    setPhoneNumber('');
     setInitialPassword('');
     setError(null);
     setSuccess(null);
@@ -86,6 +91,7 @@ export const UserManagement = () => {
     setAttendant(user.staffFunctions?.attendant || false);
     setCashier(user.staffFunctions?.cashier || false);
     setDelivery(user.staffFunctions?.delivery || false);
+    setPhoneNumber(user.phoneNumber || '');
     setInitialPassword('');
     setError(null);
     setSuccess(null);
@@ -180,10 +186,11 @@ export const UserManagement = () => {
       delivery: role === 'staff' ? delivery : false
     };
 
-    const payload: Omit<UserDocument, 'uid'> = {
+    const payload: any = {
       name,
       email: email.trim().toLowerCase(),
       role,
+      phoneNumber: phoneNumber.trim(),
       updatedAt: new Date().toISOString(),
       createdAt: editUser ? editUser.createdAt : new Date().toISOString()
     };
@@ -246,7 +253,8 @@ export const UserManagement = () => {
     // 1. Text search
     const matchesSearch = 
       u.name.toLowerCase().includes(search.toLowerCase()) || 
-      u.email.toLowerCase().includes(search.toLowerCase());
+      u.email.toLowerCase().includes(search.toLowerCase()) ||
+      (u.phoneNumber && u.phoneNumber.toLowerCase().includes(search.toLowerCase()));
       
     if (!matchesSearch) return false;
     
@@ -279,17 +287,39 @@ export const UserManagement = () => {
     return true;
   });
 
-  const toggleRoleFilter = (roleVal: UserRole) => {
-    setSelectedRoles(prev => 
-      prev.includes(roleVal) ? prev.filter(r => r !== roleVal) : [...prev, roleVal]
-    );
-  };
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    let valA: any = '';
+    let valB: any = '';
 
-  const toggleFuncFilter = (funcVal: string) => {
-    setSelectedFunctions(prev => 
-      prev.includes(funcVal) ? prev.filter(f => f !== funcVal) : [...prev, funcVal]
-    );
-  };
+    if (sortBy === 'name') {
+      valA = a.name.toLowerCase();
+      valB = b.name.toLowerCase();
+    } else if (sortBy === 'role') {
+      const roleWeight = { developer: 5, owner: 4, manager: 3, staff: 2, client: 1 };
+      valA = roleWeight[a.role] || 0;
+      valB = roleWeight[b.role] || 0;
+    } else if (sortBy === 'patente') {
+      const getPatenteWeight = (u: any) => {
+        if (u.role !== 'staff' || !u.staffFunctions) return 0;
+        if (u.staffFunctions.cashier) return 4;
+        if (u.staffFunctions.attendant) return 3;
+        if (u.staffFunctions.cook) return 2;
+        if (u.staffFunctions.delivery) return 1;
+        return 0;
+      };
+      valA = getPatenteWeight(a);
+      valB = getPatenteWeight(b);
+    } else if (sortBy === 'createdAt') {
+      valA = a.createdAt || '';
+      valB = b.createdAt || '';
+    }
+
+    if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+    if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+
 
   const getRoleLabel = (r: UserRole) => {
     switch (r) {
@@ -486,6 +516,11 @@ export const UserManagement = () => {
               <input type="email" placeholder="email@donalupastelaria.com" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ padding: '0.6rem 1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', outline: 'none' }} />
             </div>
 
+            <div className="input-group">
+              <label>Celular (WhatsApp)</label>
+              <input type="text" placeholder="Ex: (21) 99999-9999" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value.replace(/[^0-9()-\s]/g, ''))} style={{ padding: '0.6rem 1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', outline: 'none' }} />
+            </div>
+
             {!editUser && (
               <div className="input-group" style={{ gridColumn: '1 / -1' }}>
                 <label>Senha de Acesso Inicial</label>
@@ -540,11 +575,88 @@ export const UserManagement = () => {
 
       {/* Lista / Tabela de Usuários */}
       <div className="admin-card-box">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem', marginBottom: '0.5rem' }}>
-          <h3>Usuários Cadastrados ({filteredUsers.length})</h3>
-          <div className="input-wrapper" style={{ width: '250px' }}>
-            <Search size={16} className="input-icon" />
-            <input type="text" placeholder="Filtrar por nome/e-mail" value={search} onChange={(e) => setSearch(e.target.value)} style={{ padding: '0.5rem 0.5rem 0.5rem 2.2rem', fontSize: '0.85rem', width: '100%', boxSizing: 'border-box' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1rem', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <h3 style={{ margin: 0 }}>Usuários Cadastrados ({sortedUsers.length})</h3>
+            
+            {/* Barra de Busca Avançada */}
+            <div className="input-wrapper" style={{ width: '100%', maxWidth: '280px' }}>
+              <Search size={16} className="input-icon" />
+              <input 
+                type="text" 
+                placeholder="Buscar por nome, e-mail ou celular..." 
+                value={search} 
+                onChange={(e) => setSearch(e.target.value)} 
+                style={{ padding: '0.55rem 0.5rem 0.55rem 2.2rem', fontSize: '0.85rem', width: '100%', boxSizing: 'border-box', borderRadius: '8px' }} 
+              />
+            </div>
+          </div>
+
+          {/* Painel de Filtros e Ordenamento */}
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '10px', padding: '0.75rem' }}>
+            
+            {/* Filtro por Nível de Acesso */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', flex: '1 1 140px' }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Nível de Acesso</span>
+              <select 
+                value={selectedRoles[0] || ''} 
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedRoles(val ? [val as UserRole] : []);
+                }} 
+                style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', background: '#0b0f19', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', color: '#fff', cursor: 'pointer' }}
+              >
+                <option value="">Todos os Níveis</option>
+                <option value="developer">Developer</option>
+                <option value="owner">Proprietário</option>
+                <option value="manager">Gerente</option>
+                <option value="staff">Colaborador</option>
+                <option value="client">Cliente</option>
+              </select>
+            </div>
+
+            {/* Filtro por Patente */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', flex: '1 1 140px' }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Patente</span>
+              <select 
+                value={selectedFunctions[0] || ''} 
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedFunctions(val ? [val] : []);
+                }} 
+                style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', background: '#0b0f19', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', color: '#fff', cursor: 'pointer' }}
+              >
+                <option value="">Todas as Patentes</option>
+                <option value="cook">Cozinha</option>
+                <option value="attendant">Balcão</option>
+                <option value="cashier">Caixa</option>
+                <option value="delivery">Entregador</option>
+                <option value="none">Nenhuma (-)</option>
+              </select>
+            </div>
+
+            {/* Ordenamento */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', flex: '1 1 180px' }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>Ordenar por</span>
+              <select 
+                value={`${sortBy}-${sortOrder}`} 
+                onChange={(e) => {
+                  const [field, order] = e.target.value.split('-') as [any, any];
+                  setSortBy(field);
+                  setSortOrder(order);
+                }} 
+                style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', background: '#0b0f19', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', color: '#fff', cursor: 'pointer' }}
+              >
+                <option value="name-asc">Nome (A - Z)</option>
+                <option value="name-desc">Nome (Z - A)</option>
+                <option value="role-desc">Nível de Acesso (Maior privilégio)</option>
+                <option value="role-asc">Nível de Acesso (Menor privilégio)</option>
+                <option value="patente-desc">Patente (Maior prioridade)</option>
+                <option value="patente-asc">Patente (Menor prioridade)</option>
+                <option value="createdAt-desc">Cadastro (Mais Recente)</option>
+                <option value="createdAt-asc">Cadastro (Mais Antigo)</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -557,203 +669,23 @@ export const UserManagement = () => {
                 <tr>
                   <th>Nome</th>
                   <th>E-mail</th>
-                  <th style={{ position: 'relative' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <span>Nível Acesso</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowRoleDropdown(!showRoleDropdown);
-                          setShowFuncDropdown(false);
-                        }}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: selectedRoles.length > 0 ? 'var(--primary-gold)' : 'var(--text-secondary)',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          padding: '2px',
-                          borderRadius: '4px',
-                          transition: 'all 0.2s'
-                        }}
-                        title="Filtrar por nível de acesso"
-                      >
-                        <Filter size={12} />
-                      </button>
-                    </div>
-
-                    {showRoleDropdown && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        background: '#141824',
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        borderRadius: '8px',
-                        boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
-                        padding: '0.75rem',
-                        zIndex: 100,
-                        minWidth: '180px',
-                        fontWeight: 'normal',
-                        fontSize: '0.8rem',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0.5rem',
-                        marginTop: '4px'
-                      }}>
-                        <div style={{ fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.25rem', color: '#fff' }}>Filtrar Nível</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                            <input
-                              type="checkbox"
-                              checked={selectedRoles.length === 0}
-                              onChange={() => setSelectedRoles([])}
-                            />
-                            <span>(Mostrar Todos)</span>
-                          </label>
-                          {[
-                            { val: 'developer', label: 'Developer' },
-                            { val: 'owner', label: 'Proprietário' },
-                            { val: 'manager', label: 'Gerente' },
-                            { val: 'staff', label: 'Colaborador' },
-                            { val: 'client', label: 'Cliente' }
-                          ].map((opt) => (
-                            <label key={opt.val} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                              <input
-                                type="checkbox"
-                                checked={selectedRoles.includes(opt.val as UserRole)}
-                                onChange={() => toggleRoleFilter(opt.val as UserRole)}
-                              />
-                              <span>{opt.label}</span>
-                            </label>
-                          ))}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setShowRoleDropdown(false)}
-                          style={{
-                            marginTop: '0.25rem',
-                            padding: '0.35rem',
-                            background: 'var(--primary-gold)',
-                            color: '#0b0f19',
-                            border: 'none',
-                            borderRadius: '4px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            textAlign: 'center'
-                          }}
-                        >
-                          Aplicar
-                        </button>
-                      </div>
-                    )}
-                  </th>
-                  <th style={{ position: 'relative' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <span>Patente</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowFuncDropdown(!showFuncDropdown);
-                          setShowRoleDropdown(false);
-                        }}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: selectedFunctions.length > 0 ? 'var(--primary-gold)' : 'var(--text-secondary)',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          padding: '2px',
-                          borderRadius: '4px',
-                          transition: 'all 0.2s'
-                        }}
-                        title="Filtrar por patente/atividade"
-                      >
-                        <Filter size={12} />
-                      </button>
-                    </div>
-
-                    {showFuncDropdown && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        background: '#141824',
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        borderRadius: '8px',
-                        boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
-                        padding: '0.75rem',
-                        zIndex: 100,
-                        minWidth: '180px',
-                        fontWeight: 'normal',
-                        fontSize: '0.8rem',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0.5rem',
-                        marginTop: '4px'
-                      }}>
-                        <div style={{ fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.25rem', color: '#fff' }}>Filtrar Patente</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                            <input
-                              type="checkbox"
-                              checked={selectedFunctions.length === 0}
-                              onChange={() => setSelectedFunctions([])}
-                            />
-                            <span>(Mostrar Todos)</span>
-                          </label>
-                          {[
-                            { val: 'cook', label: 'Cozinha' },
-                            { val: 'attendant', label: 'Balcão' },
-                            { val: 'cashier', label: 'Caixa' },
-                            { val: 'delivery', label: 'Entregador' },
-                            { val: 'none', label: 'Nenhuma (-)' }
-                          ].map((opt) => (
-                            <label key={opt.val} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                              <input
-                                type="checkbox"
-                                checked={selectedFunctions.includes(opt.val)}
-                                onChange={() => toggleFuncFilter(opt.val)}
-                              />
-                              <span>{opt.label}</span>
-                            </label>
-                          ))}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setShowFuncDropdown(false)}
-                          style={{
-                            marginTop: '0.25rem',
-                            padding: '0.35rem',
-                            background: 'var(--primary-gold)',
-                            color: '#0b0f19',
-                            border: 'none',
-                            borderRadius: '4px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            textAlign: 'center'
-                          }}
-                        >
-                          Aplicar
-                        </button>
-                      </div>
-                    )}
-                  </th>
+                  <th>Celular (WhatsApp)</th>
+                  <th>Nível Acesso</th>
+                  <th>Patente</th>
                   <th style={{ textAlign: 'right' }}>Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>Nenhum usuário localizado.</td>
+                    <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>Nenhum usuário localizado.</td>
                   </tr>
                 ) : (
-                  filteredUsers.map((u) => (
+                  sortedUsers.map((u) => (
                     <tr key={u.uid}>
                       <td style={{ fontWeight: 600 }}>{u.name}</td>
                       <td>{u.email}</td>
+                      <td>{u.phoneNumber || <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '0.85rem' }}>-</span>}</td>
                       <td>
                         <span className="auth-role-badge" style={{ 
                           backgroundColor: 
