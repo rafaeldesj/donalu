@@ -2343,6 +2343,201 @@ select:focus {
 }
 
 .pastel-ingredients-grid {
+.map-confirm-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .map-confirm-options {
+    justify-content: center !important;
+    width: 100%;
+  }
+
+  .map-confirm-label {
+    text-align: center !important;
+  }
+
+  .map-confirm-hint {
+    text-align: center !important;
+  }
+}
+
+/* Indicador de Status da Loja */
+.store-status-container {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.3s ease;
+  user-select: none;
+  margin-left: 0.25rem;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  position: relative;
+  display: inline-block;
+}
+
+.status-dot::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(var(--status-color-rgb), 0.7);
+  }
+  70% {
+    transform: scale(1.8);
+    box-shadow: 0 0 0 6px rgba(var(--status-color-rgb), 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(var(--status-color-rgb), 0);
+  }
+}
+
+.status-dot.status-open {
+  background-color: #10b981;
+  --status-color-rgb: 16, 185, 129;
+}
+.status-dot.status-open::after {
+  background-color: #10b981;
+}
+.store-status-container.status-open {
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.25);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.status-dot.status-closing_soon {
+  background-color: #f59e0b;
+  --status-color-rgb: 245, 158, 11;
+}
+.status-dot.status-closing_soon::after {
+  background-color: #f59e0b;
+}
+.store-status-container.status-closing_soon {
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.25);
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.status-dot.status-closed {
+  background-color: #ef4444;
+  --status-color-rgb: 239, 68, 68;
+}
+.status-dot.status-closed::after {
+  background-color: #ef4444;
+}
+.store-status-container.status-closed {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+@media (max-width: 480px) {
+  .store-status-text {
+    display: none;
+  }
+  .store-status-container {
+    padding: 0.3rem 0.4rem;
+  }
+}
+
+/* ---- Horizontal Sliding Menu / Category Tabs ---- */
+.category-menu-container {
+  width: 100%;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.category-menu-scroll {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding: 0.25rem 0.25rem 0.75rem 0.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) rgba(10, 7, 7, 0.4);
+  -webkit-overflow-scrolling: touch;
+}
+
+.category-menu-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  color: var(--text-secondary);
+  padding: 0.6rem 1.25rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.category-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.category-menu-btn.active {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: var(--primary-gold);
+  color: var(--primary-gold);
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.15);
+}
+
+.category-menu-btn.create-new-btn {
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px dashed rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.category-menu-btn.create-new-btn:hover {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: #34d399;
+  color: #52e3b2;
+}
+
+/* Customização de Pastéis Salgados */
+.pastel-customization-box {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.35rem 0.45rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.pastel-ingredients-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 0.15rem 0.3rem;
@@ -2355,4 +2550,38 @@ select:focus {
   .pastel-ingredients-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+}
+
+/* Guide images — responsive sizing */
+.guide-img {
+  display: block;
+  width: 70%;
+  max-width: 70%;
+  margin: 0.5rem auto 0;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.guide-img-sm {
+  display: block;
+  width: 40%;
+  max-width: 40%;
+  margin: 0.5rem auto 0;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 1200px) {
+  .guide-img  { width: 80%; max-width: 80%; }
+  .guide-img-sm { width: 55%; max-width: 55%; }
+}
+
+@media (max-width: 900px) {
+  .guide-img  { width: 90%; max-width: 90%; }
+  .guide-img-sm { width: 70%; max-width: 70%; }
+}
+
+@media (max-width: 600px) {
+  .guide-img  { width: 100%; max-width: 100%; }
+  .guide-img-sm { width: 90%; max-width: 90%; }
 }

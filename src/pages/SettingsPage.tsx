@@ -778,7 +778,7 @@ export const SettingsPage = () => {
                   ))}
                   <span style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', color: '#34d399', borderRadius: '20px', padding: '0.25rem 0.75rem', fontSize: '0.78rem', fontWeight: 600 }}>⏱ ~25 min para configurar</span>
                 </div>
-                <img src="/guide_models.png" alt="Modelos de maquininha compatíveis" style={{ width: '100%', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', marginTop: '1rem' }} />
+                <img src="/guide_models.png" alt="Modelos de maquininha compatíveis" className="guide-img" />
               </div>
 
               {/* PASSO 1 */}
@@ -792,7 +792,7 @@ export const SettingsPage = () => {
                   Faça login com a conta Mercado Pago da pastelaria.<br />
                   Clique em <strong style={{ color: '#fff' }}>&quot;Criar aplicação&quot;</strong> como mostrado na imagem abaixo.
                 </p>
-                <img src="/guide_step1.png" alt="Painel de Desenvolvedor Mercado Pago" style={{ width: '100%', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', marginTop: '0.5rem' }} />
+                <img src="/guide_step1.png" alt="Painel de Desenvolvedor Mercado Pago" className="guide-img" />
                 <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '8px', padding: '0.6rem 1rem', fontSize: '0.82rem', color: '#fcd34d' }}>
                   💡 <strong>Dica:</strong> Se já tiver uma aplicação criada antes, pode usar ela. Basta clicar nela para acessar as credenciais.
                 </div>
@@ -809,7 +809,7 @@ export const SettingsPage = () => {
                   Em <strong style={{ color: '#fff' }}>&quot;Credenciais de produção&quot;</strong>, clique no ícone de copiar ao lado do campo <strong style={{ color: '#fff' }}>Access Token</strong>.<br />
                   Ele começa com <code style={{ background: 'rgba(255,255,255,0.08)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.8rem' }}>APP_USR-</code> e é bem longo.
                 </p>
-                <img src="/guide_step2.png" alt="Copiar Access Token Mercado Pago" style={{ width: '100%', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', marginTop: '0.5rem' }} />
+                <img src="/guide_step2.png" alt="Copiar Access Token Mercado Pago" className="guide-img" />
                 <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.6rem 1rem', fontSize: '0.82rem', color: '#fca5a5' }}>
                   ⚠️ <strong>Atenção:</strong> Use apenas o token de <strong>produção</strong> (não o de teste). O token de teste começa com <code style={{ background: 'rgba(255,255,255,0.08)', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>TEST-</code>.
                 </div>
@@ -828,7 +828,7 @@ export const SettingsPage = () => {
                   <strong style={{ color: '#fff' }}>2.</strong> Dentro da loja, clique em <strong style={{ color: '#fff' }}>&quot;Adicionar caixa&quot;</strong> e cadastre <strong style={{ color: '#fff' }}>um caixa para cada maquininha</strong> que você tiver:<br />
                   &nbsp;&nbsp;— Point Smart 2 &nbsp;|&nbsp; Point Pro 3 &nbsp;|&nbsp; Point Air 2 &nbsp;|&nbsp; Point Mini NFC 2
                 </p>
-                <img src="/guide_step3.png" alt="Lojas e Caixas Mercado Pago" style={{ width: '100%', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', marginTop: '0.5rem' }} />
+                <img src="/guide_step3.png" alt="Lojas e Caixas Mercado Pago" className="guide-img" />
                 <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '8px', padding: '0.6rem 1rem', fontSize: '0.82rem', color: '#fcd34d' }}>
                   💡 <strong>Dica:</strong> Dê nomes claros para cada caixa, ex: <em>&quot;Smart 2 - Caixa 1&quot;</em>, <em>&quot;Pro 3 - Caixa 2&quot;</em>, <em>&quot;Air 2 - Caixa 3&quot;</em>, <em>&quot;Mini NFC - Caixa 4&quot;</em>. Isso facilita identificar depois.
                 </div>
@@ -848,7 +848,7 @@ export const SettingsPage = () => {
                     <strong style={{ color: '#fff' }}>2.</strong> Procure a opção <strong style={{ color: '#fff' }}>&quot;Modo PDV&quot;</strong>, <strong style={{ color: '#fff' }}>&quot;Modo integrado&quot;</strong> ou <strong style={{ color: '#fff' }}>&quot;Integração com sistema&quot;</strong>.<br />
                     <strong style={{ color: '#fff' }}>3.</strong> Ative o toggle. A tela exibirá <em>&quot;Aguardando integração&quot;</em> — isso é correto, pode deixar assim.
                   </p>
-                  <img src="/guide_step4.png" alt="Ativar Modo PDV na maquininha" style={{ width: '100%', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }} />
+                  <img src="/guide_step4.png" alt="Ativar Modo PDV na maquininha" className="guide-img" />
                 </div>
 
                 {/* Mini NFC 2 */}
@@ -861,7 +861,7 @@ export const SettingsPage = () => {
                     <strong style={{ color: '#fff' }}>3.</strong> Em <strong style={{ color: '#fff' }}>&quot;Modo de uso&quot;</strong>, selecione <strong style={{ color: '#fff' }}>&quot;PDV (Integrado)&quot;</strong> ou <strong style={{ color: '#fff' }}>&quot;Modo PDV&quot;</strong>.<br />
                     <strong style={{ color: '#fff' }}>4.</strong> Confirme. O Mini NFC passará a receber ordens do sistema automaticamente.
                   </p>
-                  <img src="/guide_step4b.png" alt="Ativar PDV no Mini NFC pelo app" style={{ width: '100%', maxWidth: '320px', alignSelf: 'center', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }} />
+                  <img src="/guide_step4b.png" alt="Ativar PDV no Mini NFC pelo app" className="guide-img-sm" />
                 </div>
 
                 <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.6rem 1rem', fontSize: '0.82rem', color: '#fca5a5' }}>
@@ -880,7 +880,7 @@ export const SettingsPage = () => {
                   Copie o valor do campo <strong style={{ color: '#fff' }}>external_id</strong> ou <strong style={{ color: '#fff' }}>ID do caixa</strong>.<br />
                   Exemplo: <code style={{ background: 'rgba(255,255,255,0.08)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.8rem' }}>CAIXA_001</code> ou um número como <code style={{ background: 'rgba(255,255,255,0.08)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.8rem' }}>123456789</code>.
                 </p>
-                <img src="/guide_step5.png" alt="Copiar external_id do caixa" style={{ width: '100%', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', marginTop: '0.5rem' }} />
+                <img src="/guide_step5.png" alt="Copiar external_id do caixa" className="guide-img" />
               </div>
 
               {/* PASSO 6 */}
