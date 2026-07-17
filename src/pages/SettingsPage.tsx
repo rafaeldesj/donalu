@@ -766,10 +766,19 @@ export const SettingsPage = () => {
                   O cliente seleciona "Débito" no app e a maquininha ativa sozinha esperando o cartão.
                 </p>
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
-                  <span style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: '#60a5fa', borderRadius: '20px', padding: '0.25rem 0.75rem', fontSize: '0.78rem', fontWeight: 600 }}>✅ Point Smart 2</span>
-                  <span style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: '#60a5fa', borderRadius: '20px', padding: '0.25rem 0.75rem', fontSize: '0.78rem', fontWeight: 600 }}>✅ Point Pro 3</span>
-                  <span style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', color: '#34d399', borderRadius: '20px', padding: '0.25rem 0.75rem', fontSize: '0.78rem', fontWeight: 600 }}>⏱ ~20 min para configurar</span>
+                  {[
+                    { label: 'Point Smart 2', sub: 'Tela própria' },
+                    { label: 'Point Pro 3', sub: 'Tela grande' },
+                    { label: 'Point Air 2', sub: '4G + WiFi + NFC' },
+                    { label: 'Point Mini NFC 2', sub: 'Via celular' },
+                  ].map(m => (
+                    <span key={m.label} style={{ background: 'rgba(59,130,246,0.13)', border: '1px solid rgba(59,130,246,0.28)', color: '#60a5fa', borderRadius: '20px', padding: '0.25rem 0.85rem', fontSize: '0.78rem', fontWeight: 600, display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.3 }}>
+                      ✅ {m.label}<span style={{ fontSize: '0.68rem', color: '#93c5fd', fontWeight: 400 }}>{m.sub}</span>
+                    </span>
+                  ))}
+                  <span style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', color: '#34d399', borderRadius: '20px', padding: '0.25rem 0.75rem', fontSize: '0.78rem', fontWeight: 600 }}>⏱ ~25 min para configurar</span>
                 </div>
+                <img src="/guide_models.png" alt="Modelos de maquininha compatíveis" style={{ width: '100%', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', marginTop: '1rem' }} />
               </div>
 
               {/* PASSO 1 */}
@@ -816,11 +825,12 @@ export const SettingsPage = () => {
                   Acesse: <a href="https://mercadopago.com.br/pointsmartintegration" target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', textDecoration: 'underline' }}>mercadopago.com.br/pointsmartintegration</a><br />
                   No menu lateral, clique em <strong style={{ color: '#fff' }}>Seu negócio → Lojas e caixas</strong>.<br />
                   <strong style={{ color: '#fff' }}>1.</strong> Crie uma loja chamada <em>&quot;Dona Lu Pastelaria&quot;</em>.<br />
-                  <strong style={{ color: '#fff' }}>2.</strong> Dentro da loja, clique em <strong style={{ color: '#fff' }}>&quot;Adicionar caixa&quot;</strong> e cadastre uma para a <em>Point Smart 2</em> e outra para a <em>Point Pro 3</em>.
+                  <strong style={{ color: '#fff' }}>2.</strong> Dentro da loja, clique em <strong style={{ color: '#fff' }}>&quot;Adicionar caixa&quot;</strong> e cadastre <strong style={{ color: '#fff' }}>um caixa para cada maquininha</strong> que você tiver:<br />
+                  &nbsp;&nbsp;— Point Smart 2 &nbsp;|&nbsp; Point Pro 3 &nbsp;|&nbsp; Point Air 2 &nbsp;|&nbsp; Point Mini NFC 2
                 </p>
                 <img src="/guide_step3.png" alt="Lojas e Caixas Mercado Pago" style={{ width: '100%', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', marginTop: '0.5rem' }} />
                 <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '8px', padding: '0.6rem 1rem', fontSize: '0.82rem', color: '#fcd34d' }}>
-                  💡 <strong>Dica:</strong> Dê nomes claros para cada caixa, como &quot;Caixa 1 - Smart 2&quot; e &quot;Caixa 2 - Pro 3&quot;, para facilitar identificar depois.
+                  💡 <strong>Dica:</strong> Dê nomes claros para cada caixa, ex: <em>&quot;Smart 2 - Caixa 1&quot;</em>, <em>&quot;Pro 3 - Caixa 2&quot;</em>, <em>&quot;Air 2 - Caixa 3&quot;</em>, <em>&quot;Mini NFC - Caixa 4&quot;</em>. Isso facilita identificar depois.
                 </div>
               </div>
 
@@ -830,15 +840,32 @@ export const SettingsPage = () => {
                   <span style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)', color: '#fff', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', flexShrink: 0 }}>4</span>
                   <h4 style={{ margin: 0, fontSize: '1rem' }}>Ative o Modo PDV nas maquininhas</h4>
                 </div>
-                <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                  Faça isso em <strong style={{ color: '#fff' }}>cada uma</strong> das maquininhas (Smart 2 e Pro 3):<br />
-                  <strong style={{ color: '#fff' }}>1.</strong> Na tela inicial da maquininha, toque nos <strong style={{ color: '#fff' }}>3 pontinhos</strong> ou vá em <strong style={{ color: '#fff' }}>Configurações</strong>.<br />
-                  <strong style={{ color: '#fff' }}>2.</strong> Procure a opção <strong style={{ color: '#fff' }}>&quot;Modo PDV&quot;</strong> ou <strong style={{ color: '#fff' }}>&quot;Integração com sistema&quot;</strong>.<br />
-                  <strong style={{ color: '#fff' }}>3.</strong> Ative o toggle. A tela vai mostrar uma mensagem de &quot;Aguardando integração&quot; — isso é correto.
-                </p>
-                <img src="/guide_step4.png" alt="Ativar Modo PDV na maquininha" style={{ width: '100%', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', marginTop: '0.5rem' }} />
+                {/* Smart 2 / Pro 3 / Air 2 */}
+                <div style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.18)', borderRadius: '10px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📟 Point Smart 2 · Point Pro 3 · Point Air 2</span>
+                  <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                    <strong style={{ color: '#fff' }}>1.</strong> Na tela inicial da maquininha, toque nos <strong style={{ color: '#fff' }}>3 pontinhos (⋮)</strong> no canto superior direito ou acesse <strong style={{ color: '#fff' }}>Configurações</strong>.<br />
+                    <strong style={{ color: '#fff' }}>2.</strong> Procure a opção <strong style={{ color: '#fff' }}>&quot;Modo PDV&quot;</strong>, <strong style={{ color: '#fff' }}>&quot;Modo integrado&quot;</strong> ou <strong style={{ color: '#fff' }}>&quot;Integração com sistema&quot;</strong>.<br />
+                    <strong style={{ color: '#fff' }}>3.</strong> Ative o toggle. A tela exibirá <em>&quot;Aguardando integração&quot;</em> — isso é correto, pode deixar assim.
+                  </p>
+                  <img src="/guide_step4.png" alt="Ativar Modo PDV na maquininha" style={{ width: '100%', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }} />
+                </div>
+
+                {/* Mini NFC 2 */}
+                <div style={{ background: 'rgba(168,85,247,0.06)', border: '1px solid rgba(168,85,247,0.2)', borderRadius: '10px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#c084fc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📱 Point Mini NFC 2 — Configuração pelo celular</span>
+                  <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                    O Mini NFC 2 não tem tela — ele é controlado pelo app Mercado Pago no celular.<br />
+                    <strong style={{ color: '#fff' }}>1.</strong> Abra o app <strong style={{ color: '#fff' }}>Mercado Pago</strong> no celular já pareado com o Mini NFC 2.<br />
+                    <strong style={{ color: '#fff' }}>2.</strong> Vá em <strong style={{ color: '#fff' }}>Cobrar → Minha maquininha → Configurações</strong>.<br />
+                    <strong style={{ color: '#fff' }}>3.</strong> Em <strong style={{ color: '#fff' }}>&quot;Modo de uso&quot;</strong>, selecione <strong style={{ color: '#fff' }}>&quot;PDV (Integrado)&quot;</strong> ou <strong style={{ color: '#fff' }}>&quot;Modo PDV&quot;</strong>.<br />
+                    <strong style={{ color: '#fff' }}>4.</strong> Confirme. O Mini NFC passará a receber ordens do sistema automaticamente.
+                  </p>
+                  <img src="/guide_step4b.png" alt="Ativar PDV no Mini NFC pelo app" style={{ width: '100%', maxWidth: '320px', alignSelf: 'center', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }} />
+                </div>
+
                 <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.6rem 1rem', fontSize: '0.82rem', color: '#fca5a5' }}>
-                  ⚠️ <strong>Importante:</strong> Com o Modo PDV ativado, a maquininha <strong>não funciona mais de forma independente</strong> para passar cartão manualmente — ela passa a receber ordens do sistema. Se precisar usar manualmente, desative o modo PDV.
+                  ⚠️ <strong>Importante:</strong> Com o Modo PDV ativado, a maquininha <strong>não funciona mais de forma independente</strong> para passar cartão manualmente — ela passa a receber ordens do sistema. Para usar manualmente, basta desativar o Modo PDV.
                 </div>
               </div>
 
@@ -868,8 +895,10 @@ export const SettingsPage = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {[
                     { label: '🔑 Access Token (produção)', hint: 'Começa com APP_USR-...' },
-                    { label: '📟 ID do Caixa — Point Smart 2', hint: 'external_id do caixa 1' },
-                    { label: '📟 ID do Caixa — Point Pro 3', hint: 'external_id do caixa 2' },
+                    { label: '📟 ID do Caixa — Point Smart 2', hint: 'external_id (se tiver)' },
+                    { label: '📟 ID do Caixa — Point Pro 3', hint: 'external_id (se tiver)' },
+                    { label: '📟 ID do Caixa — Point Air 2', hint: 'external_id (se tiver)' },
+                    { label: '📟 ID do Caixa — Point Mini NFC 2', hint: 'external_id (se tiver)' },
                   ].map(item => (
                     <div key={item.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '8px', padding: '0.6rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>{item.label}</span>
