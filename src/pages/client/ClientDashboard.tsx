@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { ShoppingCart, MapPin, Plus, Minus, Trash2, Edit2, Check, X, Upload, Camera, QrCode } from 'lucide-react';
+import { ShoppingCart, MapPin, Plus, Minus, Trash2, Edit2, Check, X, Upload, Camera, QrCode, CreditCard } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { DeliveryMap } from '../../components/DeliveryMap';
 import { GooglePayLogo } from '../../components/GooglePayLogo';
@@ -229,7 +229,7 @@ export const ClientDashboard = ({
     return hasTable ? 'dine_in_table' : 'delivery';
   });
   const [tableNumber, setTableNumber] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credito' | 'debito' | 'dinheiro' | 'pagar_final' | 'google_pay'>('pix');
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credito' | 'debito' | 'dinheiro' | 'pagar_final' | 'google_pay' | 'debito_point' | 'credito_point'>('pix');
   const [changeFor, setChangeFor] = useState('');
   const [noChangeNeeded, setNoChangeNeeded] = useState(false);
   const [showOrderSummary, setShowOrderSummary] = useState(false);
@@ -260,11 +260,22 @@ export const ClientDashboard = ({
   const [pixPaymentId, setPixPaymentId] = useState('');
   const [pixPaymentStatus, setPixPaymentStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
 
+  // States para Maquininha Point
+  const [showPointLightbox, setShowPointLightbox] = useState(false);
+  const [pointPaymentId, setPointPaymentId] = useState('');
+  const [pointPaymentStatus, setPointPaymentStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [pointDeviceLabel, setPointDeviceLabel] = useState('');
+  const [showPointDeviceSelector, setShowPointDeviceSelector] = useState(false);
+  const [pointAmount, setPointAmount] = useState(0);
+  const [pointType, setPointType] = useState<'debito' | 'credito'>('debito');
+  const [pointActionCallback, setPointActionCallback] = useState<'place_order' | 'close_bill'>('place_order');
+  const [selectedDeviceId, setSelectedDeviceId] = useState('');
+
   // States for closing table bill
   const [showCloseBillModal, setShowCloseBillModal] = useState(false);
   const [tableOrders, setTableOrders] = useState<any[]>([]);
   const [loadingBill, setLoadingBill] = useState(false);
-  const [billPaymentMethod, setBillPaymentMethod] = useState<'pix' | 'credito' | 'dinheiro' | 'debito' | 'google_pay'>('pix');
+  const [billPaymentMethod, setBillPaymentMethod] = useState<'pix' | 'credito' | 'dinheiro' | 'debito' | 'google_pay' | 'debito_point' | 'credito_point'>('pix');
   const [billChangeFor, setBillChangeFor] = useState('');
   const [billNoChangeNeeded, setBillNoChangeNeeded] = useState(false);
   const [billSubmitting, setBillSubmitting] = useState(false);
@@ -1337,6 +1348,175 @@ export const ClientDashboard = ({
     }
   };
 
+  const completeCheckoutAfterPointPayment = async (deviceId: string, label: string) => {
+    const now = new Date();
+    const businessStart = new Date(now);
+    if (now.getHours() < 6) {
+      businessStart.setDate(now.getDate() - 1);
+    }
+    businessStart.setHours(6, 0, 0, 0);
+
+    let dailySeq = 1;
+    try {
+      const qDaily = query(
+        collection(db, 'orders'),
+        where('createdAt', '>=', businessStart.toISOString())
+      );
+      const dailySnap = await getDocs(qDaily);
+      dailySeq = dailySnap.size + 1;
+    } catch (err) {
+      dailySeq = Math.floor(Math.random() * 900) + 100;
+    }
+
+    const orderData: any = {
+      clientUid: user?.uid || '',
+      clientName: user?.displayName || user?.email || 'Cliente Anônimo',
+      clientPhone: userData?.phoneNumber || '',
+      items: cart.map(item => {
+        let customSuffix = '';
+        const details: string[] = [];
+        if (item.category === 'Pastéis Salgados') {
+          if (item.withCatupiry) details.push('Catupiry');
+          if (item.withBorda) details.push('Borda de Queijo');
+          if (item.ingredients && item.ingredients.length > 0) {
+            details.push(`Adicionais: ${item.ingredients.join(', ')}`);
+          }
+        }
+        if (details.length > 0) {
+          customSuffix = ` (${details.join(' + ')})`;
+        }
+        return {
+          id: item.id,
+          name: `${item.name}${customSuffix}`,
+          price: item.price,
+          quantity: item.quantity
+        };
+      }),
+      total: finalTotal,
+      deliveryFee: orderType === 'delivery' ? deliveryFee : 0,
+      serviceFee: orderType === 'dine_in_table' ? serviceFee : 0,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      orderType,
+      tableNumber: orderType === 'dine_in_table' ? tableNumber : null,
+      paymentMethod: pointType, // Salva como 'debito' ou 'credito' para manter painéis
+      pointPaymentIntentId: pointPaymentId,
+      pointDeviceId: deviceId,
+      pointDeviceLabel: label,
+      dailySeq,
+      address: orderType === 'delivery' ? {
+        street: deliveryAddress!.street,
+        number: deliveryAddress!.number || '',
+        neighborhood: deliveryAddress!.neighborhood || '',
+        city: deliveryAddress!.city || 'Rio de Janeiro',
+        zipCode: deliveryAddress!.zipCode || '',
+        complement: deliveryAddress!.complement || '',
+        lat: deliveryAddress!.lat,
+        lng: deliveryAddress!.lng,
+      } : null,
+    };
+
+    await addDoc(collection(db, 'orders'), orderData);
+    setCart([]);
+    setDeliveryAddress(null);
+    setRouteDistance(null);
+    setShowOrderSummary(false);
+    setPaymentMethod('pix');
+    setChangeFor('');
+    setOrderType('pickup');
+    
+    setTimeout(() => {
+      setShowPointLightbox(false);
+      setOrderPlaced(true);
+    }, 1500);
+  };
+
+  const handleStartPointPayment = async (deviceId: string, label: string) => {
+    try {
+      setBillError(null);
+      setError(null);
+      if (pointActionCallback === 'close_bill') {
+        setBillSubmitting(true);
+      } else {
+        setSubmitting(true);
+      }
+
+      let token = storeConfig?.storeOwnerAccessToken || storeConfig?.devAccessToken || 'mock';
+      if (token === 'null' || token === 'undefined' || !token) {
+        token = 'mock';
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/pagamentos/create-point-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token,
+          deviceId,
+          amount: pointAmount,
+          paymentType: pointType,
+          externalReference: 'PED_' + Date.now()
+        })
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Erro ao gerar cobrança na maquininha.');
+      }
+
+      setSelectedDeviceId(deviceId);
+      setPointPaymentId(result.intentId);
+      setPointDeviceLabel(label);
+      setPointPaymentStatus('pending');
+      setShowPointLightbox(true);
+
+    } catch (err: any) {
+      console.error(err);
+      if (pointActionCallback === 'close_bill') {
+        setBillError(err.message || 'Erro ao acionar maquininha. Tente novamente.');
+      } else {
+        setError(err.message || 'Erro ao acionar maquininha. Tente novamente.');
+      }
+    } finally {
+      setBillSubmitting(false);
+      setSubmitting(false);
+    }
+  };
+
+  const handleConfirmPointPaymentChoice = (deviceId: string, label: string) => {
+    setShowPointDeviceSelector(false);
+    handleStartPointPayment(deviceId, label);
+  };
+
+  const handleTriggerPointPaymentFlow = async (amount: number, type: 'debito' | 'credito', callback: 'place_order' | 'close_bill') => {
+    const devices = [];
+    if (storeConfig?.pointSmart2Id) devices.push({ id: storeConfig.pointSmart2Id, label: 'Point Smart 2' });
+    if (storeConfig?.pointPro3Id) devices.push({ id: storeConfig.pointPro3Id, label: 'Point Pro 3' });
+    if (storeConfig?.pointAir2Id) devices.push({ id: storeConfig.pointAir2Id, label: 'Point Air 2' });
+    if (storeConfig?.pointMiniNfc2Id) devices.push({ id: storeConfig.pointMiniNfc2Id, label: 'Point Mini NFC 2' });
+
+    if (devices.length === 0) {
+      const errMsg = 'Integração de maquininha ativa, porém nenhum ID de Caixa foi cadastrado. Por favor, configure os IDs nas configurações.';
+      if (callback === 'close_bill') {
+        setBillError(errMsg);
+      } else {
+        setError(errMsg);
+      }
+      return;
+    }
+
+    setPointAmount(amount);
+    setPointType(type);
+    setPointActionCallback(callback);
+
+    if (devices.length === 1) {
+      // Ativa diretamente a única maquininha
+      handleStartPointPayment(devices[0].id, devices[0].label);
+    } else {
+      // Abre o seletor de maquininhas
+      setShowPointDeviceSelector(true);
+    }
+  };
+
   const completeCheckoutAfterPixPayment = async () => {
     const now = new Date();
     const businessStart = new Date(now);
@@ -1393,6 +1573,71 @@ export const ClientDashboard = ({
       setOrderPlaced(true);
     }, 1500);
   };
+
+  // Effect para checagem do pagamento na Maquininha Point
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (showPointLightbox && pointPaymentId && pointPaymentStatus === 'pending') {
+      let token = storeConfig?.storeOwnerAccessToken || storeConfig?.devAccessToken || 'mock';
+      if (token === 'null' || token === 'undefined' || !token) {
+        token = 'mock';
+      }
+
+      interval = setInterval(async () => {
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/pagamentos/check-point-order?intentId=${pointPaymentId}&token=${token}`);
+          const data = await res.json();
+          if (data.success && data.status === 'FINISHED') {
+            setPointPaymentStatus('approved');
+            clearInterval(interval);
+            
+            if (pointActionCallback === 'close_bill') {
+              // FECHAMENTO DA CONTA DA MESA
+              const unpaid = tableOrders.filter(o => 
+                o.paymentMethod === 'pagar_final' || 
+                o.paymentMethod === 'dinheiro' || 
+                o.paymentMethod === 'debito'
+              );
+              
+              const batchPromises = unpaid.map(order => 
+                updateDoc(doc(db, 'orders', order.id), {
+                  status: 'completed',
+                  paymentMethod: pointType,
+                  pointPaymentIntentId: pointPaymentId,
+                  pointDeviceId: selectedDeviceId,
+                  updatedAt: new Date().toISOString()
+                })
+              );
+              await Promise.all(batchPromises);
+
+              if (user) {
+                const userDocRef = doc(db, 'users', user.uid);
+                await updateDoc(userDocRef, {
+                  tableNumber: null,
+                  updatedAt: new Date().toISOString()
+                });
+              }
+
+              alert("Conta fechada e paga com sucesso via Maquininha!");
+              setShowPointLightbox(false);
+              setShowCloseBillModal(false);
+            } else {
+              // NOVO PEDIDO DO CARRINHO
+              await completeCheckoutAfterPointPayment(selectedDeviceId, pointDeviceLabel);
+            }
+          } else if (data.success && (data.status === 'CANCELED' || data.status === 'ERROR')) {
+            setPointPaymentStatus('rejected');
+            clearInterval(interval);
+            alert(`O pagamento na maquininha falhou ou foi cancelado (Status: ${data.status}).`);
+            setShowPointLightbox(false);
+          }
+        } catch (err) {
+          console.error('Erro ao verificar status da Point:', err);
+        }
+      }, 2500);
+    }
+    return () => clearInterval(interval);
+  }, [showPointLightbox, pointPaymentId, pointPaymentStatus, storeConfig, cart, finalTotal, selectedDeviceId, pointDeviceLabel, pointActionCallback, tableOrders, user, pointType]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -1527,6 +1772,9 @@ export const ClientDashboard = ({
           console.error("Erro no Google Pay:", err);
           throw new Error(err.message || 'Falha ao processar o pagamento com Google Pay. Tente novamente.');
         }
+      } else if (paymentMethod === 'debito_point' || paymentMethod === 'credito_point') {
+        await handleTriggerPointPaymentFlow(finalTotal, paymentMethod === 'debito_point' ? 'debito' : 'credito', 'place_order');
+        return;
       } else if (paymentMethod === 'pix') {
         let token = storeConfig?.storeOwnerAccessToken || storeConfig?.devAccessToken || 'mock';
         if (token === 'null' || token === 'undefined' || !token) {
@@ -2585,15 +2833,47 @@ export const ClientDashboard = ({
                 Forma de Pagamento
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                {(orderType === 'dine_in_table'
-                  ? ([['pix','Pix 🟡'],['credito','Crédito 💳'],['google_pay','Google Pay 📱'],['pagar_final','Pagar no Final 🍽️']] as const)
-                  : ([['pix','Pix 🟡'],['credito','Crédito 💳'],['google_pay','Google Pay 📱'],['debito','Débito 💴']] as const)
-                ).map(([val, label]) => (
+                {(() => {
+                  const isPointConfigured = !!(storeConfig?.pointSmart2Id || storeConfig?.pointPro3Id || storeConfig?.pointAir2Id || storeConfig?.pointMiniNfc2Id);
+                  const hasSavedCard = !!userData?.pagbank_card_token;
+
+                  if (orderType === 'dine_in_table') {
+                    const base = [
+                      ['pix', 'Pix 🟡'],
+                      ['google_pay', 'Google Pay 📱'],
+                      ['pagar_final', 'Pagar no Final 🍽️']
+                    ];
+                    if (hasSavedCard) {
+                      base.splice(1, 0, ['credito', 'Cartão Salvo 💳']);
+                    }
+                    return base as any;
+                  }
+
+                  if (isPointConfigured) {
+                    const options = [
+                      ['pix', 'Pix 🟡'],
+                      ['google_pay', 'Google Pay 📱'],
+                      ['debito_point', 'Débito Maquininha 💴'],
+                      ['credito_point', 'Crédito Maquininha 💳']
+                    ];
+                    if (hasSavedCard) {
+                      options.splice(2, 0, ['credito', 'Cartão Salvo 💳']);
+                    }
+                    return options as any;
+                  } else {
+                    return [
+                      ['pix', 'Pix 🟡'],
+                      ['credito', 'Crédito 💳'],
+                      ['google_pay', 'Google Pay 📱'],
+                      ['debito', 'Débito 💴']
+                    ] as any;
+                  }
+                })().map(([val, label]: [string, string]) => (
                   <button
                     key={val}
                     type="button"
                     onClick={() => {
-                      setPaymentMethod(val);
+                      setPaymentMethod(val as any);
                       setChangeFor('');
                       setNoChangeNeeded(false);
                     }}
@@ -2677,6 +2957,18 @@ export const ClientDashboard = ({
 
               {paymentMethod === 'credito' && (
                 <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '1rem' }}>
+                  {(() => {
+                    const isPointConfigured = !!(storeConfig?.pointSmart2Id || storeConfig?.pointPro3Id || storeConfig?.pointAir2Id || storeConfig?.pointMiniNfc2Id);
+                    if (isPointConfigured && !userData?.pagbank_card_token) {
+                      return (
+                        <p style={{ margin: 0, fontSize: '0.82rem', color: '#fca5a5', textAlign: 'center' }}>
+                          Para pagar no crédito físico, por favor selecione a opção <strong>Crédito Maquininha</strong>. A opção online fica reservada para cartões salvos.
+                        </p>
+                      );
+                    }
+                    return null;
+                  })()}
+
                   {userData?.pagbank_card_token ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: useSavedCard ? '0' : '0.5rem' }}>
                       <input
@@ -2692,7 +2984,7 @@ export const ClientDashboard = ({
                     </div>
                   ) : null}
 
-                  {(!userData?.pagbank_card_token || !useSavedCard) && (
+                  {(!userData?.pagbank_card_token || !useSavedCard) && !(storeConfig?.pointSmart2Id || storeConfig?.pointPro3Id || storeConfig?.pointAir2Id || storeConfig?.pointMiniNfc2Id) && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                       <div className="input-group">
                         <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Número do Cartão</label>
@@ -3481,6 +3773,229 @@ export const ClientDashboard = ({
         </div>
       )}
 
+      {/* Modal de seleção de maquininhas Point */}
+      {showPointDeviceSelector && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(0,0,0,0.85)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: '#111827',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '20px',
+            padding: '2rem',
+            maxWidth: '420px',
+            width: '100%',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem',
+            textAlign: 'left'
+          }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--primary-gold)' }}>
+                Selecione a Maquininha Point
+              </h3>
+              <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                Escolha qual terminal ativo você deseja usar para realizar o pagamento de <strong>R$ {pointAmount.toFixed(2).replace('.', ',')}</strong>.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              {(() => {
+                const devices = [];
+                if (storeConfig?.pointSmart2Id) devices.push({ id: storeConfig.pointSmart2Id, label: 'Point Smart 2' });
+                if (storeConfig?.pointPro3Id) devices.push({ id: storeConfig.pointPro3Id, label: 'Point Pro 3' });
+                if (storeConfig?.pointAir2Id) devices.push({ id: storeConfig.pointAir2Id, label: 'Point Air 2' });
+                if (storeConfig?.pointMiniNfc2Id) devices.push({ id: storeConfig.pointMiniNfc2Id, label: 'Point Mini NFC 2' });
+                return devices.map(dev => (
+                  <button
+                    key={dev.id}
+                    type="button"
+                    onClick={() => handleConfirmPointPaymentChoice(dev.id, dev.label)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.85rem 1rem',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      background: 'rgba(255,255,255,0.02)',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      fontWeight: 600,
+                      fontSize: '0.9rem'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(59,130,246,0.08)';
+                      e.currentTarget.style.borderColor = 'rgba(59,130,246,0.3)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+                    }}
+                  >
+                    <span>📟 {dev.label}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.5rem', borderRadius: '6px' }}>
+                      Ativar
+                    </span>
+                  </button>
+                ));
+              })()}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowPointDeviceSelector(false);
+                setBillSubmitting(false);
+                setSubmitting(false);
+              }}
+              style={{
+                width: '100%',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: 'var(--text-secondary)',
+                padding: '0.65rem',
+                borderRadius: '30px',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                marginTop: '0.25rem'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox de Pagamento via Point */}
+      {showPointLightbox && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(0,0,0,0.85)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: '#111827',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '20px',
+            padding: '2.5rem 2rem',
+            maxWidth: '420px',
+            width: '100%',
+            textAlign: 'center',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5), 0 10px 10px -5px rgba(0,0,0,0.04)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '1.5rem'
+          }}>
+            {/* Ícone */}
+            <div style={{
+              position: 'relative',
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              background: 'rgba(59, 130, 246, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '0.5rem'
+            }}>
+              <CreditCard size={36} style={{ color: '#3b82f6' }} />
+              <div style={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                borderRadius: '50%',
+                border: '2px dashed rgba(59, 130, 246, 0.3)'
+              }} />
+            </div>
+
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>Aguardando Maquininha</h3>
+              <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Envio realizado para a <strong>{pointDeviceLabel}</strong>
+              </p>
+            </div>
+
+            <div style={{
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid rgba(255,255,255,0.05)',
+              borderRadius: '12px',
+              padding: '1rem',
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.4rem'
+            }}>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Valor da Cobrança</span>
+              <span style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--primary-gold)' }}>
+                R$ {pointAmount.toFixed(2).replace('.', ',')}
+              </span>
+              <span style={{ fontSize: '0.8rem', color: '#60a5fa', fontWeight: 600 }}>
+                Modo: {pointType === 'debito' ? '💳 Débito' : '💳 Crédito'}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#34d399', fontSize: '0.85rem', fontWeight: 600 }}>
+              <div className="status-dot status-open" style={{ width: '8px', height: '8px' }} />
+              <span>Insira ou aproxime o cartão na maquininha...</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowPointLightbox(false);
+                setPointPaymentId('');
+                setPointPaymentStatus('pending');
+                alert('Pagamento cancelado na tela. A maquininha continuará ativa por alguns instantes.');
+              }}
+              style={{
+                marginTop: '0.5rem',
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.2)',
+                color: '#f87171',
+                padding: '0.6rem 1.5rem',
+                borderRadius: '30px',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.18)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+            >
+              Cancelar Pagamento
+            </button>
+          </div>
+        </div>
+      )}
+
       {showCloseBillModal && (
         <div
           className="lightbox-overlay"
@@ -3647,12 +4162,37 @@ export const ClientDashboard = ({
                       <div>
                         <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em', display: 'block', marginBottom: '0.4rem' }}>Pagar Saldo Devedor Via</span>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
-                          {([['pix','Pix 🟡'],['credito','Crédito 💳'],['google_pay','Google Pay 📱'],['debito','Débito 💴'],['dinheiro','Dinheiro 💵']] as const).map(([val, label]) => (
+                          {(() => {
+                            const isPointConfigured = !!(storeConfig?.pointSmart2Id || storeConfig?.pointPro3Id || storeConfig?.pointAir2Id || storeConfig?.pointMiniNfc2Id);
+                            const hasSavedCard = !!userData?.pagbank_card_token;
+
+                            if (isPointConfigured) {
+                              const options = [
+                                ['pix', 'Pix 🟡'],
+                                ['google_pay', 'Google Pay 📱'],
+                                ['debito_point', 'Débito Maquininha 💴'],
+                                ['credito_point', 'Crédito Maquininha 💳'],
+                                ['dinheiro', 'Dinheiro 💵']
+                              ];
+                              if (hasSavedCard) {
+                                options.splice(2, 0, ['credito', 'Cartão Salvo 💳']);
+                              }
+                              return options as any;
+                            } else {
+                              return [
+                                ['pix', 'Pix 🟡'],
+                                ['credito', 'Crédito 💳'],
+                                ['google_pay', 'Google Pay 📱'],
+                                ['debito', 'Débito 💴'],
+                                ['dinheiro', 'Dinheiro 💵']
+                              ] as any;
+                            }
+                          })().map(([val, label]: [string, string]) => (
                             <button
                               key={val}
                               type="button"
                               onClick={() => {
-                                setBillPaymentMethod(val);
+                                setBillPaymentMethod(val as any);
                                 setBillChangeFor('');
                                 setBillNoChangeNeeded(false);
                               }}
@@ -3854,6 +4394,16 @@ export const ClientDashboard = ({
                           style={{ background: 'linear-gradient(135deg, #000000 0%, #202020 100%)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontWeight: 700, padding: '0.7rem' }}
                         >
                           {billSubmitting ? 'Iniciando Google Pay...' : `Pagar R$ ${totalToPay.toFixed(2).replace('.', ',')} via Google Pay`}
+                        </button>
+                      ) : (billPaymentMethod === 'debito_point' || billPaymentMethod === 'credito_point') ? (
+                        <button
+                          type="button"
+                          onClick={() => handleTriggerPointPaymentFlow(totalToPay, billPaymentMethod === 'debito_point' ? 'debito' : 'credito', 'close_bill')}
+                          disabled={billSubmitting}
+                          className="auth-btn"
+                          style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', fontWeight: 700, padding: '0.7rem' }}
+                        >
+                          {billSubmitting ? 'Acionando Maquininha...' : `Pagar R$ ${totalToPay.toFixed(2).replace('.', ',')} na Maquininha`}
                         </button>
                       ) : (
                         <button

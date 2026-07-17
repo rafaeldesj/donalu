@@ -20,6 +20,10 @@ interface StoreConfig {
   devAccessToken?: string;
   storeOwnerAccessToken?: string;
   storeOwnerEmail?: string;
+  pointSmart2Id?: string;
+  pointPro3Id?: string;
+  pointAir2Id?: string;
+  pointMiniNfc2Id?: string;
 }
 
 export const SettingsPage = () => {
@@ -108,7 +112,11 @@ export const SettingsPage = () => {
             devClientId: '',
             devAccessToken: '',
             storeOwnerAccessToken: '',
-            storeOwnerEmail: ''
+            storeOwnerEmail: '',
+            pointSmart2Id: '',
+            pointPro3Id: '',
+            pointAir2Id: '',
+            pointMiniNfc2Id: ''
           };
           await setDoc(docRef, defaults);
           setStoreConfig(defaults);
@@ -757,6 +765,70 @@ export const SettingsPage = () => {
           {/* Aba Guia Maquininha Point */}
           {activeTab === 'point_guide' && isAdmin && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+              {/* Formulário de Configuração de IDs */}
+              <form onSubmit={handleSaveStoreConfig} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '12px', padding: '1.5rem', marginBottom: '1rem' }}>
+                <h4 style={{ margin: 0, color: 'var(--primary-gold)', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  ⚙️ Configurar IDs das Maquininhas Point
+                </h4>
+                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  Insira o <strong>ID do Caixa (external_id)</strong> obtido no Passo 5 para cada maquininha correspondente. Se deixar em branco, o modelo não ficará integrado.
+                </p>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="input-group">
+                    <label>Point Smart 2 (external_id)</label>
+                    <input
+                      type="text"
+                      className="pastel-edit-input"
+                      placeholder="Ex: CAIXA_SMART2"
+                      value={storeConfig.pointSmart2Id || ''}
+                      onChange={(e) => setStoreConfig(prev => ({ ...prev, pointSmart2Id: e.target.value }))}
+                    />
+                  </div>
+                  <div className="input-group">
+                    <label>Point Pro 3 (external_id)</label>
+                    <input
+                      type="text"
+                      className="pastel-edit-input"
+                      placeholder="Ex: CAIXA_PRO3"
+                      value={storeConfig.pointPro3Id || ''}
+                      onChange={(e) => setStoreConfig(prev => ({ ...prev, pointPro3Id: e.target.value }))}
+                    />
+                  </div>
+                  <div className="input-group">
+                    <label>Point Air 2 (external_id)</label>
+                    <input
+                      type="text"
+                      className="pastel-edit-input"
+                      placeholder="Ex: CAIXA_AIR2"
+                      value={storeConfig.pointAir2Id || ''}
+                      onChange={(e) => setStoreConfig(prev => ({ ...prev, pointAir2Id: e.target.value }))}
+                    />
+                  </div>
+                  <div className="input-group">
+                    <label>Point Mini NFC 2 (external_id)</label>
+                    <input
+                      type="text"
+                      className="pastel-edit-input"
+                      placeholder="Ex: CAIXA_MININFC2"
+                      value={storeConfig.pointMiniNfc2Id || ''}
+                      onChange={(e) => setStoreConfig(prev => ({ ...prev, pointMiniNfc2Id: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                  <button
+                    type="submit"
+                    disabled={submittingStore}
+                    className="auth-btn"
+                    style={{ width: 'auto', padding: '0.6rem 2rem', fontSize: '0.85rem' }}
+                  >
+                    {submittingStore ? 'Salvando...' : 'Salvar IDs das Maquininhas'}
+                  </button>
+                </div>
+              </form>
+
               <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '1rem' }}>
                 <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '1.15rem' }}>
                   📟 Guia de Configuração — Maquininha Mercado Pago Point

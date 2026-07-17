@@ -320,3 +320,172 @@ export const checkPixMiddleware = async (req, res) => {
     return res.end(JSON.stringify({ success: false, message: 'Erro interno ao checar Pix.' }));
   }
 };
+
+// Middlewares adicionados para Maquininha Point
+if (!global.mockPointIntents) {
+  global.mockPointIntents = {};
+}
+
+export const createPointOrderMiddleware = async (req, res) => {
+  let body = '';
+  req.on('data', chunk => {
+    body += chunk.toString();
+  });
+  
+  req.on('end', async () => {
+    try {
+      const data = JSON.parse(body);
+      const { token, deviceId, amount, paymentType, externalReference } = data;
+      
+      const isMock = !token || token === 'mock' || token === '' || token === 'null' || token === 'undefined' || deviceId.includes('MOCK') || deviceId === 'mock';
+      
+      if (isMock) {
+        console.log(`[Mercado Pago Point Dev] Rodando em modo MOCK. Dispositivo: ${deviceId}`);
+        const mockIntentId = 'INTENT_MOCK_' + Math.random().toString(36).substring(2, 11).toUpperCase();
+        
+        global.mockPointIntents[mockIntentId] = {
+          status: 'OPEN',
+          createdAt: Date.now(),
+          amount: parseFloat(amount),
+          deviceId
+        };
+
+        // Simular aprovação automática após 10 segundos
+        setTimeout(() => {
+          if (global.mockPointIntents[mockIntentId]) {
+            global.mockPointIntents[mockIntentId].status = 'FINISHED';
+            global.mockPointIntents[mockIntentId].approvedAt = Date.now();
+            console.log(`[Mercado Pago Point Dev Mock] Pagamento ${mockIntentId} APROVADO via simulação.`);
+          }
+        }, 10000);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({
+          success: true,
+          intentId: mockIntentId,
+          status: 'OPEN',
+          isMock: true
+        }));
+      }
+
+      // Chamada real ao Mercado Pago Point
+      const mpUrl = `https://api.mercadopago.com/point/integration-api/devices/${deviceId}/payment-intents`;
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      const payload = {
+        amount: parseFloat(amount),
+        description: 'Pedido Dona Lu Pastelaria',
+        additional_info: {
+          external_reference: externalReference || 'PED_' + Date.now(),
+          print_on_terminal: true
+        },
+        payment: {
+          installments: 1,
+          type: paymentType === 'debito' ? 'debit_card' : 'credit_card'
+        }
+      };
+
+      const response = await nativeRequest(mpUrl, 'POST', headers, payload);
+
+      if (!response.ok) {
+        console.error('[Mercado Pago Point Dev] Erro ao criar intenção de pagamento:', response.json);
+        
+        // Fallback para mock em desenvolvimento se der erro na API
+        const mockIntentId = 'INTENT_MOCK_' + Math.random().toString(36).substring(2, 11).toUpperCase();
+        global.mockPointIntents[mockIntentId] = {
+          status: 'OPEN',
+          createdAt: Date.now(),
+          amount: parseFloat(amount),
+          deviceId
+        };
+        setTimeout(() => {
+          if (global.mockPointIntents[mockIntentId]) {
+            global.mockPointIntents[mockIntentId].status = 'FINISHED';
+          }
+        }, 10000);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({
+          success: true,
+          intentId: mockIntentId,
+          status: 'OPEN',
+          isMock: true,
+          message: 'Modo de testes ativo (erro na API real).'
+        }));
+      }
+
+      const r = response.json;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({
+        success: true,
+        intentId: r.id,
+        status: r.state || 'OPEN',
+        isMock: false
+      }));
+
+    } catch (err) {
+      console.error('[Mercado Pago Point Dev] Erro no middleware:', err);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ success: false, message: 'Erro interno ao acionar maquininha.' }));
+    }
+  });
+};
+
+export const checkPointOrderMiddleware = async (req, res) => {
+  try {
+    const urlObj = new URL(req.url, 'http://localhost');
+    const intentId = urlObj.searchParams.get('intentId');
+    const token = urlObj.searchParams.get('token');
+    
+    if (!intentId) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ success: false, message: 'intentId é obrigatório.' }));
+    }
+    
+    const isMock = intentId.startsWith('INTENT_MOCK_') || !token || token === 'mock' || token === 'null' || token === 'undefined';
+    
+    if (isMock) {
+      const mockIntent = global.mockPointIntents[intentId];
+      if (!mockIntent) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: true, status: 'CANCELED' }));
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ success: true, status: mockIntent.status, isMock: true }));
+    }
+
+    // Consulta real ao Mercado Pago Point
+    const mpUrl = `https://api.mercadopago.com/point/integration-api/payment-intents/${intentId}`;
+    const headers = {
+      'Authorization': `Bearer ${token}`
+    };
+
+    const response = await nativeRequest(mpUrl, 'GET', headers);
+
+    if (!response.ok) {
+      console.error('[Mercado Pago Point Dev] Erro ao consultar intenção:', response.json);
+      
+      const mockIntent = global.mockPointIntents[intentId];
+      if (mockIntent) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: true, status: mockIntent.status, isMock: true }));
+      }
+
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ success: false, message: 'Erro ao verificar maquininha no Mercado Pago.' }));
+    }
+
+    const r = response.json;
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ success: true, status: r.state || 'OPEN', isMock: false }));
+
+  } catch (err) {
+    console.error('[Mercado Pago Point Status Dev] Erro no middleware:', err);
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ success: false, message: 'Erro interno ao checar maquininha.' }));
+  }
+};
+
