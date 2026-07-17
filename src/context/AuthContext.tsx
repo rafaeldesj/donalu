@@ -169,14 +169,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const usersRef = collection(db, 'users');
 
     try {
+      const trimmedLower = trimmed.toLowerCase();
+      const isPhone = /^\d+$/.test(trimmed.replace(/\D/g, ''));
+
       if (trimmed.includes('@')) {
-        const q = query(usersRef, where('email', '==', trimmed.toLowerCase()), limit(1));
+        const q = query(usersRef, where('email', '==', trimmedLower), limit(1));
         const snap = await getDocs(q);
         if (!snap.empty) {
           userDocData = snap.docs[0].data();
           userDocId = snap.docs[0].id;
         }
-      } else {
+      } else if (isPhone && trimmed.replace(/\D/g, '').length >= 8) {
         const clean = trimmed.replace(/\D/g, '');
         const qClean = query(usersRef, where('phoneNumber', '==', clean), limit(1));
         const snapClean = await getDocs(qClean);
@@ -199,6 +202,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             userDocData = snapFormat.docs[0].data();
             userDocId = snapFormat.docs[0].id;
           }
+        }
+      } else {
+        // Busca flexível pelo Nome (Case-Insensitive)
+        const snap = await getDocs(usersRef);
+        const match = snap.docs.find(d => {
+          const u = d.data();
+          return u.name && u.name.toLowerCase().trim() === trimmedLower;
+        });
+        if (match) {
+          userDocData = match.data();
+          userDocId = match.id;
         }
       }
     } catch (dbErr) {

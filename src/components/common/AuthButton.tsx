@@ -446,15 +446,18 @@ export const AuthButton = () => {
         )}
 
         <div className="input-group">
-          <label htmlFor="auth-email">Endereço de E-mail</label>
+          <label htmlFor="auth-email">
+            {isRegisterMode ? 'Endereço de E-mail' : 'E-mail, Celular (WhatsApp) ou Nome'}
+          </label>
           <div className="input-wrapper">
             <Mail size={18} className="input-icon" />
             <input 
               id="auth-email"
-              type="email" 
-              placeholder="exemplo@email.com" 
+              type={isRegisterMode ? 'email' : 'text'} 
+              placeholder={isRegisterMode ? 'exemplo@email.com' : 'Digite seu e-mail, celular ou nome'} 
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
+              required
             />
           </div>
         </div>
