@@ -64,6 +64,23 @@ export const UserManagement = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const formatPhone = (val: string) => {
+    const digits = val.replace(/\D/g, '');
+    if (digits.length <= 10) {
+      return digits.replace(/^(\d{2})(\d{4})(\d{0,4})$/, (_, p1, p2, p3) => {
+        return `(${p1}) ${p2}${p3 ? '-' + p3 : ''}`;
+      });
+    } else {
+      return digits.slice(0, 11).replace(/^(\d{2})(\d{5})(\d{0,4})$/, (_, p1, p2, p3) => {
+        return `(${p1}) ${p2}${p3 ? '-' + p3 : ''}`;
+      });
+    }
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPhoneNumber(formatPhone(e.target.value));
+  };
+
   // Estados para redefinição de senha provisória
   const [resetUser, setResetUser] = useState<UserDocument | null>(null);
   const [tempPassword, setTempPassword] = useState('');
@@ -115,7 +132,7 @@ export const UserManagement = () => {
     setAttendant(user.staffFunctions?.attendant || false);
     setCashier(user.staffFunctions?.cashier || false);
     setDelivery(user.staffFunctions?.delivery || false);
-    setPhoneNumber(user.phoneNumber || '');
+    setPhoneNumber(formatPhone(user.phoneNumber || ''));
     setInitialPassword('');
     setError(null);
     setSuccess(null);
@@ -557,7 +574,7 @@ export const UserManagement = () => {
 
             <div className="input-group">
               <label>Celular (WhatsApp)</label>
-              <input type="text" placeholder="Ex: (21) 99999-9999" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value.replace(/[^0-9()-\s]/g, ''))} style={{ padding: '0.6rem 1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', outline: 'none' }} />
+              <input type="text" placeholder="Ex: (21) 99999-9999" value={phoneNumber} onChange={handlePhoneChange} style={{ padding: '0.6rem 1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', outline: 'none' }} />
             </div>
 
             {!editUser && (
