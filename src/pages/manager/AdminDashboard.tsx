@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { TrendingUp, Users, DollarSign, ShieldAlert, Cpu } from 'lucide-react';
+import { TrendingUp, Users, DollarSign, ShieldAlert, Cpu, Clock } from 'lucide-react';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import type { OrderDocument } from '../../types/order';
@@ -41,10 +41,27 @@ export const AdminDashboard = () => {
   const pendingPrepCount = orders.filter(o => o.status === 'pending').length;
   const inPrepCount = orders.filter(o => o.status === 'preparing').length;
 
+  // Filtra pedidos que têm tempo de preparo registrado para calcular a média
+  const ordersWithPrepTime = orders.filter(o => o.kitchenDurationSeconds !== undefined && o.kitchenDurationSeconds > 0);
+  const avgPrepTimeSeconds = ordersWithPrepTime.length > 0 
+    ? ordersWithPrepTime.reduce((sum, o) => sum + (o.kitchenDurationSeconds || 0), 0) / ordersWithPrepTime.length 
+    : 0;
+
+  const formatPrepTime = (totalSeconds: number) => {
+    if (totalSeconds === 0) return '--';
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = Math.round(totalSeconds % 60);
+    if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    }
+    return `${seconds}s`;
+  };
+
   const mockStats = [
     { id: 1, label: 'Faturamento Total Real', val: `R$ ${billingToday.toFixed(2).replace('.', ',')}`, icon: DollarSign, color: '#f59e0b' },
     { id: 2, label: 'Vendas Finalizadas', val: `${completedOrders.length} pedidos`, icon: TrendingUp, color: '#10b981' },
     { id: 3, label: 'Fila de Preparação', val: `${pendingPrepCount} pendentes / ${inPrepCount} preparando`, icon: Users, color: '#3b82f6' },
+    { id: 4, label: 'Tempo Médio de Preparo', val: formatPrepTime(avgPrepTimeSeconds), icon: Clock, color: '#a855f7' },
   ];
 
   if (loading) {
@@ -92,12 +109,13 @@ export const AdminDashboard = () => {
                   <th>Cliente</th>
                   <th>Total</th>
                   <th>Status</th>
+                  <th>Tempo Preparo</th>
                 </tr>
               </thead>
               <tbody>
                 {orders.length === 0 ? (
                   <tr>
-                    <td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>Nenhum pedido efetuado ainda.</td>
+                    <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>Nenhum pedido efetuado ainda.</td>
                   </tr>
                 ) : (
                   orders.slice(0, 5).map((order) => (
@@ -145,6 +163,25 @@ export const AdminDashboard = () => {
                             }
                           })()}
                         </span>
+                      </td>
+                      <td style={{ fontSize: '0.85rem' }}>
+                        {order.kitchenDurationSeconds !== undefined ? (
+                          <div>
+                            <strong>{formatPrepTime(order.kitchenDurationSeconds)}</strong>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                              Entrada: {new Date(order.kitchenEnteredAt || order.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          </div>
+                        ) : order.kitchenEnteredAt ? (
+                          <div>
+                            <span style={{ color: 'var(--primary-gold)', fontWeight: 600 }}>⏱️ Em andamento</span>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                              Entrada: {new Date(order.kitchenEnteredAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          </div>
+                        ) : (
+                          <span style={{ color: 'var(--text-secondary)' }}>-</span>
+                        )}
                       </td>
                     </tr>
                   ))

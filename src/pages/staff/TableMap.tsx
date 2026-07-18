@@ -155,7 +155,8 @@ export const TableMap = () => {
     try {
       const orderDocRef = doc(db, 'orders', order.id);
       await updateDoc(orderDocRef, {
-        status: 'pending'
+        status: 'pending',
+        kitchenEnteredAt: new Date().toISOString()
       });
 
       await addDoc(collection(db, 'transactions'), {

@@ -48,4 +48,7 @@ export interface OrderDocument {
   cancelledBy?: string;
   paymentMethod?: string | null;
   changeFor?: number | null;
+  kitchenEnteredAt?: string;
+  kitchenFinishedAt?: string;
+  kitchenDurationSeconds?: number;
 }

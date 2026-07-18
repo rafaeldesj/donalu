@@ -38,7 +38,8 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
     try {
       const orderDocRef = doc(db, 'orders', order.id);
       await updateDoc(orderDocRef, {
-        status: 'pending'
+        status: 'pending',
+        kitchenEnteredAt: new Date().toISOString()
       });
 
       await addDoc(collection(db, 'transactions'), {
@@ -165,7 +166,20 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
       const orderDocRef = doc(db, 'orders', orderId);
-      await updateDoc(orderDocRef, { status: newStatus });
+      const updates: any = { status: newStatus };
+      if (newStatus === 'ready') {
+        const order = orders.find(o => o.id === orderId);
+        if (order) {
+          const finishedAt = new Date().toISOString();
+          const enteredAt = order.kitchenEnteredAt || order.createdAt;
+          updates.kitchenFinishedAt = finishedAt;
+          if (enteredAt) {
+            const durationMs = new Date(finishedAt).getTime() - new Date(enteredAt).getTime();
+            updates.kitchenDurationSeconds = Math.max(0, Math.floor(durationMs / 1000));
+          }
+        }
+      }
+      await updateDoc(orderDocRef, updates);
 
       if (newStatus === 'completed' || newStatus === 'cancelled') {
         const order = orders.find(o => o.id === orderId);
@@ -375,6 +389,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                           </button>
                         )}
                       </div>
+                      <OrderTimer order={order} />
                     </div>
                   ))
                 )}
@@ -945,3 +960,75 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
   );
 };
 export default StaffDashboard;
+
+const OrderTimer = ({ order }: { order: OrderDocument }) => {
+  const [elapsed, setElapsed] = useState('');
+
+  useEffect(() => {
+    const startTimeStr = order.kitchenEnteredAt || order.createdAt;
+    if (!startTimeStr) {
+      setElapsed('00:00');
+      return;
+    }
+
+    const start = new Date(startTimeStr).getTime();
+
+    if (order.kitchenFinishedAt) {
+      const end = new Date(order.kitchenFinishedAt).getTime();
+      const diff = Math.max(0, end - start);
+      setElapsed(formatDuration(diff));
+      return;
+    }
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const diff = Math.max(0, now - start);
+      setElapsed(formatDuration(diff));
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [order.kitchenEnteredAt, order.createdAt, order.kitchenFinishedAt]);
+
+  const formatDuration = (ms: number) => {
+    const hours = Math.floor(ms / (1000 * 60 * 60));
+    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((ms % (1000 * 60)) / 1000);
+
+    return [
+      hours > 0 ? String(hours).padStart(2, '0') : null,
+      String(minutes).padStart(2, '0'),
+      String(seconds).padStart(2, '0')
+    ].filter(Boolean).join(':');
+  };
+
+  const entryTime = new Date(order.kitchenEnteredAt || order.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  return (
+    <div style={{
+      marginTop: '0.75rem',
+      fontSize: '0.85rem',
+      color: 'var(--text-secondary)',
+      background: 'rgba(255, 255, 255, 0.02)',
+      padding: '0.6rem 0.8rem',
+      borderRadius: '8px',
+      border: '1px solid rgba(255,255,255,0.05)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '0.2rem'
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>Entrada na Cozinha:</span>
+        <strong style={{ color: '#fff' }}>{entryTime}</strong>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>Tempo decorrido:</span>
+        <strong style={{ color: order.kitchenFinishedAt ? '#10b981' : 'var(--primary-gold)', fontFamily: 'monospace', fontSize: '0.95rem' }}>
+          {order.kitchenFinishedAt ? '✅ ' : '⏱️ '}{elapsed}
+        </strong>
+      </div>
+    </div>
+  );
+};
+
