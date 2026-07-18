@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { ChefHat, CreditCard, Bell, Play, Check, Navigation, TrendingUp, DollarSign, Clock } from 'lucide-react';
-import { collection, query, onSnapshot, doc, updateDoc, orderBy, addDoc, getDocs, where } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, updateDoc, orderBy, addDoc, getDocs, where, deleteDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { processOrderLoyaltyStamps } from '../../utils/loyalty';
 import type { OrderDocument } from '../../types/order';
@@ -37,6 +37,12 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
   const [selectedCheckoutOrder, setSelectedCheckoutOrder] = useState<OrderDocument | null>(null);
   const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<string>('dinheiro');
   const [checkoutChangeFor, setCheckoutChangeFor] = useState<string>('');
+
+  const [timeFilterHours, setTimeFilterHours] = useState<string>('all_day');
+  const [specificDateValue, setSpecificDateValue] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [viewingStatsDetailType, setViewingStatsDetailType] = useState<'realized' | 'paid' | 'unpaid' | null>(null);
+  const [showDevToolsModal, setShowDevToolsModal] = useState<boolean>(false);
+  const [devSelectedClientUid, setDevSelectedClientUid] = useState<string>('');
 
   const handleApproveCashierOrder = async (order: OrderDocument) => {
     if (!order.id) return;
@@ -168,6 +174,88 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
     } catch (err) {
       console.error("Erro ao finalizar pedido manualmente:", err);
       alert("Erro ao finalizar pedido. Tente novamente.");
+    }
+  };
+
+  const handleDevDeleteOrder = async (orderId: string, seqNum: number | string) => {
+    if (userData?.role !== 'developer') return;
+    if (!window.confirm(`[DEV] Tem certeza que deseja EXCLUIR permanentemente o Pedido #${seqNum} do histórico?`)) return;
+    try {
+      await deleteDoc(doc(db, 'orders', orderId));
+      alert(`[DEV] Pedido #${seqNum} excluído com sucesso.`);
+      setViewingStatsDetailType(null);
+    } catch (err) {
+      console.error("Erro do desenvolvedor ao excluir pedido:", err);
+      alert("Erro ao excluir pedido.");
+    }
+  };
+
+  const handleDevDeleteTodayHistory = async () => {
+    if (userData?.role !== 'developer') return;
+    const todayStr = getBusinessDay(new Date().toISOString());
+    if (!window.confirm(`[DEV] ATENÇÃO: Você está prestes a EXCLUIR TODOS OS PEDIDOS do dia de trabalho atual (${todayStr.split('-').reverse().join('/')}). Continuar?`)) return;
+    if (!window.confirm(`[DEV] CONFIRMAÇÃO FINAL: Deseja realmente apagar todos os registros de hoje? Esta ação é irreversível!`)) return;
+    
+    try {
+      const todayOrders = orders.filter(o => getBusinessDay(o.createdAt) === todayStr);
+      const batchPromises = todayOrders.map(async (o) => {
+        if (o.id) {
+          await deleteDoc(doc(db, 'orders', o.id));
+        }
+      });
+      await Promise.all(batchPromises);
+      alert("[DEV] Histórico do dia excluído com sucesso.");
+      setShowDevToolsModal(false);
+    } catch (err) {
+      console.error("Erro do desenvolvedor ao excluir histórico do dia:", err);
+      alert("Erro ao excluir histórico do dia.");
+    }
+  };
+
+  const handleDevDeleteClientHistory = async (clientUid: string, clientName: string) => {
+    if (userData?.role !== 'developer') return;
+    if (!clientUid) {
+      alert("Selecione um cliente válido.");
+      return;
+    }
+    if (!window.confirm(`[DEV] ATENÇÃO: Você está prestes a EXCLUIR TODO O HISTÓRICO de pedidos do cliente "${clientName}". Continuar?`)) return;
+    if (!window.confirm(`[DEV] CONFIRMAÇÃO FINAL: Deseja apagar todos os registros de "${clientName}"?`)) return;
+
+    try {
+      const ordersRef = collection(db, 'orders');
+      const q = query(ordersRef, where('clientUid', '==', clientUid));
+      const querySnapshot = await getDocs(q);
+      
+      const batchPromises = querySnapshot.docs.map(d => deleteDoc(doc(db, 'orders', d.id)));
+      await Promise.all(batchPromises);
+      
+      alert(`[DEV] Todo o histórico de "${clientName}" foi excluído com sucesso.`);
+      setDevSelectedClientUid('');
+      setShowDevToolsModal(false);
+    } catch (err) {
+      console.error("Erro do desenvolvedor ao excluir histórico do cliente:", err);
+      alert("Erro ao excluir histórico do cliente.");
+    }
+  };
+
+  const handleDevDeleteAllHistory = async () => {
+    if (userData?.role !== 'developer') return;
+    if (!window.confirm("[DEV] 🚨🚨🚨 ALERTA CRÍTICO: Você está prestes a APAGAR ABSOLUTAMENTE TODOS OS PEDIDOS DO HISTÓRICO DESDE O INÍCIO DO SISTEMA! Isso apagará todo o faturamento histórico. Deseja continuar?")) return;
+    const confirmText = prompt("[DEV] Para confirmar esta ação crítica, digite EXCLUIR_TUDO no campo abaixo:");
+    if (confirmText !== 'EXCLUIR_TUDO') {
+      alert("Ação cancelada. A frase de confirmação estava incorreta.");
+      return;
+    }
+
+    try {
+      const querySnapshot = await getDocs(collection(db, 'orders'));
+      const batchPromises = querySnapshot.docs.map(d => deleteDoc(doc(db, 'orders', d.id)));
+      await Promise.all(batchPromises);
+      alert("[DEV] Todos os registros de pedidos históricos foram excluídos com sucesso do banco de dados.");
+      setShowDevToolsModal(false);
+    } catch (err) {
+      console.error("Erro do desenvolvedor ao excluir histórico total:", err);
+      alert("Erro ao excluir histórico total.");
     }
   };
 
@@ -587,7 +675,34 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
           {/* Fila do Caixa */}
           {filter === 'cashier' && isAuthorized('cashier') && (() => {
             const todayStr = getBusinessDay(new Date().toISOString());
-            const todayOrders = orders.filter(o => getBusinessDay(o.createdAt) === todayStr && o.status !== 'cancelled');
+            let todayOrders = orders.filter(o => o.status !== 'cancelled');
+
+            // Lógica de filtragem por tempo estendido / específico
+            if (timeFilterHours === 'all_day') {
+              todayOrders = todayOrders.filter(o => getBusinessDay(o.createdAt) === todayStr);
+            } else if (['1', '2', '3', '4'].includes(timeFilterHours)) {
+              const hours = parseInt(timeFilterHours);
+              const cutoffTime = Date.now() - hours * 60 * 60 * 1000;
+              todayOrders = todayOrders.filter(o => 
+                getBusinessDay(o.createdAt) === todayStr && 
+                new Date(o.createdAt).getTime() >= cutoffTime
+              );
+            } else if (timeFilterHours === '3_days') {
+              const cutoffTime = Date.now() - 3 * 24 * 60 * 60 * 1000;
+              todayOrders = todayOrders.filter(o => new Date(o.createdAt).getTime() >= cutoffTime);
+            } else if (timeFilterHours === '7_days') {
+              const cutoffTime = Date.now() - 7 * 24 * 60 * 60 * 1000;
+              todayOrders = todayOrders.filter(o => new Date(o.createdAt).getTime() >= cutoffTime);
+            } else if (timeFilterHours === '30_days') {
+              const cutoffTime = Date.now() - 30 * 24 * 60 * 60 * 1000;
+              todayOrders = todayOrders.filter(o => new Date(o.createdAt).getTime() >= cutoffTime);
+            } else if (timeFilterHours === 'specific_date') {
+              if (specificDateValue) {
+                todayOrders = todayOrders.filter(o => o.createdAt.startsWith(specificDateValue));
+              } else {
+                todayOrders = [];
+              }
+            }
 
             // Pedidos pagos de hoje (tanto finalizados quanto ativos pagos online)
             const paidTodayOrders = todayOrders.filter(o => 
@@ -639,21 +754,112 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                     gap: '1.25rem'
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.75rem', flexWrap: 'wrap', gap: '1rem' }}>
                     <h3 style={{ fontSize: '1.3rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#fff' }}>
                       <TrendingUp size={22} className="text-gold" style={{ color: 'var(--primary-gold)' }} />
                       Resumo do Caixa (Hoje)
                     </h3>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                      Dia de Trabalho: <strong style={{ color: '#fff' }}>{todayStr.split('-').reverse().join('/')}</strong>
-                    </span>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                      {/* Filtro de Tempo */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <select
+                          value={timeFilterHours}
+                          onChange={(e) => setTimeFilterHours(e.target.value)}
+                          style={{ 
+                            padding: '0.4rem 0.6rem', 
+                            borderRadius: '8px', 
+                            background: '#0b0f19', 
+                            border: '1px solid rgba(255,255,255,0.1)', 
+                            color: '#fff', 
+                            fontSize: '0.85rem',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <option value="all_day">Hoje (Todo o dia)</option>
+                          <option value="1">Última 1 hora</option>
+                          <option value="2">Últimas 2 horas</option>
+                          <option value="3">Últimas 3 horas</option>
+                          <option value="4">Últimas 4 horas</option>
+                          <option value="3_days">Últimos 3 dias</option>
+                          <option value="7_days">Última semana</option>
+                          <option value="30_days">Últimos 30 dias</option>
+                          <option value="specific_date">Data específica...</option>
+                        </select>
+
+                        {timeFilterHours === 'specific_date' && (
+                          <input
+                            type="date"
+                            value={specificDateValue}
+                            onChange={(e) => setSpecificDateValue(e.target.value)}
+                            style={{ 
+                              padding: '0.4rem 0.6rem', 
+                              borderRadius: '8px', 
+                              background: '#0b0f19', 
+                              border: '1px solid rgba(255,255,255,0.1)', 
+                              color: '#fff', 
+                              fontSize: '0.85rem',
+                              cursor: 'pointer'
+                            }}
+                          />
+                        )}
+                      </div>
+
+                      {/* Botão Dev Tools */}
+                      {userData?.role === 'developer' && (
+                        <button
+                          type="button"
+                          onClick={() => setShowDevToolsModal(true)}
+                          style={{
+                            padding: '0.4rem 0.8rem',
+                            borderRadius: '8px',
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            border: '1px solid rgba(239, 68, 68, 0.25)',
+                            color: '#ef4444',
+                            fontWeight: 700,
+                            fontSize: '0.82rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.3rem'
+                          }}
+                        >
+                          🔧 Ferramentas Dev
+                        </button>
+                      )}
+
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        Dia de Trabalho: <strong style={{ color: '#fff' }}>{todayStr.split('-').reverse().join('/')}</strong>
+                      </span>
+                    </div>
                   </div>
 
                   {/* Grid de Cards de Estatísticas */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
                     
                     {/* Card 1: Total Realizado */}
-                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '16px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div 
+                      onClick={() => setViewingStatsDetailType('realized')}
+                      style={{ 
+                        background: 'rgba(255,255,255,0.02)', 
+                        border: '1px solid rgba(255,255,255,0.04)', 
+                        borderRadius: '16px', 
+                        padding: '1.25rem', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '1rem',
+                        cursor: 'pointer',
+                        transition: 'transform 0.15s, background 0.15s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+                      }}
+                    >
                       <div style={{ width: '45px', height: '45px', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-gold)', flexShrink: 0 }}>
                         <DollarSign size={22} />
                       </div>
@@ -669,7 +875,28 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                     </div>
 
                     {/* Card 2: Pedidos Pagos */}
-                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '16px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div 
+                      onClick={() => setViewingStatsDetailType('paid')}
+                      style={{ 
+                        background: 'rgba(255,255,255,0.02)', 
+                        border: '1px solid rgba(255,255,255,0.04)', 
+                        borderRadius: '16px', 
+                        padding: '1.25rem', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '1rem',
+                        cursor: 'pointer',
+                        transition: 'transform 0.15s, background 0.15s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+                      }}
+                    >
                       <div style={{ width: '45px', height: '45px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981', flexShrink: 0 }}>
                         <Check size={22} />
                       </div>
@@ -685,7 +912,28 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                     </div>
 
                     {/* Card 3: Pedidos Não Pagos */}
-                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '16px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div 
+                      onClick={() => setViewingStatsDetailType('unpaid')}
+                      style={{ 
+                        background: 'rgba(255,255,255,0.02)', 
+                        border: '1px solid rgba(255,255,255,0.04)', 
+                        borderRadius: '16px', 
+                        padding: '1.25rem', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '1rem',
+                        cursor: 'pointer',
+                        transition: 'transform 0.15s, background 0.15s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+                      }}
+                    >
                       <div style={{ width: '45px', height: '45px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', flexShrink: 0 }}>
                         <Clock size={22} />
                       </div>
@@ -1588,6 +1836,365 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                   style={{ flex: 1.5, padding: '0.7rem', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
                 >
                   Registrar Pagamento
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Lightbox do Detalhamento das Estatísticas de Pedidos */}
+      {viewingStatsDetailType && (() => {
+        const todayStr = getBusinessDay(new Date().toISOString());
+        let filteredOrders = orders.filter(o => o.status !== 'cancelled');
+
+        // Aplicar a mesma lógica de filtros temporais
+        if (timeFilterHours === 'all_day') {
+          filteredOrders = filteredOrders.filter(o => getBusinessDay(o.createdAt) === todayStr);
+        } else if (['1', '2', '3', '4'].includes(timeFilterHours)) {
+          const hours = parseInt(timeFilterHours);
+          const cutoffTime = Date.now() - hours * 60 * 60 * 1000;
+          filteredOrders = filteredOrders.filter(o => 
+            getBusinessDay(o.createdAt) === todayStr && 
+            new Date(o.createdAt).getTime() >= cutoffTime
+          );
+        } else if (timeFilterHours === '3_days') {
+          const cutoffTime = Date.now() - 3 * 24 * 60 * 60 * 1000;
+          filteredOrders = filteredOrders.filter(o => new Date(o.createdAt).getTime() >= cutoffTime);
+        } else if (timeFilterHours === '7_days') {
+          const cutoffTime = Date.now() - 7 * 24 * 60 * 60 * 1000;
+          filteredOrders = filteredOrders.filter(o => new Date(o.createdAt).getTime() >= cutoffTime);
+        } else if (timeFilterHours === '30_days') {
+          const cutoffTime = Date.now() - 30 * 24 * 60 * 60 * 1000;
+          filteredOrders = filteredOrders.filter(o => new Date(o.createdAt).getTime() >= cutoffTime);
+        } else if (timeFilterHours === 'specific_date') {
+          if (specificDateValue) {
+            filteredOrders = filteredOrders.filter(o => o.createdAt.startsWith(specificDateValue));
+          } else {
+            filteredOrders = [];
+          }
+        }
+
+        // Sub-filtrar dependendo do card clicado
+        if (viewingStatsDetailType === 'paid') {
+          filteredOrders = filteredOrders.filter(o => 
+            o.status === 'completed' || 
+            ['pix', 'credito', 'google_pay'].includes(o.paymentMethod || '')
+          );
+        } else if (viewingStatsDetailType === 'unpaid') {
+          filteredOrders = filteredOrders.filter(o => 
+            o.status !== 'completed' && 
+            !['pix', 'credito', 'google_pay'].includes(o.paymentMethod || '')
+          );
+        }
+
+        const titleMap = {
+          realized: 'Pedidos Realizados (Hoje)',
+          paid: 'Pedidos Pagos (Hoje)',
+          unpaid: 'Pedidos Pendentes (Hoje)'
+        };
+
+        return (
+          <div
+            className="lightbox-overlay animate-fade-in"
+            onClick={() => setViewingStatsDetailType(null)}
+            style={{ zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)', position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh' }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: 'var(--bg-card)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '24px',
+                padding: '2rem',
+                width: '95%',
+                maxWidth: '650px',
+                maxHeight: '85vh',
+                boxShadow: '0 24px 60px rgba(0,0,0,0.8)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1.25rem',
+                color: '#fff'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.75rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  📊 Detalhes: {titleMap[viewingStatsDetailType]}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setViewingStatsDetailType(null)}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '1.25rem' }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Lista de Pedidos */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', overflowY: 'auto', paddingRight: '0.5rem' }}>
+                {filteredOrders.length === 0 ? (
+                  <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', margin: '2rem 0', textAlign: 'center' }}>Nenhum pedido correspondente encontrado.</p>
+                ) : (
+                  filteredOrders.map((order) => {
+                    const seqNum = order.dailySeq || getOrderSequenceNumber(order.id, order.createdAt);
+                    const orderTimeStr = new Date(order.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    return (
+                      <div 
+                        key={order.id} 
+                        style={{ 
+                          background: 'rgba(255,255,255,0.02)', 
+                          border: '1px solid rgba(255,255,255,0.04)', 
+                          borderRadius: '12px', 
+                          padding: '1rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.5rem'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <strong style={{ color: 'var(--primary-gold)', fontSize: '0.95rem' }}>Pedido #{seqNum}</strong>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginLeft: '0.5rem' }}>({orderTimeStr})</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <strong style={{ fontSize: '1.05rem', color: '#fff' }}>R$ {order.total.toFixed(2).replace('.', ',')}</strong>
+                            {userData?.role === 'developer' && (
+                              <button
+                                type="button"
+                                onClick={() => handleDevDeleteOrder(order.id!, seqNum)}
+                                title="[DEV] Excluir Pedido"
+                                style={{
+                                  background: 'rgba(239, 68, 68, 0.1)',
+                                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                                  borderRadius: '8px',
+                                  padding: '0.35rem 0.6rem',
+                                  color: '#ef4444',
+                                  fontWeight: 700,
+                                  fontSize: '0.75rem',
+                                  cursor: 'pointer',
+                                  marginLeft: '1rem',
+                                  transition: 'background 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+                              >
+                                🗑️ Excluir
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', gap: '0.75rem' }}>
+                          <span>Cliente: <strong style={{ color: '#fff' }}>{order.clientName}</strong></span>
+                          <span>•</span>
+                          <span>Tipo: <strong style={{ color: '#fff' }}>{getOrderTypeLabel(order)}</strong></span>
+                          <span>•</span>
+                          <span>Pagamento: <strong style={{ color: '#fff' }}>{order.paymentMethod === 'dinheiro' ? '💵 Dinheiro' : order.paymentMethod === 'debito' ? '💳 Débito' : order.paymentMethod === 'credito' ? '💳 Crédito' : order.paymentMethod === 'pagar_final' ? '🍽️ Pagar no Final' : order.paymentMethod || 'Não definido'}</strong></span>
+                        </div>
+
+                        {/* Itens */}
+                        <div style={{ fontSize: '0.82rem', background: 'rgba(0,0,0,0.15)', padding: '0.5rem 0.75rem', borderRadius: '8px' }}>
+                          {order.items.map((item, idx) => (
+                            <div key={idx} style={{ color: 'var(--text-secondary)' }}>
+                              <span style={{ color: '#fff', fontWeight: 600 }}>{item.quantity}x</span> {item.name}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setViewingStatsDetailType(null)}
+                  style={{
+                    padding: '0.6rem 1.5rem',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'rgba(255,255,255,0.04)',
+                    color: '#fff',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Fechar
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Lightbox de Ferramentas de Exclusão do Desenvolvedor (Dev Tools) */}
+      {showDevToolsModal && userData?.role === 'developer' && (() => {
+        // Obter lista única de clientes a partir de todos os pedidos carregados
+        const uniqueClientsMap = new Map<string, string>();
+        orders.forEach(o => {
+          if (o.clientUid && o.clientName) {
+            uniqueClientsMap.set(o.clientUid, o.clientName);
+          }
+        });
+        const uniqueClientsList = Array.from(uniqueClientsMap.entries()).map(([uid, name]) => ({ uid, name }));
+
+        return (
+          <div
+            className="lightbox-overlay animate-fade-in"
+            onClick={() => { setShowDevToolsModal(false); setDevSelectedClientUid(''); }}
+            style={{ zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh' }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: 'var(--bg-card)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                borderRadius: '24px',
+                padding: '2rem',
+                width: '90%',
+                maxWidth: '520px',
+                boxShadow: '0 24px 60px rgba(0,0,0,0.9)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1.5rem',
+                color: '#fff'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(239,68,68,0.2)', paddingBottom: '0.75rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  🔧 Painel do Desenvolvedor (Dev Tools)
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => { setShowDevToolsModal(false); setDevSelectedClientUid(''); }}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '1.25rem' }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Banner de Aviso Crítico */}
+              <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '12px', padding: '1rem', fontSize: '0.85rem', color: '#ef4444', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <strong style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>🚨 ATENÇÃO OPERAÇÕES CRÍTICAS</strong>
+                <span>Qualquer exclusão realizada aqui apaga os registros diretamente no banco de dados Firestore. Ações são permanentes e irreversíveis!</span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {/* Ação 1: Excluir todo o histórico do dia */}
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>1. Histórico do Dia Atual</span>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Apaga todos os pedidos cadastrados no dia de trabalho de hoje (excluindo os já cancelados).</p>
+                  <button
+                    type="button"
+                    onClick={handleDevDeleteTodayHistory}
+                    style={{
+                      padding: '0.5rem',
+                      background: '#dc2626',
+                      border: 'none',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontWeight: 700,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#b91c1c'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = '#dc2626'}
+                  >
+                    Excluir Todo o Histórico de Hoje
+                  </button>
+                </div>
+
+                {/* Ação 2: Excluir histórico de cliente específico */}
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>2. Histórico de Cliente Específico</span>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Remove todos os pedidos associados ao cliente escolhido abaixo de todo o histórico do sistema.</p>
+                  
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.2rem' }}>
+                    <select
+                      value={devSelectedClientUid}
+                      onChange={(e) => setDevSelectedClientUid(e.target.value)}
+                      style={{
+                        flex: 1,
+                        padding: '0.5rem',
+                        borderRadius: '8px',
+                        background: '#0b0f19',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        color: '#fff',
+                        fontSize: '0.85rem'
+                      }}
+                    >
+                      <option value="">-- Selecione o Cliente --</option>
+                      {uniqueClientsList.map(c => (
+                        <option key={c.uid} value={c.uid}>{c.name}</option>
+                      ))}
+                    </select>
+                    
+                    <button
+                      type="button"
+                      disabled={!devSelectedClientUid}
+                      onClick={() => handleDevDeleteClientHistory(devSelectedClientUid, uniqueClientsMap.get(devSelectedClientUid) || '')}
+                      style={{
+                        padding: '0.5rem 0.85rem',
+                        background: devSelectedClientUid ? '#dc2626' : 'rgba(255,255,255,0.05)',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: devSelectedClientUid ? '#fff' : 'var(--text-secondary)',
+                        fontWeight: 700,
+                        fontSize: '0.8rem',
+                        cursor: devSelectedClientUid ? 'pointer' : 'not-allowed',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={(e) => { if (devSelectedClientUid) e.currentTarget.style.background = '#b91c1c'; }}
+                      onMouseLeave={(e) => { if (devSelectedClientUid) e.currentTarget.style.background = '#dc2626'; }}
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                </div>
+
+                {/* Ação 3: Excluir todo o histórico geral */}
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#ef4444' }}>3. Reset Completo (Limpeza Geral)</span>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Apaga absolutamente todos os pedidos armazenados na coleção 'orders' de todos os tempos.</p>
+                  <button
+                    type="button"
+                    onClick={handleDevDeleteAllHistory}
+                    style={{
+                      padding: '0.5rem',
+                      background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+                      border: 'none',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontWeight: 700,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Excluir Todo o Histórico (Desde o Início)
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => { setShowDevToolsModal(false); setDevSelectedClientUid(''); }}
+                  style={{
+                    flex: 1,
+                    padding: '0.7rem',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'rgba(255,255,255,0.04)',
+                    color: 'var(--text-secondary)',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Voltar
                 </button>
               </div>
 
