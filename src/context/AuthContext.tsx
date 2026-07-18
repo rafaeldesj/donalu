@@ -268,13 +268,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (userDocData) {
       if (userDocData.password || userDocData.tempPassword) {
-        const dbPass = userDocData.password || userDocData.tempPassword;
+        // Prioriza a senha provisória sobre a senha anterior
+        const dbPass = userDocData.tempPassword || userDocData.password;
         if (dbPass === password) {
           // Autentica de verdade no Firebase Auth para liberar privilégios administrativos
           try {
             await signInWithEmailAndPassword(auth, userDocData.email, password);
           } catch (authErr) {
             console.warn("Sessão Auth paralela não pôde ser estabelecida, operando com sessão Firestore local:", authErr);
+          }
+
+          // Se logou com a senha provisória, atualiza como senha oficial e limpa a provisória do banco
+          if (userDocData.tempPassword && userDocData.tempPassword === password) {
+            try {
+              await updateDoc(doc(db, 'users', userDocId), {
+                password: password,
+                tempPassword: null
+              });
+              userDocData.password = password;
+              userDocData.tempPassword = null as any;
+            } catch (dbUpdateErr) {
+              console.warn("Erro ao promover senha provisória no Firestore:", dbUpdateErr);
+            }
           }
 
           const mockUser = {
