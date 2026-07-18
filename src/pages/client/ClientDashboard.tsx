@@ -2571,7 +2571,7 @@ export const ClientDashboard = ({
               </button>
             )}
           </div>
-          {activeCategory !== 'Bebidas' && (
+          {isPastelTab && (
             <div style={{
               background: 'rgba(245, 158, 11, 0.05)',
               border: '1px solid rgba(245, 158, 11, 0.15)',
