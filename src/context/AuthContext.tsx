@@ -245,20 +245,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         }
       } else {
-        // Busca compatível com as regras rígidas do list (filtro de igualdade direta '==')
-        // Tenta buscar pelo nome exato (como Rafael Jorge)
-        const qName = query(usersRef, where('name', '==', trimmed), limit(1));
-        const snapName = await getDocs(qName);
-        if (!snapName.empty) {
-          userDocData = snapName.docs[0].data();
-          userDocId = snapName.docs[0].id;
-        } else {
-          // Tenta buscar com o nome todo em minúsculas
-          const qNameLower = query(usersRef, where('name', '==', trimmedLower), limit(1));
-          const snapNameLower = await getDocs(qNameLower);
-          if (!snapNameLower.empty) {
-            userDocData = snapNameLower.docs[0].data();
-            userDocId = snapNameLower.docs[0].id;
+        // Tenta variações de capitalização do nome para passar na busca case-sensitive do Firestore
+        const titleCaseName = trimmed.toLowerCase().replace(/(?:^|\s)\S/g, (a) => a.toUpperCase());
+        const upperCaseName = trimmed.toUpperCase();
+        
+        const candidateNames = Array.from(new Set([
+          trimmed,
+          trimmedLower,
+          titleCaseName,
+          upperCaseName
+        ]));
+
+        for (const candidate of candidateNames) {
+          const qName = query(usersRef, where('name', '==', candidate), limit(1));
+          const snapName = await getDocs(qName);
+          if (!snapName.empty) {
+            userDocData = snapName.docs[0].data();
+            userDocId = snapName.docs[0].id;
+            break; // Encontrou a correspondência!
           }
         }
       }
