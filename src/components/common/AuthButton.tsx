@@ -219,7 +219,11 @@ export const AuthButton = () => {
       await completeRegistration(finalName, phone, email);
     } catch (err: any) {
       console.error(err);
-      setError('Ocorreu um erro ao concluir o cadastro. Tente novamente.');
+      if (err?.code === 'permission-denied' || err?.message?.includes('permission') || err?.message?.includes('permissions')) {
+        setError('Esta conta já está cadastrada com outra senha no sistema. Por favor, faça login utilizando a sua senha original ou clique em "Esqueceu a senha?" na tela de login para redefinir.');
+      } else {
+        setError('Ocorreu um erro ao concluir o cadastro. Tente novamente.');
+      }
     } finally {
       setActionLoading(false);
     }

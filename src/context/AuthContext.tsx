@@ -209,8 +209,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const isPhone = /^\d+$/.test(trimmed.replace(/\D/g, ''));
 
       if (trimmed.includes('@')) {
-        const q = query(usersRef, where('email', '==', trimmedLower), limit(1));
-        const snap = await getDocs(q);
+        let q = query(usersRef, where('email', '==', trimmedLower), limit(1));
+        let snap = await getDocs(q);
+        // Fallback para buscar com o e-mail no formato original (caso tenha maiúsculas no banco)
+        if (snap.empty && trimmed !== trimmedLower) {
+          q = query(usersRef, where('email', '==', trimmed), limit(1));
+          snap = await getDocs(q);
+        }
         if (!snap.empty) {
           userDocData = snap.docs[0].data();
           userDocId = snap.docs[0].id;
