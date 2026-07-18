@@ -152,7 +152,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
 
       } else {
-        setUserData(null);
+        // Só limpa o userData se não houver nenhuma sessão ativa salva no localStorage
+        const savedSession = localStorage.getItem('donalu_session');
+        if (!savedSession) {
+          setUserData(null);
+        }
         setLoading(false);
       }
     });
