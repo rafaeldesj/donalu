@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { doc, getDoc, setDoc, updateDoc, collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { User, Store, Shield, CreditCard, Save, Trash2, Clock, MapPin, AlertCircle, History, FileText, KeyRound, Plus, Camera, QrCode, Wallet } from 'lucide-react';
+import { User, Store, Shield, CreditCard, Save, Trash2, Clock, MapPin, AlertCircle, History, FileText, KeyRound, Plus, Camera, QrCode, Wallet, Printer } from 'lucide-react';
 import { logAuditAction } from '../utils/audit';
 import { SecurityCameraSettings } from '../components/SecurityCameraSettings';
 import { TableQrCodeGenerator } from '../components/TableQrCodeGenerator';
+import { getPrinterSettings, savePrinterSettings, connectPrinter, disconnectPrinter, isBluetoothConnected, getConnectedDeviceName, subscribeToBluetoothState, printMockOrder } from '../utils/printer';
+import type { PrinterSettings } from '../utils/printer';
 
 interface StoreConfig {
   isOpen: boolean;
@@ -34,8 +36,62 @@ interface StoreConfig {
 export const SettingsPage = () => {
   const { user, userData, updatePhoneNumber } = useAuth();
   
-  // Tabs state: 'profile' (all) | 'store' (admin) | 'loyalty' (admin) | 'advanced' (dev) | 'audit_logs' (admin) | 'commissions' | 'security' | 'payments'
-  const [activeTab, setActiveTab] = useState<'profile' | 'store' | 'loyalty' | 'advanced' | 'audit_logs' | 'commissions' | 'security' | 'mesas' | 'point_guide' | 'payments'>('profile');
+  // Tabs state: 'profile' (all) | 'store' (admin) | 'loyalty' (admin) | 'advanced' (dev) | 'audit_logs' (admin) | 'commissions' | 'security' | 'payments' | 'printer'
+  const [activeTab, setActiveTab] = useState<'profile' | 'store' | 'loyalty' | 'advanced' | 'audit_logs' | 'commissions' | 'security' | 'mesas' | 'point_guide' | 'payments' | 'printer'>('profile');
+
+  // Printer config states
+  const [printerSettings, setPrinterSettingsState] = useState<PrinterSettings>(() => getPrinterSettings());
+  const [isBtConnected, setIsBtConnected] = useState(isBluetoothConnected());
+  const [btDeviceName, setBtDeviceName] = useState(getConnectedDeviceName());
+  const [isPairing, setIsPairing] = useState(false);
+  const [printError, setPrintError] = useState<string | null>(null);
+  const [printSuccess, setPrintSuccess] = useState<boolean>(false);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToBluetoothState((connected, name) => {
+      setIsBtConnected(connected);
+      setBtDeviceName(name || '');
+    });
+    return unsubscribe;
+  }, []);
+
+  const handleConnectBt = async () => {
+    setIsPairing(true);
+    setPrintError(null);
+    setPrintSuccess(false);
+    try {
+      await connectPrinter();
+      setPrintSuccess(true);
+      setTimeout(() => setPrintSuccess(false), 3000);
+    } catch (err: any) {
+      setPrintError(err.message || 'Erro ao conectar à impressora Bluetooth.');
+    } finally {
+      setIsPairing(false);
+    }
+  };
+
+  const handleDisconnectBt = () => {
+    disconnectPrinter();
+    setPrintSuccess(false);
+  };
+
+  const handleSavePrinterSettings = (newSettings: PrinterSettings) => {
+    setPrinterSettingsState(newSettings);
+    savePrinterSettings(newSettings);
+    showFeedback('success', 'Configurações de impressão salvas com sucesso!');
+  };
+
+  const handleTestPrint = async () => {
+    setPrintError(null);
+    setPrintSuccess(false);
+    try {
+      await printMockOrder();
+      setPrintSuccess(true);
+      setTimeout(() => setPrintSuccess(false), 3000);
+    } catch (err: any) {
+      setPrintError(err.message || 'Erro ao realizar impressão de teste.');
+    }
+  };
   
   const role = userData?.role || 'client';
   const isAdmin = ['developer', 'owner', 'manager'].includes(role);
@@ -629,10 +685,10 @@ export const SettingsPage = () => {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: '2rem', marginTop: '1.5rem' }}>
+      <div className="settings-grid">
         
         {/* Sidebar de Configurações */}
-        <aside style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <aside className="settings-sidebar">
           <button
             type="button"
             onClick={() => setActiveTab('profile')}
@@ -655,6 +711,31 @@ export const SettingsPage = () => {
             <User size={16} />
             <span>Meu Perfil</span>
           </button>
+
+          {(isAdmin || role === 'staff') && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('printer')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                padding: '0.85rem 1rem',
+                borderRadius: '12px',
+                border: activeTab === 'printer' ? '1px solid var(--primary-gold)' : '1px solid rgba(255,255,255,0.05)',
+                background: activeTab === 'printer' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(255,255,255,0.02)',
+                color: activeTab === 'printer' ? 'var(--primary-gold)' : 'var(--text-secondary)',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                transition: 'all 0.2s',
+                textAlign: 'left'
+              }}
+            >
+              <Printer size={16} style={{ color: 'var(--primary-gold)' }} />
+              <span>Impressora Bluetooth</span>
+            </button>
+          )}
 
           {isAdmin && (
             <>
@@ -1110,7 +1191,7 @@ export const SettingsPage = () => {
                   Insira o <strong>ID do Caixa (external_id)</strong> obtido no Passo 5 para cada maquininha correspondente. Se deixar em branco, o modelo não ficará integrado.
                 </p>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="responsive-grid-2">
                   <div className="input-group">
                     <label>Point Smart 2 (external_id)</label>
                     <input
@@ -1326,7 +1407,7 @@ export const SettingsPage = () => {
             <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem', margin: 0 }}>Meu Perfil e Endereço</h3>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="responsive-grid-2">
                 <div className="input-group">
                   <label>Nome Completo</label>
                   <input
@@ -1350,7 +1431,7 @@ export const SettingsPage = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="responsive-grid-2">
                 <div className="input-group">
                   <label>Celular (WhatsApp)</label>
                   <input
@@ -1377,7 +1458,7 @@ export const SettingsPage = () => {
 
               <h4 style={{ margin: '0.5rem 0 0 0', color: 'var(--primary-gold)' }}>Endereço de Entrega Principal</h4>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '1rem' }}>
+              <div className="responsive-grid-street-number">
                 <div className="input-group">
                   <label>Rua / Logradouro</label>
                   <input
@@ -1402,7 +1483,7 @@ export const SettingsPage = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="responsive-grid-2">
                 <div className="input-group">
                   <label>Bairro</label>
                   <input
@@ -1427,7 +1508,7 @@ export const SettingsPage = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="responsive-grid-2">
                 <div className="input-group">
                   <label>CEP</label>
                   <input
@@ -1530,7 +1611,7 @@ export const SettingsPage = () => {
                   </div>
 
                   {/* Horários */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="responsive-grid-2">
                     <div className="input-group">
                       <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         <Clock size={14} /> Horário de Abertura
@@ -1601,7 +1682,7 @@ export const SettingsPage = () => {
                   <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1.5rem', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--primary-gold)' }}>⚙️ Gestão de Ingredientes Adicionais</h3>
                     
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="responsive-grid-2">
                       <div className="input-group">
                         <label>Quantidade Máxima Permitida por Pastel</label>
                         <input
@@ -1829,7 +1910,7 @@ export const SettingsPage = () => {
                 <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', color: '#a855f7' }}>
                   Conta do Desenvolvedor (Recebe {storeConfig.devPercentage ?? 1}%)
                 </label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="responsive-grid-2">
                   <div className="input-group">
                     <label>Mercado Pago Client ID (Dev)</label>
                     <input
@@ -2083,7 +2164,7 @@ export const SettingsPage = () => {
                 </div>
 
                 {/* Grid dos Fechamentos */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                <div className="responsive-grid-2" style={{ gap: '1.5rem' }}>
                   
                   {/* Semana */}
                   <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '12px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -2097,7 +2178,7 @@ export const SettingsPage = () => {
                         {weeklyPeriod.start.toLocaleDateString('pt-BR')} a {weeklyPeriod.end.toLocaleDateString('pt-BR')}
                       </div>
                     </div>
-                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="responsive-grid-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem' }}>
                       <div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Vendas Offline:</div>
                         <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff' }}>R$ {totalWeeklySales.toFixed(2)}</div>
@@ -2130,7 +2211,7 @@ export const SettingsPage = () => {
                         {monthlyPeriod.start.toLocaleDateString('pt-BR')} a {monthlyPeriod.end.toLocaleDateString('pt-BR')}
                       </div>
                     </div>
-                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="responsive-grid-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem' }}>
                       <div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Vendas Offline:</div>
                         <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff' }}>R$ {totalMonthlySales.toFixed(2)}</div>
@@ -2206,6 +2287,184 @@ export const SettingsPage = () => {
           {/* Aba 7: Segurança e Câmeras IP */}
           {activeTab === 'security' && (isDev || role === 'owner') && (
             <SecurityCameraSettings />
+          )}
+
+          {/* Aba 8: Impressora Bluetooth */}
+          {activeTab === 'printer' && (isAdmin || role === 'staff') && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div>
+                <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem', margin: 0, color: 'var(--primary-gold)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Printer size={22} style={{ color: 'var(--primary-gold)' }} />
+                  Configuração da Impressora Térmica Bluetooth 🖨️
+                </h3>
+                <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: '1.4' }}>
+                  Configure e teste a sua impressora térmica local para a impressão dos pedidos. Você pode imprimir o cupom e grampeá-lo na embalagem do cliente para rápida identificação na cozinha e na entrega.
+                </p>
+              </div>
+
+              {printError && (
+                <div style={{ background: 'rgba(239, 68, 68, 0.1)', borderLeft: '4px solid #ef4444', color: '#f87171', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.85rem' }}>
+                  ⚠️ {printError}
+                </div>
+              )}
+
+              {printSuccess && (
+                <div style={{ background: 'rgba(16, 185, 129, 0.1)', borderLeft: '4px solid #10b981', color: '#34d399', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.85rem' }}>
+                  ✅ Ação executada com sucesso na impressora!
+                </div>
+              )}
+
+              <div className="responsive-grid-2" style={{ gap: '1.5rem' }}>
+                
+                {/* Métodos de Impressão e Tamanho */}
+                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                  <h4 style={{ margin: 0, color: '#fff', fontSize: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>Preferências de Impressão</h4>
+                  
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', fontWeight: 600 }}>MÉTODO DE IMPRESSÃO</label>
+                    <select
+                      value={printerSettings.method}
+                      onChange={(e) => handleSavePrinterSettings({ ...printerSettings, method: e.target.value as 'browser' | 'bluetooth' })}
+                      style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '10px', background: '#0b0f19', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}
+                    >
+                      <option value="browser">Navegador (Padrão do Sistema) - Recomendado</option>
+                      <option value="bluetooth">Bluetooth Direto (Web Bluetooth BLE API)</option>
+                    </select>
+                    <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.3' }}>
+                      {printerSettings.method === 'browser' 
+                        ? 'Utiliza o gerenciador de impressão do próprio sistema (Windows/Android/iOS). Altamente compatível com impressoras pareadas por Bluetooth clássico ou cabo.' 
+                        : 'Envia dados binários brutos (ESC/POS) diretamente à impressora via Bluetooth do navegador. Não abre telas do sistema. Requer navegador compatível (Chrome/Edge).'}
+                    </p>
+                  </div>
+
+                  <div className="responsive-grid-2">
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', fontWeight: 600 }}>TAMANHO DA BOBINA</label>
+                      <select
+                        value={printerSettings.paperSize}
+                        onChange={(e) => handleSavePrinterSettings({ ...printerSettings, paperSize: e.target.value as '58mm' | '80mm' })}
+                        style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '10px', background: '#0b0f19', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}
+                      >
+                        <option value="58mm">58mm (Padrão Pequena)</option>
+                        <option value="80mm">80mm (Grande/Larga)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', fontWeight: 600 }}>Nº DE CÓPIAS</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={5}
+                        value={printerSettings.copies}
+                        onChange={(e) => handleSavePrinterSettings({ ...printerSettings, copies: Math.max(1, parseInt(e.target.value) || 1) })}
+                        style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '10px', background: '#0b0f19', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.9rem' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status Bluetooth / Conexão */}
+                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                  <h4 style={{ margin: 0, color: '#fff', fontSize: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>Conexão de Hardware</h4>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(0,0,0,0.15)', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: isBtConnected ? '#10b981' : '#ef4444', display: 'inline-block' }}></span>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#fff' }}>
+                      {isBtConnected ? `Conectado: ${btDeviceName}` : 'Impressora Bluetooth Desconectada'}
+                    </span>
+                  </div>
+
+                  {printerSettings.method === 'bluetooth' ? (
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      {!isBtConnected ? (
+                        <button
+                          type="button"
+                          disabled={isPairing}
+                          onClick={handleConnectBt}
+                          style={{ flex: 1, padding: '0.75rem', background: 'var(--primary-gold)', color: '#0b0f19', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                        >
+                          {isPairing ? <span className="spinner" style={{ width: '14px', height: '14px', border: '2px solid #0b0f19', borderTopColor: 'transparent' }} /> : <Printer size={16} />}
+                          Parear / Conectar Impressora
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleDisconnectBt}
+                          style={{ flex: 1, padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '10px', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}
+                        >
+                          Desconectar
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                      Como você está usando o método **Navegador (Padrão do Sistema)**, a conexão Bluetooth direta com o site não é necessária. O sistema utilizará as impressoras instaladas no seu computador ou celular.
+                    </p>
+                  )}
+
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                    <button
+                      type="button"
+                      onClick={handleTestPrint}
+                      style={{ padding: '0.75rem', background: 'rgba(245, 158, 11, 0.1)', color: 'var(--primary-gold)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '10px', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                    >
+                      <Printer size={16} />
+                      Imprimir Cupom de Teste 🖨️
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Automações de Impressão */}
+              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                <h4 style={{ margin: 0, color: '#fff', fontSize: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>Impressão Automática (Automação de Pedidos)</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.25rem' }}>
+                  
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer', background: 'rgba(0,0,0,0.1)', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.02)' }}>
+                    <input
+                      type="checkbox"
+                      checked={printerSettings.autoPrintOnNew}
+                      onChange={(e) => handleSavePrinterSettings({ ...printerSettings, autoPrintOnNew: e.target.checked })}
+                      style={{ marginTop: '0.2rem', accentColor: 'var(--primary-gold)' }}
+                    />
+                    <div>
+                      <strong style={{ display: 'block', fontSize: '0.9rem', color: '#fff' }}>Ao receber novo pedido</strong>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Imprime o cupom automaticamente assim que o cliente enviar o pedido no caixa ou cardápio.</span>
+                    </div>
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer', background: 'rgba(0,0,0,0.1)', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.02)' }}>
+                    <input
+                      type="checkbox"
+                      checked={printerSettings.autoPrintOnAccept}
+                      onChange={(e) => handleSavePrinterSettings({ ...printerSettings, autoPrintOnAccept: e.target.checked })}
+                      style={{ marginTop: '0.2rem', accentColor: 'var(--primary-gold)' }}
+                    />
+                    <div>
+                      <strong style={{ display: 'block', fontSize: '0.9rem', color: '#fff' }}>Ao começar preparo</strong>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Imprime o cupom automaticamente na cozinha quando o cozinheiro clicar em 'Começar Preparo'.</span>
+                    </div>
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer', background: 'rgba(0,0,0,0.1)', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.02)' }}>
+                    <input
+                      type="checkbox"
+                      checked={printerSettings.autoPrintOnReady}
+                      onChange={(e) => handleSavePrinterSettings({ ...printerSettings, autoPrintOnReady: e.target.checked })}
+                      style={{ marginTop: '0.2rem', accentColor: 'var(--primary-gold)' }}
+                    />
+                    <div>
+                      <strong style={{ display: 'block', fontSize: '0.9rem', color: '#fff' }}>Ao concluir preparo</strong>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Imprime o cupom automaticamente assim que o pedido for enviado para o balcão.</span>
+                    </div>
+                  </label>
+
+                </div>
+              </div>
+
+            </div>
           )}
 
         </main>

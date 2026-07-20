@@ -2,11 +2,12 @@ import { useEffect, useState, useRef } from 'react';
 import entrouPedidoSound from '../../sounds/entrou-pedido.mp3';
 import pedidoProntoSound from '../../sounds/pedido-pronto.mp3';
 import { useAuth } from '../../hooks/useAuth';
-import { ChefHat, CreditCard, Bell, Play, Check, Navigation, TrendingUp, DollarSign, Clock } from 'lucide-react';
+import { ChefHat, CreditCard, Bell, Play, Check, Navigation, TrendingUp, DollarSign, Clock, Printer } from 'lucide-react';
 import { collection, query, onSnapshot, doc, updateDoc, orderBy, addDoc, getDocs, where, deleteDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { processOrderLoyaltyStamps } from '../../utils/loyalty';
 import type { OrderDocument } from '../../types/order';
+import { printOrder, getPrinterSettings } from '../../utils/printer';
 
 interface StaffDashboardProps {
   filter?: 'cook' | 'attendant' | 'cashier' | 'delivery';
@@ -318,6 +319,27 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
           ...docSnap.data()
         } as OrderDocument);
       });
+
+      // Handle auto-printing of incoming new orders in real-time
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const order = { id: change.doc.id, ...change.doc.data() } as OrderDocument;
+          const orderTime = new Date(order.createdAt).getTime();
+          const nowTime = Date.now();
+          // If the order was created in the last 30 seconds and status is pending
+          if (nowTime - orderTime < 30000 && order.status === 'pending') {
+            try {
+              const printerSet = getPrinterSettings();
+              if (printerSet.autoPrintOnNew) {
+                printOrder(order).catch(err => console.error("Erro ao auto-imprimir novo pedido:", err));
+              }
+            } catch (err) {
+              console.error("Erro ao buscar configurações para auto-impressão:", err);
+            }
+          }
+        }
+      });
+
       setOrders(fetchedOrders);
       setLoadingOrders(false);
     }, (error) => {
@@ -628,6 +650,22 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
       }
       await updateDoc(orderDocRef, updates);
 
+      // Auto-printing trigger on status transition
+      try {
+        const order = orders.find(o => o.id === orderId);
+        if (order) {
+          const printerSet = getPrinterSettings();
+          const mergedOrder = { ...order, ...updates }; // Ensure status reflects newStatus
+          if (newStatus === 'preparing' && printerSet.autoPrintOnAccept) {
+            printOrder(mergedOrder).catch(err => console.error("Erro ao imprimir automaticamente:", err));
+          } else if (newStatus === 'ready' && printerSet.autoPrintOnReady) {
+            printOrder(mergedOrder).catch(err => console.error("Erro ao imprimir automaticamente:", err));
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao verificar auto-impressão:", err);
+      }
+
       if (newStatus === 'completed' || newStatus === 'cancelled') {
         const order = orders.find(o => o.id === orderId);
         if (order) {
@@ -870,6 +908,27 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                             <Check size={14} /> Concluído (Enviar ao Balcão)
                           </button>
                         )}
+                        <button 
+                          type="button" 
+                          onClick={() => printOrder(order).catch(err => alert("Erro ao imprimir: " + err.message))} 
+                          className="btn-small" 
+                          style={{ 
+                            width: '100%', 
+                            padding: '0.6rem', 
+                            background: 'rgba(245, 158, 11, 0.1)', 
+                            color: 'var(--primary-gold)', 
+                            border: '1px solid rgba(245, 158, 11, 0.2)', 
+                            borderRadius: '8px', 
+                            cursor: 'pointer', 
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.4rem'
+                          }}
+                        >
+                          <Printer size={14} /> Imprimir Via Embalagem
+                        </button>
                         {isAuthorizedCancel && (
                           <button type="button" onClick={() => { if (order.id) { setCancelOrderId(order.id); setCancelOrderSeq(order.dailySeq || getOrderSequenceNumber(order.id, order.createdAt)); } }} className="btn-small btn-danger" style={{ width: '100%', padding: '0.6rem', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>
                             Cancelar Pedido
@@ -929,47 +988,70 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                           {order.address.street}, {order.address.number} ({order.address.neighborhood})
                         </div>
                       )}
-                      <div className="order-actions" style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
-                        <button
-                          type="button"
-                          onClick={() => order.id && handleMarkAsDelivered(order)}
-                          className="btn-small btn-success"
-                          style={{
-                            flex: 1.5,
-                            padding: '0.6rem',
-                            background: '#10b981',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
+                      <div className="order-actions" style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <button 
+                          type="button" 
+                          onClick={() => printOrder(order).catch(err => alert("Erro ao imprimir: " + err.message))} 
+                          className="btn-small" 
+                          style={{ 
+                            width: '100%', 
+                            padding: '0.6rem', 
+                            background: 'rgba(245, 158, 11, 0.1)', 
+                            color: 'var(--primary-gold)', 
+                            border: '1px solid rgba(245, 158, 11, 0.2)', 
+                            borderRadius: '8px', 
+                            cursor: 'pointer', 
                             fontWeight: 600,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: '0.3rem'
+                            gap: '0.4rem'
                           }}
                         >
-                          <Check size={14} style={{ flexShrink: 0 }} /> Entregue
+                          <Printer size={14} /> Imprimir Via Embalagem
                         </button>
-                        {isAuthorizedCancel && (
+                        <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
                           <button
                             type="button"
-                            onClick={() => { if (order.id) { setCancelOrderId(order.id); setCancelOrderSeq(order.dailySeq || getOrderSequenceNumber(order.id, order.createdAt)); } }}
-                            className="btn-small btn-danger"
+                            onClick={() => order.id && handleMarkAsDelivered(order)}
+                            className="btn-small btn-success"
                             style={{
-                              flex: 1,
+                              flex: 1.5,
                               padding: '0.6rem',
-                              background: '#dc2626',
+                              background: '#10b981',
                               color: '#fff',
                               border: 'none',
                               borderRadius: '8px',
                               cursor: 'pointer',
-                              fontWeight: 600
+                              fontWeight: 600,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '0.3rem'
                             }}
                           >
-                            Cancelar
+                            <Check size={14} style={{ flexShrink: 0 }} /> Entregue
                           </button>
-                        )}
+                          {isAuthorizedCancel && (
+                            <button
+                              type="button"
+                              onClick={() => { if (order.id) { setCancelOrderId(order.id); setCancelOrderSeq(order.dailySeq || getOrderSequenceNumber(order.id, order.createdAt)); } }}
+                              className="btn-small btn-danger"
+                              style={{
+                                flex: 1,
+                                padding: '0.6rem',
+                                background: '#dc2626',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontWeight: 600
+                              }}
+                            >
+                              Cancelar
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))
@@ -1448,6 +1530,28 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                               </p>
                             )}
                           </div>
+                          <button 
+                            type="button" 
+                            onClick={() => printOrder(order).catch(err => alert("Erro ao imprimir: " + err.message))} 
+                            className="btn-small" 
+                            style={{ 
+                              width: '100%', 
+                              padding: '0.6rem', 
+                              background: 'rgba(245, 158, 11, 0.1)', 
+                              color: 'var(--primary-gold)', 
+                              border: '1px solid rgba(245, 158, 11, 0.2)', 
+                              borderRadius: '8px', 
+                              cursor: 'pointer', 
+                              fontWeight: 600,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '0.4rem',
+                              marginBottom: '0.5rem'
+                            }}
+                          >
+                            <Printer size={14} /> Imprimir Recibo
+                          </button>
                           <div className="order-actions" style={{ 
                             display: 'grid', 
                             gridTemplateColumns: order.orderType === 'dine_in_table' ? '1fr 1fr 1fr' : '1fr 1fr', 
@@ -1628,6 +1732,27 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                             <Check size={14} /> Concluir Entrega (Pago)
                           </button>
                         )}
+                        <button 
+                          type="button" 
+                          onClick={() => printOrder(order).catch(err => alert("Erro ao imprimir: " + err.message))} 
+                          className="btn-small" 
+                          style={{ 
+                            width: '100%', 
+                            padding: '0.6rem', 
+                            background: 'rgba(245, 158, 11, 0.1)', 
+                            color: 'var(--primary-gold)', 
+                            border: '1px solid rgba(245, 158, 11, 0.2)', 
+                            borderRadius: '8px', 
+                            cursor: 'pointer', 
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.4rem'
+                          }}
+                        >
+                          <Printer size={14} /> Imprimir Via Embalagem
+                        </button>
                         {isAuthorizedCancel && (
                           <button type="button" onClick={() => { if (order.id) { setCancelOrderId(order.id); setCancelOrderSeq(order.dailySeq || getOrderSequenceNumber(order.id, order.createdAt)); } }} className="btn-small btn-danger" style={{ width: '100%', padding: '0.6rem', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>
                             Cancelar Pedido
@@ -2281,6 +2406,30 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center' }}>
                             <strong style={{ fontSize: '1.05rem', color: '#fff' }}>R$ {order.total.toFixed(2).replace('.', ',')}</strong>
+                            <button
+                              type="button"
+                              onClick={() => printOrder(order).catch(err => alert("Erro ao imprimir: " + err.message))}
+                              title="Imprimir Cupom"
+                              style={{
+                                background: 'rgba(245, 158, 11, 0.1)',
+                                border: '1px solid rgba(245, 158, 11, 0.3)',
+                                borderRadius: '8px',
+                                padding: '0.35rem 0.6rem',
+                                color: 'var(--primary-gold)',
+                                fontWeight: 700,
+                                fontSize: '0.75rem',
+                                cursor: 'pointer',
+                                marginLeft: '0.75rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                                transition: 'background 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(245, 158, 11, 0.2)'}
+                              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(245, 158, 11, 0.1)'}
+                            >
+                              <Printer size={12} /> Imprimir
+                            </button>
                             {userData?.role === 'developer' && (
                               <button
                                 type="button"
