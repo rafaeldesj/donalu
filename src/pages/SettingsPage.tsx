@@ -227,9 +227,17 @@ export const SettingsPage = () => {
     const pendingCode = sessionStorage.getItem('mp_oauth_pending_code');
     if (!pendingCode || !isAdmin || !storeConfig) return;
 
+    // Guard: if devClientId is not loaded yet, bail — the effect will re-run when it loads
+    const clientId = storeConfig.devClientId || '';
+    if (!clientId) {
+      console.warn('[MP OAuth] devClientId ainda não carregado, aguardando...');
+      return;
+    }
+
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
     const doExchange = async () => {
       setExchangingOAuth(true);
+      // Only remove the code AFTER confirming we have all required params
       sessionStorage.removeItem('mp_oauth_pending_code');
       try {
         const response = await fetch(`${API_BASE_URL}/api/mercadopago/exchange-token`, {
@@ -237,7 +245,7 @@ export const SettingsPage = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             code: pendingCode,
-            clientId: storeConfig.devClientId || '',
+            clientId,
             redirectUri: window.location.origin + '/'
           })
         });
@@ -259,6 +267,8 @@ export const SettingsPage = () => {
         showFeedback('success', `✅ Conta do estabelecimento (${result.email || result.nickname || 'ID ' + result.userId}) conectada com sucesso via Mercado Pago!`);
       } catch (err: any) {
         console.error('[MP OAuth] Erro na troca de código:', err);
+        // Restore the code so user can retry without going through OAuth again
+        sessionStorage.setItem('mp_oauth_pending_code', pendingCode);
         showFeedback('error', `❌ Erro ao conectar conta MP: ${err.message}`);
       } finally {
         setExchangingOAuth(false);
