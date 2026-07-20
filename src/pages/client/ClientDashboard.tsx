@@ -1993,11 +1993,16 @@ export const ClientDashboard = ({
         return;
       } else if (paymentMethod === 'pix') {
         let token = storeConfig?.storeOwnerAccessToken || storeConfig?.devAccessToken || 'mock';
+        const isStoreOwnerConnected = storeConfig?.storeOwnerAccessToken && 
+                                      !storeConfig.storeOwnerAccessToken.includes('MOCK') &&
+                                      storeConfig.storeOwnerAccessToken !== 'mock';
+        
         // Sanitize: treat absence, placeholder strings, and legacy mock tokens as mock mode
         if (!token || token === 'null' || token === 'undefined' || 
             token.startsWith('APP_USR-MOCK-') || token.includes('-MOCK-')) {
           token = 'mock';
         }
+        
         const response = await fetch(`${API_BASE_URL}/api/pagamentos/create-pix`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2007,7 +2012,7 @@ export const ClientDashboard = ({
             email: user?.email || 'cliente@email.com',
             name: user?.displayName || user?.email || 'Cliente',
             cpf: userData?.cpf || '45678912364',
-            devPercentage: storeConfig?.devPercentage || 0
+            devPercentage: isStoreOwnerConnected ? (storeConfig?.devPercentage || 0) : 0
           })
         });
 
