@@ -7,7 +7,8 @@ import { collection, query, onSnapshot, doc, updateDoc, orderBy, addDoc, getDocs
 import { db } from '../../config/firebase';
 import { processOrderLoyaltyStamps } from '../../utils/loyalty';
 import type { OrderDocument } from '../../types/order';
-import { printOrder, getPrinterSettings } from '../../utils/printer';
+import { printOrder, getPrinterSettings, printTableBill } from '../../utils/printer';
+import { API_BASE_URL } from '../../config/api';
 
 interface StaffDashboardProps {
   filter?: 'cook' | 'attendant' | 'cashier' | 'delivery';
@@ -50,6 +51,15 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
   const [selectedCheckoutOrder, setSelectedCheckoutOrder] = useState<OrderDocument | null>(null);
   const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<string>('dinheiro');
   const [checkoutChangeFor, setCheckoutChangeFor] = useState<string>('');
+  // Client filter inside table checkout modal
+  const [checkoutClientFilter, setCheckoutClientFilter] = useState<string>('all');
+  // Mercado Pago Point states for operator checkout
+  const [storeConfig, setStoreConfig] = useState<any>(null);
+  const [pointPaymentStatus, setPointPaymentStatus] = useState<'idle' | 'pending' | 'approved' | 'rejected'>('idle');
+  const [pointIntentId, setPointIntentId] = useState<string>('');
+  const [pointDeviceLabel, setPointDeviceLabel] = useState<string>('');
+  const [pointPaymentLoading, setPointPaymentLoading] = useState<boolean>(false);
+  const [pointPaymentError, setPointPaymentError] = useState<string | null>(null);
 
   const [timeFilterHours, setTimeFilterHours] = useState<string>('all_day');
   const [specificDateValue, setSpecificDateValue] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -118,38 +128,60 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
   };
 
   const handleManualTableCheckout = async (tableNum: string, tableOrdersList: OrderDocument[]) => {
+    // Guard: for Point methods, require approved status
+    if (['maq_pix', 'maq_debito', 'maq_credito'].includes(checkoutPaymentMethod) && pointPaymentStatus !== 'approved') {
+      alert('Aguarde a confirmação do pagamento na maquininha antes de encerrar.');
+      return;
+    }
     try {
       const batchPromises = tableOrdersList.map(async (order) => {
         if (!order.id) return;
         const orderDocRef = doc(db, 'orders', order.id);
         
-        await updateDoc(orderDocRef, {
+        // Map internal payment method to storage label
+        const storedMethod = checkoutPaymentMethod === 'maq_pix' ? 'pix'
+          : checkoutPaymentMethod === 'maq_debito' ? 'debito'
+          : checkoutPaymentMethod === 'maq_credito' ? 'credito'
+          : checkoutPaymentMethod;
+
+        const updates: any = {
           status: 'completed',
-          paymentMethod: checkoutPaymentMethod,
-          changeFor: checkoutPaymentMethod === 'dinheiro' && checkoutChangeFor ? parseFloat(checkoutChangeFor.replace(',', '.')) : null,
+          paymentMethod: storedMethod,
+          changeFor: storedMethod === 'dinheiro' && checkoutChangeFor ? parseFloat(checkoutChangeFor.replace(',', '.')) : null,
           updatedAt: new Date().toISOString()
-        });
+        };
+
+        if (pointIntentId && ['maq_pix', 'maq_debito', 'maq_credito'].includes(checkoutPaymentMethod)) {
+          updates.pointPaymentIntentId = pointIntentId;
+        }
+
+        await updateDoc(orderDocRef, updates);
 
         await addDoc(collection(db, 'transactions'), {
           orderId: order.id,
           clientName: order.clientName,
           clientUid: order.clientUid,
           total: order.total,
-          paymentMethod: checkoutPaymentMethod,
+          paymentMethod: storedMethod,
           type: 'baixa_manual',
           approvedBy: userData?.name || userData?.email || 'Caixa',
           createdAt: new Date().toISOString()
         });
 
-        await processOrderLoyaltyStamps(order.id, { ...order, status: 'completed', paymentMethod: checkoutPaymentMethod });
+        await processOrderLoyaltyStamps(order.id, { ...order, status: 'completed', paymentMethod: storedMethod });
       });
 
       await Promise.all(batchPromises);
       await checkAndFreeTable(tableNum, undefined);
       
-      alert(`Mesa ${tableNum} encerrada e paga com sucesso!`);
+      const clientLabel = checkoutClientFilter !== 'all' ? ` (conta de ${checkoutClientFilter})` : '';
+      alert(`Mesa ${tableNum}${clientLabel} encerrada e paga com sucesso!`);
       setSelectedCheckoutTable(null);
       setCheckoutChangeFor('');
+      setCheckoutClientFilter('all');
+      setPointPaymentStatus('idle');
+      setPointIntentId('');
+      setPointPaymentError(null);
     } catch (err) {
       console.error("Erro ao encerrar mesa manualmente:", err);
       alert("Erro ao encerrar mesa. Tente novamente.");
@@ -349,6 +381,43 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
 
     return () => unsubscribe();
   }, []);
+
+  // Escuta configurações da loja (para Point devices e devPercentage)
+  useEffect(() => {
+    const docRef = doc(db, 'settings', 'store_config');
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setStoreConfig(docSnap.data());
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Polling do status de pagamento na Maquininha Point (do caixa)
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (pointIntentId && pointPaymentStatus === 'pending') {
+      let token = storeConfig?.storeOwnerAccessToken || storeConfig?.devAccessToken || 'mock';
+      if (token === 'null' || token === 'undefined' || !token) token = 'mock';
+      interval = setInterval(async () => {
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/pagamentos/check-point-order?intentId=${pointIntentId}&token=${token}`);
+          const data = await res.json();
+          if (data.success && data.status === 'FINISHED') {
+            setPointPaymentStatus('approved');
+            clearInterval(interval);
+          } else if (data.success && (data.status === 'CANCELED' || data.status === 'ERROR')) {
+            setPointPaymentStatus('rejected');
+            setPointPaymentError(`Pagamento ${data.status === 'CANCELED' ? 'cancelado' : 'recusado'} na maquininha.`);
+            clearInterval(interval);
+          }
+        } catch (err) {
+          console.error('Erro ao verificar status da Point (caixa):', err);
+        }
+      }, 2500);
+    }
+    return () => clearInterval(interval);
+  }, [pointIntentId, pointPaymentStatus, storeConfig]);
 
   // Limpa todos os áudios e timers quando a tela da cozinha é desmontada por completo
   useEffect(() => {
@@ -1984,9 +2053,9 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
 
       {/* Lightbox de Fechamento de Mesa Manual */}
       {selectedCheckoutTable && (() => {
-        // Filtrar pedidos pendentes desta mesa
+        // --- Derivações do estado ---
         const todayStr = getBusinessDay(new Date().toISOString());
-        const tableUnpaidOrders = orders.filter(o => 
+        const allTableOrders = orders.filter(o =>
           getBusinessDay(o.createdAt) === todayStr &&
           o.status !== 'completed' &&
           o.status !== 'cancelled' &&
@@ -1995,12 +2064,74 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
           !['pix', 'credito', 'google_pay'].includes(o.paymentMethod || '')
         );
 
-        const tableTotal = tableUnpaidOrders.reduce((sum, o) => sum + o.total, 0);
+        // Lista de clientes únicos na mesa
+        const clientsAtTable = Array.from(new Set(allTableOrders.map(o => o.clientName).filter(Boolean))) as string[];
+
+        // Pedidos filtrados pelo cliente selecionado (ou todos)
+        const filteredOrders = checkoutClientFilter === 'all'
+          ? allTableOrders
+          : allTableOrders.filter(o => o.clientName === checkoutClientFilter);
+
+        const tableTotal = filteredOrders.reduce((sum, o) => sum + o.total, 0);
+
+        // Dispositivos Point disponíveis
+        const pointDevices: {id: string; label: string}[] = [];
+        if (storeConfig?.pointSmart2Id) pointDevices.push({ id: storeConfig.pointSmart2Id, label: 'Point Smart 2' });
+        if (storeConfig?.pointPro3Id) pointDevices.push({ id: storeConfig.pointPro3Id, label: 'Point Pro 3' });
+        if (storeConfig?.pointAir2Id) pointDevices.push({ id: storeConfig.pointAir2Id, label: 'Point Air 2' });
+        if (storeConfig?.pointMiniNfc2Id) pointDevices.push({ id: storeConfig.pointMiniNfc2Id, label: 'Point Mini NFC 2' });
+        if (pointDevices.length === 0) pointDevices.push({ id: 'MOCK_DEVICE', label: 'Simulador (Teste)' });
+
+        const isPointMethod = ['maq_pix', 'maq_debito', 'maq_credito'].includes(checkoutPaymentMethod);
+        const canClose = !isPointMethod || pointPaymentStatus === 'approved';
+
+        const handleTriggerPoint = async (deviceId: string, label: string) => {
+          setPointPaymentLoading(true);
+          setPointPaymentError(null);
+          setPointPaymentStatus('idle');
+          setPointIntentId('');
+          try {
+            let token = storeConfig?.storeOwnerAccessToken || storeConfig?.devAccessToken || 'mock';
+            if (!token || token === 'null' || token === 'undefined') token = 'mock';
+            const pType = checkoutPaymentMethod === 'maq_pix' ? 'pix'
+              : checkoutPaymentMethod === 'maq_debito' ? 'debito' : 'credito';
+            const response = await fetch(`${API_BASE_URL}/api/pagamentos/create-point-order`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                token,
+                deviceId,
+                amount: tableTotal.toFixed(2),
+                paymentType: pType,
+                externalReference: 'CAIXA_' + Date.now(),
+                devPercentage: storeConfig?.devPercentage || 0
+              })
+            });
+            const result = await response.json();
+            if (!result.success) throw new Error(result.message || 'Erro ao acionar maquininha.');
+            setPointIntentId(result.intentId);
+            setPointDeviceLabel(label);
+            setPointPaymentStatus('pending');
+          } catch (err: any) {
+            setPointPaymentError(err.message || 'Erro ao acionar maquininha.');
+          } finally {
+            setPointPaymentLoading(false);
+          }
+        };
 
         return (
           <div
             className="lightbox-overlay animate-fade-in"
-            onClick={() => { setSelectedCheckoutTable(null); setCheckoutChangeFor(''); }}
+            onClick={() => {
+              if (pointPaymentStatus !== 'pending') {
+                setSelectedCheckoutTable(null);
+                setCheckoutChangeFor('');
+                setCheckoutClientFilter('all');
+                setPointPaymentStatus('idle');
+                setPointIntentId('');
+                setPointPaymentError(null);
+              }
+            }}
             style={{ zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)', position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh' }}
           >
             <div
@@ -2011,7 +2142,9 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                 borderRadius: '24px',
                 padding: '2rem',
                 width: '90%',
-                maxWidth: '520px',
+                maxWidth: '560px',
+                maxHeight: '92vh',
+                overflowY: 'auto',
                 boxShadow: '0 24px 60px rgba(0,0,0,0.8)',
                 display: 'flex',
                 flexDirection: 'column',
@@ -2019,35 +2152,98 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                 color: '#fff'
               }}
             >
+              {/* Cabeçalho */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.75rem' }}>
                 <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  🍽️ Fechar Conta - Mesa {selectedCheckoutTable}
+                  🍽️ Fechar Conta — Mesa {selectedCheckoutTable}
                 </h3>
                 <button
                   type="button"
-                  onClick={() => { setSelectedCheckoutTable(null); setCheckoutChangeFor(''); }}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '1.25rem' }}
+                  onClick={() => {
+                    if (pointPaymentStatus !== 'pending') {
+                      setSelectedCheckoutTable(null);
+                      setCheckoutChangeFor('');
+                      setCheckoutClientFilter('all');
+                      setPointPaymentStatus('idle');
+                      setPointIntentId('');
+                      setPointPaymentError(null);
+                    }
+                  }}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: pointPaymentStatus === 'pending' ? 'not-allowed' : 'pointer', fontSize: '1.25rem' }}
                 >
                   ✕
                 </button>
               </div>
 
+              {/* Filtro de Cliente (abas) */}
+              {clientsAtTable.length > 0 && (
+                <div>
+                  <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.4rem', letterSpacing: '0.06em' }}>Visualizar conta de:</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => { setCheckoutClientFilter('all'); setPointPaymentStatus('idle'); setPointIntentId(''); setPointPaymentError(null); }}
+                      style={{
+                        padding: '0.35rem 0.8rem', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+                        border: checkoutClientFilter === 'all' ? '2px solid var(--primary-gold)' : '1px solid rgba(255,255,255,0.15)',
+                        background: checkoutClientFilter === 'all' ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.03)',
+                        color: checkoutClientFilter === 'all' ? 'var(--primary-gold)' : 'var(--text-secondary)'
+                      }}
+                    >🍽️ Mesa Completa</button>
+                    {clientsAtTable.map(name => (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => { setCheckoutClientFilter(name); setPointPaymentStatus('idle'); setPointIntentId(''); setPointPaymentError(null); }}
+                        style={{
+                          padding: '0.35rem 0.8rem', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+                          border: checkoutClientFilter === name ? '2px solid var(--primary-gold)' : '1px solid rgba(255,255,255,0.15)',
+                          background: checkoutClientFilter === name ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.03)',
+                          color: checkoutClientFilter === name ? 'var(--primary-gold)' : 'var(--text-secondary)'
+                        }}
+                      >👤 {name}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Botões de Impressão */}
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => printTableBill(selectedCheckoutTable, filteredOrders, checkoutClientFilter !== 'all' ? checkoutClientFilter : undefined)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.9rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)', color: '#fff', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  <Printer size={14} />
+                  {checkoutClientFilter === 'all' ? 'Imprimir Conta da Mesa' : `Imprimir Conta de ${checkoutClientFilter}`}
+                </button>
+                {checkoutClientFilter !== 'all' && (
+                  <button
+                    type="button"
+                    onClick={() => printTableBill(selectedCheckoutTable, allTableOrders)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.9rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)', color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    <Printer size={14} /> Imprimir Mesa Completa
+                  </button>
+                )}
+              </div>
+
               {/* Lista de Consumo */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '200px', overflowY: 'auto', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '12px' }}>
-                {tableUnpaidOrders.length === 0 ? (
+                {filteredOrders.length === 0 ? (
                   <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', margin: 0, textAlign: 'center' }}>Nenhum item pendente.</p>
                 ) : (
-                  tableUnpaidOrders.map((order) => {
+                  filteredOrders.map((order) => {
                     const seqNum = order.dailySeq || getOrderSequenceNumber(order.id, order.createdAt);
                     return (
                       <div key={order.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '0.5rem', marginBottom: '0.25rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>
-                          <span style={{ color: 'var(--primary-gold)' }}>Pedido #{seqNum}</span>
+                          <span style={{ color: 'var(--primary-gold)' }}>Pedido #{seqNum} — {order.clientName}</span>
                           <span>R$ {order.total.toFixed(2).replace('.', ',')}</span>
                         </div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', paddingLeft: '0.5rem' }}>
                           {order.items.map((item, idx) => (
-                            <div key={idx}>{item.quantity}x {item.name} - R$ {((item.price ?? 0) * item.quantity).toFixed(2).replace('.', ',')}</div>
+                            <div key={idx}>{item.quantity}x {item.name} — R$ {((item.price ?? 0) * item.quantity).toFixed(2).replace('.', ',')}</div>
                           ))}
                           {(order.serviceFee ?? 0) > 0 && (
                             <div style={{ fontStyle: 'italic', color: 'var(--primary-gold)' }}>🪑 Taxa de Serviço (10%): R$ {order.serviceFee?.toFixed(2).replace('.', ',')}</div>
@@ -2061,81 +2257,169 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
 
               {/* Totalizador */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(245,158,11,0.05)', border: '1px dashed var(--primary-gold)', borderRadius: '12px', padding: '0.85rem' }}>
-                <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Total Consumido Pendente:</span>
+                <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>
+                  {checkoutClientFilter === 'all' ? 'Total da Mesa:' : `Total de ${checkoutClientFilter}:`}
+                </span>
                 <strong style={{ fontSize: '1.3rem', color: 'var(--primary-gold)' }}>R$ {tableTotal.toFixed(2).replace('.', ',')}</strong>
               </div>
 
-              {/* Opções de Pagamento */}
+              {/* Formas de Recebimento (exclusivo do operador/caixa) */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div>
-                  <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>Forma de Recebimento</span>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.4rem' }}>
-                    {[
-                      ['dinheiro', '💵 Dinheiro'],
-                      ['debito', '💳 Débito'],
-                      ['credito', '💳 Crédito'],
-                      ['debito_point', '💴 Maq. Débito'],
-                      ['credito_point', '💳 Maq. Crédito'],
-                      ['pix', '🟡 Pix Manual']
-                    ].map(([method, label]) => (
-                      <button
-                        key={method}
-                        type="button"
-                        onClick={() => {
-                          setCheckoutPaymentMethod(method);
-                          if (method !== 'dinheiro') setCheckoutChangeFor('');
-                        }}
-                        style={{
-                          padding: '0.5rem',
-                          borderRadius: '8px',
-                          border: checkoutPaymentMethod === method ? '2px solid var(--primary-gold)' : '1px solid rgba(255,255,255,0.1)',
-                          background: checkoutPaymentMethod === method ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.02)',
-                          color: checkoutPaymentMethod === method ? 'var(--primary-gold)' : '#fff',
-                          fontWeight: 700,
-                          fontSize: '0.78rem',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
+                <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.06em' }}>Forma de Recebimento</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
+                  {([
+                    ['dinheiro', '💵', 'Dinheiro'],
+                    ['maq_pix', '🟡', 'Maq. Pix'],
+                    ['maq_debito', '💳', 'Maq. Débito'],
+                    ['maq_credito', '💳', 'Maq. Crédito'],
+                  ] as [string, string, string][]).map(([method, icon, label]) => (
+                    <button
+                      key={method}
+                      type="button"
+                      disabled={pointPaymentStatus === 'pending'}
+                      onClick={() => {
+                        setCheckoutPaymentMethod(method);
+                        if (method !== 'dinheiro') setCheckoutChangeFor('');
+                        setPointPaymentStatus('idle');
+                        setPointIntentId('');
+                        setPointPaymentError(null);
+                      }}
+                      style={{
+                        padding: '0.65rem 0.5rem',
+                        borderRadius: '10px',
+                        border: checkoutPaymentMethod === method ? '2px solid var(--primary-gold)' : '1px solid rgba(255,255,255,0.1)',
+                        background: checkoutPaymentMethod === method ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.02)',
+                        color: checkoutPaymentMethod === method ? 'var(--primary-gold)' : '#fff',
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                        cursor: pointPaymentStatus === 'pending' ? 'not-allowed' : 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem'
+                      }}
+                    >
+                      {icon} {label}
+                    </button>
+                  ))}
                 </div>
 
+                {/* Campo de troco para dinheiro */}
                 {checkoutPaymentMethod === 'dinheiro' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Valor Pago pelo Cliente (Troco para):</label>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Valor entregue pelo cliente (Troco para):</label>
                     <input
                       type="text"
-                      placeholder="Ex: R$ 50,00"
+                      placeholder="Ex: 50"
                       value={checkoutChangeFor}
                       onChange={(e) => setCheckoutChangeFor(e.target.value.replace(/\D/g, ''))}
                       style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: '#0b0f19', color: '#fff', fontSize: '0.85rem' }}
                     />
                     {checkoutChangeFor && parseFloat(checkoutChangeFor) > tableTotal && (
                       <div style={{ fontSize: '0.8rem', color: '#10b981', marginTop: '2px', fontWeight: 600 }}>
-                        Troco a Devolver: R$ {(parseFloat(checkoutChangeFor) - tableTotal).toFixed(2).replace('.', ',')}
+                        Troco a devolver: R$ {(parseFloat(checkoutChangeFor) - tableTotal).toFixed(2).replace('.', ',')}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Acionamento da Maquininha */}
+                {isPointMethod && pointPaymentStatus === 'idle' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Selecione a Maquininha:</span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                      {pointDevices.map(device => (
+                        <button
+                          key={device.id}
+                          type="button"
+                          disabled={pointPaymentLoading || tableTotal <= 0}
+                          onClick={() => handleTriggerPoint(device.id, device.label)}
+                          style={{
+                            padding: '0.5rem 0.9rem', borderRadius: '8px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer',
+                            border: '1px solid rgba(245,158,11,0.4)', background: 'rgba(245,158,11,0.08)', color: 'var(--primary-gold)',
+                            opacity: (pointPaymentLoading || tableTotal <= 0) ? 0.5 : 1
+                          }}
+                        >
+                          {pointPaymentLoading ? '⏳ Aguarde...' : `📲 ${device.label}`}
+                        </button>
+                      ))}
+                    </div>
+                    {pointPaymentError && (
+                      <p style={{ color: '#ef4444', fontSize: '0.8rem', margin: 0 }}>⚠️ {pointPaymentError}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Status do pagamento na maquininha */}
+                {isPointMethod && pointPaymentStatus === 'pending' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.85rem 1rem', borderRadius: '12px', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.25)' }}>
+                    <span style={{ fontSize: '1.4rem' }}>⏳</span>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--primary-gold)' }}>Aguardando pagamento na {pointDeviceLabel}...</div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Siga as instruções na tela da maquininha. O sistema confirmará automaticamente.</div>
+                    </div>
+                  </div>
+                )}
+
+                {isPointMethod && pointPaymentStatus === 'approved' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.85rem 1rem', borderRadius: '12px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.35)' }}>
+                    <span style={{ fontSize: '1.4rem' }}>✅</span>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#10b981' }}>Pagamento aprovado na {pointDeviceLabel}!</div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Agora você pode encerrar a conta.</div>
+                    </div>
+                  </div>
+                )}
+
+                {isPointMethod && pointPaymentStatus === 'rejected' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.85rem 1rem', borderRadius: '12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '1.2rem' }}>❌</span>
+                      <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#ef4444' }}>Pagamento recusado ou cancelado.</div>
+                    </div>
+                    {pointPaymentError && <p style={{ color: '#ef4444', fontSize: '0.78rem', margin: 0 }}>{pointPaymentError}</p>}
+                    <button
+                      type="button"
+                      onClick={() => { setPointPaymentStatus('idle'); setPointIntentId(''); setPointPaymentError(null); }}
+                      style={{ alignSelf: 'flex-start', padding: '0.35rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.5)', background: 'rgba(239,68,68,0.1)', color: '#ef4444', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}
+                    >🔄 Tentar Novamente</button>
                   </div>
                 )}
               </div>
 
               {/* Ações */}
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
                 <button
                   type="button"
-                  onClick={() => { setSelectedCheckoutTable(null); setCheckoutChangeFor(''); }}
-                  style={{ flex: 1, padding: '0.7rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer' }}
+                  disabled={pointPaymentStatus === 'pending'}
+                  onClick={() => {
+                    if (pointPaymentStatus !== 'pending') {
+                      setSelectedCheckoutTable(null);
+                      setCheckoutChangeFor('');
+                      setCheckoutClientFilter('all');
+                      setPointPaymentStatus('idle');
+                      setPointIntentId('');
+                      setPointPaymentError(null);
+                    }
+                  }}
+                  style={{ flex: 1, padding: '0.7rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: 'var(--text-secondary)', fontWeight: 600, cursor: pointPaymentStatus === 'pending' ? 'not-allowed' : 'pointer', opacity: pointPaymentStatus === 'pending' ? 0.5 : 1 }}
                 >
                   Voltar
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleManualTableCheckout(selectedCheckoutTable, tableUnpaidOrders)}
-                  style={{ flex: 1.5, padding: '0.7rem', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
+                  disabled={!canClose || filteredOrders.length === 0}
+                  onClick={() => handleManualTableCheckout(selectedCheckoutTable, filteredOrders)}
+                  style={{
+                    flex: 1.5, padding: '0.7rem', borderRadius: '10px', border: 'none',
+                    background: canClose && filteredOrders.length > 0
+                      ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                      : 'rgba(255,255,255,0.06)',
+                    color: canClose && filteredOrders.length > 0 ? '#fff' : 'var(--text-secondary)',
+                    fontWeight: 700,
+                    cursor: canClose && filteredOrders.length > 0 ? 'pointer' : 'not-allowed'
+                  }}
                 >
-                  Encerrar e Fechar Conta
+                  {isPointMethod && pointPaymentStatus !== 'approved'
+                    ? '🔒 Encerrar (aguardando pagamento)'
+                    : '✅ Encerrar e Fechar Conta'}
                 </button>
               </div>
 

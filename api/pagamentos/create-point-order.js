@@ -61,7 +61,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { token, deviceId, amount, paymentType, externalReference } = req.body;
+    const { token, deviceId, amount, paymentType, externalReference, devPercentage } = req.body;
 
     const isMock = !token || token === 'mock' || token === '' || token === 'null' || token === 'undefined' || deviceId.includes('MOCK') || deviceId === 'mock';
 
@@ -110,9 +110,18 @@ export default async function handler(req, res) {
       },
       payment: {
         installments: 1,
-        type: paymentType === 'debito' ? 'debit_card' : 'credit_card'
+        type: paymentType === 'pix' ? 'pix' : (paymentType === 'debito' || paymentType === 'debit_card' ? 'debit_card' : 'credit_card')
       }
     };
+
+    // Add split payment fee if configured
+    if (devPercentage && devPercentage > 0) {
+      const fee = parseFloat((parseFloat(amount) * devPercentage / 100).toFixed(2));
+      if (fee >= 0.01) {
+        payload.application_fee = fee;
+        console.log(`[Mercado Pago Point] Split ativado: application_fee = R$${fee.toFixed(2)} (${devPercentage}% de R$${amount})`);
+      }
+    }
 
     const response = await nativeRequest(mpUrl, 'POST', headers, payload);
 

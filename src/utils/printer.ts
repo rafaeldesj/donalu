@@ -667,3 +667,207 @@ export async function printMockOrder(): Promise<void> {
   };
   return printOrder(mockOrder);
 }
+
+// -------------------------------------------------------------
+// Table / Client Extrato Bill Printing
+// -------------------------------------------------------------
+export async function printTableBill(tableNum: string, ordersList: OrderDocument[], targetClientName?: string): Promise<void> {
+  const settings = getPrinterSettings();
+  if (!ordersList || ordersList.length === 0) return;
+
+  const paperWidth = settings.paperSize === '58mm' ? '56mm' : '78mm';
+  const dividerLine = '-'.repeat(settings.paperSize === '80mm' ? 48 : 32);
+
+  const grandTotal = ordersList.reduce((sum, o) => sum + o.total, 0);
+  const totalServiceFee = ordersList.reduce((sum, o) => sum + (o.serviceFee || 0), 0);
+  const dateStr = new Date().toLocaleString('pt-BR');
+
+  if (settings.method === 'browser') {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0px';
+    iframe.style.height = '0px';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) return;
+
+    let itemsHtml = '';
+    ordersList.forEach(order => {
+      order.items.forEach(item => {
+        itemsHtml += `
+          <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 3px;">
+            <span>${item.quantity}x <strong>${item.name}</strong></span>
+            <span>R$ ${((item.price ?? 0) * item.quantity).toFixed(2).replace('.', ',')}</span>
+          </div>
+        `;
+        if (item.withCatupiry || item.withBorda || (item.ingredients && item.ingredients.length > 0)) {
+          let details = [];
+          if (item.withCatupiry) details.push('+ Catupiry');
+          if (item.withBorda) details.push('+ Borda Recheada');
+          if (item.ingredients && item.ingredients.length > 0) details.push(`Ingr: ${item.ingredients.join(', ')}`);
+          itemsHtml += `<div style="font-size: 9px; font-weight: bold; margin-left: 10px; margin-bottom: 4px;">${details.join(' | ')}</div>`;
+        }
+      });
+    });
+
+    const titleText = targetClientName ? `CONTA DO CLIENTE: ${targetClientName.toUpperCase()}` : `CONTA DA MESA ${tableNum}`;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            @page { margin: 0; size: auto; }
+            body { margin: 0; padding: 4mm 2mm 8mm 2mm; font-family: 'Courier New', Courier, monospace; font-size: 11px; width: ${paperWidth}; color: #000; background: #fff; }
+            .center { text-align: center; }
+            .bold { font-weight: bold; }
+            .header-title { font-size: 16px; margin-bottom: 2px; }
+            .divider { border-top: 1px dashed #000; margin: 6px 0; font-size: 8px; }
+            .seq-box { font-size: 18px; font-weight: bold; border: 2px solid #000; padding: 4px; margin: 6px auto; width: fit-content; text-align: center; }
+            .right { text-align: right; }
+            .total-row { font-size: 14px; font-weight: bold; display: flex; justify-content: space-between; margin-top: 6px; }
+          </style>
+        </head>
+        <body>
+          <div class="center">
+            <div class="header-title bold">DONA LU PASTELARIA</div>
+            <div class="bold">EXTRATO DE CONTA</div>
+            <div class="divider">${dividerLine}</div>
+            <div class="seq-box">${titleText}</div>
+            <div class="divider">${dividerLine}</div>
+          </div>
+          <div>
+            <div><strong>Data/Hora:</strong> ${dateStr}</div>
+            <div><strong>Mesa:</strong> ${tableNum}</div>
+            ${targetClientName ? `<div><strong>Cliente:</strong> ${targetClientName}</div>` : ''}
+            <div class="divider">${dividerLine}</div>
+          </div>
+          <div class="bold" style="margin-bottom: 4px;">DISCRIMINACAO DO CONSUMO:</div>
+          ${itemsHtml}
+          <div class="divider">${dividerLine}</div>
+          <div class="right">
+            ${totalServiceFee > 0 ? `<div>Taxa de Servico (10%): R$ ${totalServiceFee.toFixed(2).replace('.', ',')}</div>` : ''}
+            <div class="total-row">
+              <span>TOTAL A PAGAR:</span>
+              <span>R$ ${grandTotal.toFixed(2).replace('.', ',')}</span>
+            </div>
+          </div>
+          <div class="divider">${dividerLine}</div>
+          <div class="center" style="font-size: 9px; margin-top: 10px;">
+            <div>Conferir consumo antes de efetuar o pagamento.</div>
+            <div class="bold">Obrigado pela visita!</div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+
+    setTimeout(() => {
+      if (iframe.contentWindow) {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        setTimeout(() => { document.body.removeChild(iframe); }, 1000);
+      }
+    }, 350);
+  } else {
+    // Binary ESC/POS for Direct BLE / Serial
+    const encoder = new TextEncoder();
+    const buffer: number[] = [];
+
+    const INIT = [0x1B, 0x40];
+    const ALIGN_CENTER = [0x1B, 0x61, 0x01];
+    const ALIGN_LEFT = [0x1B, 0x61, 0x00];
+    const ALIGN_RIGHT = [0x1B, 0x61, 0x02];
+    const BOLD_ON = [0x1B, 0x45, 0x01];
+    const BOLD_OFF = [0x1B, 0x45, 0x00];
+    const DOUBLE_SIZE_ON = [0x1D, 0x21, 0x11];
+    const DOUBLE_SIZE_OFF = [0x1D, 0x21, 0x00];
+    const LINE_FEED = [0x0A];
+
+    const write = (text: string) => {
+      const cleanText = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^ -~\n\r\t]/g, '');
+      const bytes = encoder.encode(cleanText);
+      buffer.push(...Array.from(bytes));
+    };
+
+    const writeLine = (text: string = '') => {
+      write(text);
+      buffer.push(...LINE_FEED);
+    };
+
+    const divider = () => {
+      const width = settings.paperSize === '80mm' ? 48 : 32;
+      writeLine('-'.repeat(width));
+    };
+
+    buffer.push(...INIT, ...ALIGN_CENTER, ...BOLD_ON);
+    writeLine('DONA LU PASTELARIA');
+    writeLine('EXTRATO DE CONTA');
+    buffer.push(...BOLD_OFF);
+    divider();
+
+    buffer.push(...ALIGN_CENTER, ...BOLD_ON, ...DOUBLE_SIZE_ON);
+    writeLine(targetClientName ? `CLIENTE: ${targetClientName.toUpperCase()}` : `MESA ${tableNum}`);
+    buffer.push(...DOUBLE_SIZE_OFF, ...BOLD_OFF);
+    divider();
+
+    buffer.push(...ALIGN_LEFT);
+    writeLine(`Data/Hora: ${dateStr}`);
+    writeLine(`Mesa: ${tableNum}`);
+    if (targetClientName) writeLine(`Cliente: ${targetClientName}`);
+    divider();
+
+    buffer.push(...BOLD_ON);
+    writeLine('DISCRIMINACAO DO CONSUMO:');
+    buffer.push(...BOLD_OFF);
+
+    ordersList.forEach(order => {
+      order.items.forEach(item => {
+        const qtyStr = `${item.quantity}x `;
+        const priceStr = `R$ ${((item.price ?? 0) * item.quantity).toFixed(2).replace('.', ',')}`;
+        const maxChars = settings.paperSize === '80mm' ? 48 : 32;
+        const nameLen = maxChars - qtyStr.length - priceStr.length;
+        let nameStr = item.name;
+        if (nameStr.length > nameLen) nameStr = nameStr.substring(0, nameLen - 3) + '...';
+        const padSize = nameLen - nameStr.length;
+        writeLine(`${qtyStr}${nameStr}${' '.repeat(padSize > 0 ? padSize : 0)}${priceStr}`);
+      });
+    });
+    divider();
+
+    buffer.push(...ALIGN_RIGHT);
+    if (totalServiceFee > 0) {
+      writeLine(`Taxa Servico (10%): R$ ${totalServiceFee.toFixed(2).replace('.', ',')}`);
+    }
+    buffer.push(...BOLD_ON);
+    writeLine(`TOTAL A PAGAR: R$ ${grandTotal.toFixed(2).replace('.', ',')}`);
+    buffer.push(...BOLD_OFF);
+
+    buffer.push(...ALIGN_CENTER);
+    divider();
+    writeLine('Conferir consumo antes de pagar.');
+    writeLine('Obrigado pela visita!');
+    buffer.push(...LINE_FEED, ...LINE_FEED, ...LINE_FEED, ...LINE_FEED, 0x1D, 0x56, 0x42, 0x00);
+
+    const binaryData = new Uint8Array(buffer);
+
+    if (settings.method === 'bluetooth' && isBluetoothConnected() && activeBluetoothCharacteristic) {
+      const chunkSize = 20;
+      for (let i = 0; i < binaryData.length; i += chunkSize) {
+        const chunk = binaryData.slice(i, i + chunkSize);
+        await activeBluetoothCharacteristic.writeValue(chunk);
+        await new Promise(r => setTimeout(r, 15));
+      }
+    } else if (settings.method === 'serial' && isSerialConnected() && activeSerialPort) {
+      const writer = activeSerialPort.writable.getWriter();
+      await writer.write(binaryData);
+      writer.releaseLock();
+    }
+  }
+}
+
