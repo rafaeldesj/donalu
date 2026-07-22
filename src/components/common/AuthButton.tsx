@@ -97,7 +97,7 @@ export const AuthButton = () => {
       case 'auth/user-disabled':
         return 'Este usuário foi desativado.';
       case 'auth/user-not-found':
-        return 'Este e-mail não está cadastrado no sistema.';
+        return 'Este e-mail, celular ou nome não está cadastrado no sistema.';
       case 'auth/wrong-password':
       case 'auth/invalid-credential':
         return 'E-mail ou senha incorretos.';
