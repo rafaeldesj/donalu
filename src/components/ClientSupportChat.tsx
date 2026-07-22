@@ -212,7 +212,50 @@ Responda de forma extremamente curta e natural, como um atendente humano no What
       // Local rules engine fallback
       if (!replyText) {
         if (matchedRule) {
-          replyText = matchedRule.response;
+          // Process instructional rules to return a clean natural response instead of literal rules
+          const parseInstructionalResponse = (instruction: string, clientMsg: string): string => {
+            const instLower = instruction.toLowerCase().trim();
+            const msgLower = clientMsg.toLowerCase().trim();
+
+            if (instLower.includes('bom dia') || instLower.includes('boa tarde') || instLower.includes('boa noite') || instLower.includes('retribua') || instLower.includes('cumprimente')) {
+              if (msgLower.includes('boa noite')) return 'Boa noite! Tudo bem? 🥟😋 Como posso te ajudar?';
+              if (msgLower.includes('boa tarde')) return 'Boa tarde! Tudo bem? 🥟😋 Como posso te ajudar?';
+              if (msgLower.includes('bom dia')) return 'Bom dia! Tudo bem? 🥟😋 Como posso te ajudar?';
+              if (msgLower.includes('oi') || msgLower.includes('ola') || msgLower.includes('olá') || msgLower.includes('tudo bem')) {
+                return 'Oi! Tudo bem? Vai um pastelzinho hoje? 🥟😋 Como posso te ajudar?';
+              }
+            }
+
+            const prefixes = [
+              /^(diga|fale|responda|informe|explique|avise)\s+que\s+/i,
+              /^(diga|fale|responda|informe|explique|avise)\s+para\s+o\s+cliente\s+que\s+/i,
+              /^(diga|fale|responda|informe|explique|avise)\s+ao\s+cliente\s+que\s+/i,
+              /^(diga|fale|responda|informe|explique|avise)\s+/i,
+              /^retribua\s+/i,
+              /^caso\s+o\s+cliente\s+.*,\s*(responda|diga|fale|retribua)\s+/i
+            ];
+
+            let cleaned = instruction;
+            for (const pattern of prefixes) {
+              if (pattern.test(cleaned)) {
+                cleaned = cleaned.replace(pattern, '');
+                cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+                break;
+              }
+            }
+
+            if (cleaned !== instruction) {
+              return cleaned;
+            }
+
+            if (instLower.startsWith('caso o cliente') || instLower.startsWith('se o cliente') || instLower.includes('instrua') || instLower.includes('atendente deve')) {
+              return 'Olá! Tudo bem? 🥟 Como posso te ajudar hoje? Se quiser ver os sabores e preços, acesse o Cardápio Digital no menu lateral!';
+            }
+
+            return instruction;
+          };
+
+          replyText = parseInstructionalResponse(matchedRule.response, newClientMessage);
         } else {
           const msg = newClientMessage.toLowerCase();
           
