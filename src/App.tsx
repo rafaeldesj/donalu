@@ -3,7 +3,7 @@ import type { OrderItem } from './types/order';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AuthButton } from './components/common/AuthButton';
 import { DeliveryMap } from './components/DeliveryMap';
-import { ShieldCheck, ChefHat, CreditCard, Bell, ShoppingCart, Heart, FileText, Users, Navigation, CheckCircle, Clock, Map, Settings, Menu, ChevronDown, Grid } from 'lucide-react';
+import { ShieldCheck, ChefHat, CreditCard, Bell, ShoppingCart, Heart, FileText, Users, Navigation, CheckCircle, Clock, Map, Settings, Menu, ChevronDown, Grid, Boxes } from 'lucide-react';
 import logoDonalu from './assets/logo_donalu.png';
 import logoDonaluMobile from './assets/logo_donalu_mobile.png';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -20,6 +20,7 @@ const ManagerDeliveryActive = lazy(() => import('./pages/manager/ManagerDelivery
 const OrderTracking = lazy(() => import('./pages/client/OrderTracking'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const TableMap = lazy(() => import('./pages/staff/TableMap'));
+const StockControl = lazy(() => import('./pages/staff/StockControl'));
 
 // Premium feedback state for lazy loading
 const ViewLoader = () => (
@@ -280,6 +281,11 @@ const MainLayout = () => {
       menuItems.push({ id: 'teste_mapa', label: 'Localização dos Entregadores', icon: Map });
     }
 
+    // Controle de Estoque — visível a todos, menos clientes e entregadores
+    if (role !== 'client' && !(role === 'staff' && staff?.delivery)) {
+      menuItems.push({ id: 'estoque', label: 'Controle de Estoque', icon: Boxes });
+    }
+
     // Configurações — visível para todos os usuários logados
     if (user) {
       menuItems.push({ id: 'configuracoes', label: 'Configurações', icon: Settings });
@@ -289,7 +295,7 @@ const MainLayout = () => {
   const menuGroups = [
     { label: 'Cardápio / Cliente', ids: ['menu', 'tracking', 'fidelidade'] },
     { label: 'Operações de Entrega', ids: ['entrega_andamento', 'entrega_finalizada'] },
-    { label: 'Painéis de Trabalho', ids: ['cozinha', 'atendimento', 'caixa', 'mapa_mesas', 'admin', 'teste_mapa'] },
+    { label: 'Painéis de Trabalho', ids: ['cozinha', 'atendimento', 'caixa', 'mapa_mesas', 'estoque', 'admin', 'teste_mapa'] },
     { label: 'Configurações', ids: ['users', 'configuracoes'] },
   ];
 const getRoleLabel = (r: string): React.ReactNode => {
@@ -434,6 +440,7 @@ const getRoleLabel = (r: string): React.ReactNode => {
             )}
             {activeView === 'entrega_finalizada' && <DeliveryHistory />}
             {activeView === 'admin' && <AdminDashboard />}
+            {activeView === 'estoque' && <StockControl />}
             {activeView === 'users' && <UserManagement />}
             {activeView === 'configuracoes' && <SettingsPage />}
             {activeView === 'mapa_mesas' && <TableMap />}

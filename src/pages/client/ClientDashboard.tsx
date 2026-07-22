@@ -212,7 +212,9 @@ export const ClientDashboard = ({
   const [isNewItem, setIsNewItem] = useState<number | null>(null);
 
   const role = userData?.role || 'client';
+  const staff = userData?.staffFunctions;
   const canEdit = ['developer', 'owner', 'manager'].includes(role);
+  const canManageStock = role !== 'client' && !(role === 'staff' && staff?.delivery);
   const isStoreClosed = storeStatus?.status === 'closed';
   const isClosedForUser = isStoreClosed && !canEdit;
 
@@ -1247,6 +1249,25 @@ export const ClientDashboard = ({
     }
   };
 
+  const decrementStock = async (items: any[]) => {
+    for (const item of items) {
+      try {
+        const prodRef = doc(db, 'products', item.id.toString());
+        const prodSnap = await getDoc(prodRef);
+        if (prodSnap.exists()) {
+          const prodData = prodSnap.data();
+          if (prodData.stock !== undefined) {
+            const currentStock = Number(prodData.stock);
+            const newStock = Math.max(0, currentStock - item.quantity);
+            await updateDoc(prodRef, { stock: newStock });
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao decrementar estoque:", err);
+      }
+    }
+  };
+
   const addToCart = (item: typeof defaultPastels[0]) => {
     if (isVisitor) {
       if (onLoginRequired) {
@@ -1257,6 +1278,12 @@ export const ClientDashboard = ({
     }
     if (isClosedForUser) {
       alert('A pastelaria está fechada no momento e não está recebendo pedidos.');
+      return;
+    }
+
+    const currentStock = (item as any).stock !== undefined ? Number((item as any).stock) : 999;
+    if (!canManageStock && currentStock <= 0) {
+      alert(`Desculpe, o item "${item.name}" está sem estoque no momento.`);
       return;
     }
 
@@ -1293,6 +1320,16 @@ export const ClientDashboard = ({
   };
 
   const updateQuantity = (id: number, delta: number) => {
+    if (delta > 0 && !canManageStock) {
+      const originalProduct = pastels.find((p: any) => p.id === id);
+      if (originalProduct && originalProduct.stock !== undefined) {
+        const totalQuantityInCart = cart.filter(c => c.id === id).reduce((sum, c) => sum + c.quantity, 0);
+        if (totalQuantityInCart + delta > Number(originalProduct.stock)) {
+          alert(`Desculpe, só temos ${originalProduct.stock} unidades de "${originalProduct.name}" em estoque.`);
+          return;
+        }
+      }
+    }
     setCart((prevCart) =>
       prevCart
         .map((i) => (i.id === id ? { ...i, quantity: i.quantity + delta } : i))
@@ -1486,6 +1523,7 @@ export const ClientDashboard = ({
       } : null,
     };
 
+    await decrementStock(cart);
     await addDoc(collection(db, 'orders'), orderData);
     setCart([]);
     setUseFidelityRescue(false);
@@ -1667,6 +1705,7 @@ export const ClientDashboard = ({
             } : null,
           };
 
+          await decrementStock(cart);
           await addDoc(collection(db, 'orders'), orderData);
           setCart([]);
           setUseFidelityRescue(false);
@@ -1783,6 +1822,7 @@ export const ClientDashboard = ({
       await addDoc(collection(db, 'orders'), orderData);
     }
 
+    await decrementStock(cart);
     setPendingPixOrderId(null);
     setCart([]);
     setUseFidelityRescue(false);
@@ -2259,6 +2299,7 @@ export const ClientDashboard = ({
         } : null,
       };
 
+      await decrementStock(cart);
       await addDoc(collection(db, 'orders'), orderData);
       setCart([]);
       setUseFidelityRescue(false);
@@ -2380,7 +2421,15 @@ export const ClientDashboard = ({
 
   const filteredProducts = pastels.filter((p: any) => {
     const cat = p.category || 'Pastéis Gourmet Especiais';
-    return cat.toLowerCase() === activeCategory.toLowerCase();
+    if (cat.toLowerCase() !== activeCategory.toLowerCase()) return false;
+    
+    // Se não for gestor de estoque e o produto estiver zerado com opção 'ocultar' ativa
+    if (!canManageStock) {
+      const isOutOfStock = p.stock !== undefined && Number(p.stock) <= 0;
+      const hideIfEmpty = p.hideWhenOutOfStock === true;
+      if (isOutOfStock && hideIfEmpty) return false;
+    }
+    return true;
   });
 
   const isBebidasTab = activeCategory.toLowerCase().includes('bebida');
@@ -2782,6 +2831,69 @@ export const ClientDashboard = ({
                         {pastel.category !== 'Pastéis Salgados' && pastel.description && (
                           <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{pastel.description}</p>
                         )}
+                        {canManageStock && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.4rem', borderTop: '1px dashed rgba(255,255,255,0.05)', paddingTop: '0.4rem' }} onClick={(e) => e.stopPropagation()}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem' }}>
+                              <span style={{ color: 'var(--primary-gold)', fontWeight: 600 }}>Estoque:</span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    const currentStock = pastel.stock !== undefined ? Number(pastel.stock) : 0;
+                                    if (currentStock > 0) {
+                                      await setDoc(doc(db, 'products', pastel.id.toString()), { ...pastel, stock: currentStock - 1 });
+                                    }
+                                  }}
+                                  style={{ width: '20px', height: '20px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}
+                                >
+                                  -
+                                </button>
+                                <input
+                                  type="number"
+                                  defaultValue={pastel.stock !== undefined ? pastel.stock : 0}
+                                  key={pastel.stock}
+                                  onBlur={async (e) => {
+                                    const val = parseInt(e.target.value);
+                                    if (!isNaN(val)) {
+                                      await setDoc(doc(db, 'products', pastel.id.toString()), { ...pastel, stock: Math.max(0, val) });
+                                    }
+                                  }}
+                                  onKeyDown={async (e) => {
+                                    if (e.key === 'Enter') {
+                                      const val = parseInt((e.target as HTMLInputElement).value);
+                                      if (!isNaN(val)) {
+                                        await setDoc(doc(db, 'products', pastel.id.toString()), { ...pastel, stock: Math.max(0, val) });
+                                        (e.target as HTMLInputElement).blur();
+                                      }
+                                    }
+                                  }}
+                                  style={{ width: '45px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '4px', color: '#fff', padding: '0.1rem 0.2rem', textAlign: 'center', fontSize: '0.8rem' }}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    const currentStock = pastel.stock !== undefined ? Number(pastel.stock) : 0;
+                                    await setDoc(doc(db, 'products', pastel.id.toString()), { ...pastel, stock: currentStock + 1 });
+                                  }}
+                                  style={{ width: '20px', height: '20px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)', cursor: 'pointer', marginTop: '0.1rem' }}>
+                              <input
+                                  type="checkbox"
+                                  checked={pastel.hideWhenOutOfStock === true}
+                                  onChange={async (e) => {
+                                    await setDoc(doc(db, 'products', pastel.id.toString()), { ...pastel, hideWhenOutOfStock: e.target.checked });
+                                  }}
+                                  style={{ cursor: 'pointer', margin: 0 }}
+                              />
+                              Ocultar se zerar
+                            </label>
+                          </div>
+                        )}
                       </div>
 
                       {(pastel.category === 'Pastéis Salgados' || pastel.category === 'Pastéis Doces') && (
@@ -2832,16 +2944,31 @@ export const ClientDashboard = ({
                           </button>
                         </>
                       )}
-                      <button 
-                        type="button" 
-                        onClick={() => addToCart(pastel)} 
-                        className="add-to-cart-btn" 
-                        aria-label={`Adicionar ${pastel.name} ao carrinho`}
-                        disabled={isClosedForUser}
-                        style={isClosedForUser ? { opacity: 0.5, cursor: 'not-allowed', background: '#4b5563' } : undefined}
-                      >
-                        <ShoppingCart size={18} />
-                      </button>
+                      {pastel.stock !== undefined && Number(pastel.stock) <= 0 ? (
+                        <span style={{
+                          fontSize: '0.75rem',
+                          color: '#ef4444',
+                          fontWeight: 600,
+                          background: 'rgba(239, 68, 68, 0.1)',
+                          border: '1px solid rgba(239, 68, 68, 0.2)',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '6px',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          Sem Estoque
+                        </span>
+                      ) : (
+                        <button 
+                          type="button" 
+                          onClick={() => addToCart(pastel)} 
+                          className="add-to-cart-btn" 
+                          aria-label={`Adicionar ${pastel.name} ao carrinho`}
+                          disabled={isClosedForUser}
+                          style={isClosedForUser ? { opacity: 0.5, cursor: 'not-allowed', background: '#4b5563' } : undefined}
+                        >
+                          <ShoppingCart size={18} />
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
@@ -5154,6 +5281,12 @@ export const ClientDashboard = ({
               <button
                 type="button"
                 onClick={() => {
+                  const currentStock = customizingPastel.stock !== undefined ? Number(customizingPastel.stock) : 999;
+                  const totalQuantityInCart = cart.filter(c => c.id === customizingPastel.id).reduce((sum, c) => sum + c.quantity, 0);
+                  if (!canManageStock && totalQuantityInCart + 1 > currentStock) {
+                    alert(`Desculpe, só temos ${currentStock} unidades de "${customizingPastel.name}" em estoque.`);
+                    return;
+                  }
                   setCart((prevCart) => {
                     const existingIdx = prevCart.findIndex(i => 
                       i.id === customizingPastel.id && 

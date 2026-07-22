@@ -60,6 +60,7 @@ As funções de backend ficam localizadas na pasta `/api` e rodam como serverles
 - **Funcionários (Cozinha, Caixa e Atendimento):**
   - [src/pages/staff/StaffDashboard.tsx](file:///e:/REPOSITORIOS%20-%20PROJETOS/DONA-LU-PASTELARIA/src/pages/staff/StaffDashboard.tsx): Painel unificado de tarefas operacionais. Filtra os pedidos com base no cargo do funcionário logado (exibe a fila de preparo para `cook`, fila de entrega/balcão para `attendant`, e controle financeiro de pagamentos pendentes para `cashier`).
   - [src/pages/staff/TableMap.tsx](file:///e:/REPOSITORIOS%20-%20PROJETOS/DONA-LU-PASTELARIA/src/pages/staff/TableMap.tsx): Mapa gráfico das mesas do salão indicando ocupação e status dos pedidos locais.
+  - [src/pages/staff/StockControl.tsx](file:///e:/REPOSITORIOS%20-%20PROJETOS/DONA-LU-PASTELARIA/src/pages/staff/StockControl.tsx): Painel de controle de estoque de produtos, permitindo edição rápida de quantidades e controle de ocultação.
 - **Entregadores:**
   - [src/pages/delivery/DeliveryActive.tsx](file:///e:/REPOSITORIOS%20-%20PROJETOS/DONA-LU-PASTELARIA/src/pages/delivery/DeliveryActive.tsx): Painel de entregas ativas com mapa de rota do entregador até o cliente.
   - [src/pages/delivery/DeliveryHistory.tsx](file:///e:/REPOSITORIOS%20-%20PROJETOS/DONA-LU-PASTELARIA/src/pages/delivery/DeliveryHistory.tsx): Relatório de entregas finalizadas pelo entregador logado.
