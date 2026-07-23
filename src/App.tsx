@@ -243,9 +243,9 @@ const MainLayout = () => {
       menuItems.push({ id: 'fidelidade', label: 'Cartão Fidelidade', icon: Heart });
     }
 
-    // Atendimento I.A. visível para clientes e equipe administrativa para testes
+    // Atendimento (suporte) visível para clientes e equipe administrativa para testes
     if (['client', 'developer', 'owner', 'manager'].includes(role)) {
-      menuItems.push({ id: 'suporte_virtual', label: 'Atendimento I.A.', icon: MessageCircle });
+      menuItems.push({ id: 'suporte_virtual', label: 'Atendimento (suporte)', icon: MessageCircle });
     }
 
     // Fila da cozinha (Cozinheiro, admin, owner, dev)

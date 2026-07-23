@@ -1,12 +1,19 @@
 import { useEffect, useState, useRef } from 'react';
 import { collection, query, onSnapshot, doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import { MessageSquare, Bot, User, Send, Settings, Save, AlertCircle, Play, Pause, Check, Trash2, GraduationCap, ChevronLeft } from 'lucide-react';
+import { MessageSquare, Bot, User, Send, Settings, Save, AlertCircle, Play, Pause, Check, Trash2, GraduationCap, ChevronLeft, Mic, Image, MapPin } from 'lucide-react';
 
 interface Message {
   sender: 'client' | 'assistant' | 'operator';
   text: string;
   timestamp: string;
+  type?: 'text' | 'image' | 'audio' | 'location';
+  mediaUrl?: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+    isRealTime?: boolean;
+  };
 }
 
 interface ChatSession {
@@ -38,6 +45,147 @@ export const SupportPanel = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Media attachments for Operator
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<any>(null);
+
+  const sendOperatorMediaMessage = async (type: 'image' | 'audio' | 'location', mediaUrl: string, textFallback: string, locationObj?: any) => {
+    if (!selectedChatId || !selectedChat) return;
+    try {
+      const docRef = doc(db, 'support_chats', selectedChatId);
+      const currentMessages = selectedChat.messages || [];
+
+      const newMsg: Message = {
+        sender: 'operator',
+        text: textFallback,
+        timestamp: new Date().toISOString(),
+        type,
+        ...(mediaUrl ? { mediaUrl } : {}),
+        ...(locationObj ? { location: locationObj } : {})
+      };
+
+      const updatedMessages = [...currentMessages, newMsg];
+
+      await setDoc(docRef, {
+        ...selectedChat,
+        messages: updatedMessages,
+        assistantActive: false, // Turn off AI since human operator is interacting!
+        lastMessageAt: new Date().toISOString(),
+        unreadByOperator: false
+      });
+    } catch (err) {
+      console.error('Erro ao enviar mídia do operador:', err);
+    }
+  };
+
+  const handleOperatorPhotoSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64Image = reader.result as string;
+      await sendOperatorMediaMessage('image', base64Image, 'Imagem enviada 📷');
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const startOperatorRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      const options = { mimeType: 'audio/webm' };
+      let recorder;
+      try {
+        recorder = new MediaRecorder(stream, options);
+      } catch (_) {
+        recorder = new MediaRecorder(stream);
+      }
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime((t) => t + 1);
+      }, 1000);
+    } catch (err) {
+      console.error('Erro ao acessar microfone:', err);
+      alert('Não foi possível acessar o microfone para gravação.');
+    }
+  };
+
+  const cancelOperatorRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
+    }
+    clearInterval(recordingTimerRef.current);
+    setIsRecording(false);
+    setRecordingTime(0);
+    audioChunksRef.current = [];
+  };
+
+  const stopAndSendOperatorRecording = () => {
+    if (!mediaRecorderRef.current || mediaRecorderRef.current.state === 'inactive') return;
+
+    mediaRecorderRef.current.onstop = async () => {
+      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+      mediaRecorderRef.current?.stream.getTracks().forEach((track) => track.stop());
+
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64Audio = reader.result as string;
+        await sendOperatorMediaMessage('audio', base64Audio, 'Áudio enviado 🎤');
+      };
+      reader.readAsDataURL(audioBlob);
+    };
+
+    mediaRecorderRef.current.stop();
+    clearInterval(recordingTimerRef.current);
+    setIsRecording(false);
+    setRecordingTime(0);
+  };
+
+  const sendOperatorLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocalização não suportada.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        await sendOperatorMediaMessage('location', '', 'Localização enviada 📍', {
+          latitude,
+          longitude,
+          isRealTime: false
+        });
+      },
+      (err) => {
+        console.error('Erro geolocalização:', err);
+        // Fallback: send shop location
+        sendOperatorMediaMessage('location', '', 'Localização da Pastelaria enviada 📍', {
+          latitude: -22.9068,
+          longitude: -43.1729,
+          isRealTime: false
+        });
+      }
+    );
+  };
   
   // Custom quick training rules states
   const [customRules, setCustomRules] = useState<any[]>([]);
@@ -220,6 +368,17 @@ export const SupportPanel = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', height: 'calc(100vh - 160px)', padding: '0.2rem' }} className="animate-fade-in">
+      <style>{`
+        @keyframes blink-warning {
+          0% { background-color: rgba(239, 68, 68, 0.03); border-color: rgba(239, 68, 68, 0.2); }
+          50% { background-color: rgba(239, 68, 68, 0.25); border-color: #ef4444; }
+          100% { background-color: rgba(239, 68, 68, 0.03); border-color: rgba(239, 68, 68, 0.2); }
+        }
+        .blink-alert-chat {
+          animation: blink-warning 1.5s infinite ease-in-out !important;
+          border: 1px solid rgba(239, 68, 68, 0.4) !important;
+        }
+      `}</style>
       
       {/* Header and tabs */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
@@ -326,10 +485,21 @@ export const SupportPanel = () => {
                     const isSelected = selectedChatId === c.clientUid;
                     const lastMsg = c.messages[c.messages.length - 1];
 
+                    // Check if AI conversation has been active for >= 120 minutes
+                    const isAiConversationLong = (() => {
+                      if (!c.assistantActive || !c.messages || c.messages.length === 0) return false;
+                      const firstMsg = c.messages[0];
+                      const firstTime = new Date(firstMsg.timestamp).getTime();
+                      const now = new Date().getTime();
+                      const diffMinutes = (now - firstTime) / (1000 * 60);
+                      return diffMinutes >= 120;
+                    })();
+
                     return (
                       <button
                         key={c.clientUid}
                         onClick={() => setSelectedChatId(c.clientUid)}
+                        className={isAiConversationLong ? 'blink-alert-chat' : ''}
                         style={{
                           padding: '0.85rem 1rem',
                           border: 'none',
@@ -525,6 +695,62 @@ export const SupportPanel = () => {
                               {isClient ? 'Cliente' : (isAI ? `Atendente Virtual (I.A.)` : `Você (Operador Humano)`)}
                             </div>
                             <div style={{ whiteSpace: 'pre-wrap' }}>
+                              {m.type === 'image' && m.mediaUrl && (
+                                <img 
+                                  src={m.mediaUrl} 
+                                  alt="Imagem" 
+                                  style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', display: 'block', margin: '0.35rem 0', cursor: 'pointer' }}
+                                  onClick={() => window.open(m.mediaUrl)}
+                                />
+                              )}
+                              {m.type === 'audio' && m.mediaUrl && (
+                                <audio 
+                                  src={m.mediaUrl} 
+                                  controls 
+                                  style={{ display: 'block', margin: '0.35rem 0', maxWidth: '100%' }} 
+                                />
+                              )}
+                              {m.type === 'location' && m.location && (
+                                <div style={{
+                                  background: 'rgba(0,0,0,0.2)',
+                                  padding: '0.5rem',
+                                  borderRadius: '8px',
+                                  marginTop: '0.35rem',
+                                  border: '1px solid rgba(255,255,255,0.1)'
+                                }}>
+                                  <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', color: 'var(--primary-gold)' }}>
+                                    📍 {m.location.isRealTime ? 'Localização em Tempo Real' : 'Localização Fixa'}
+                                  </div>
+                                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', margin: '0.2rem 0' }}>
+                                    Lat: {m.location.latitude.toFixed(6)}, Lng: {m.location.longitude.toFixed(6)}
+                                  </div>
+                                  {m.location.isRealTime && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.7rem', color: '#10b981', marginBottom: '0.35rem' }}>
+                                      <span className="pulse-dot" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+                                      Transmitindo em tempo real...
+                                    </div>
+                                  )}
+                                  <a 
+                                    href={`https://www.google.com/maps?q=${m.location.latitude},${m.location.longitude}`} 
+                                    target="_blank" 
+                                    rel="noreferrer"
+                                    style={{
+                                      display: 'inline-block',
+                                      background: 'var(--primary-gold)',
+                                      color: '#000',
+                                      padding: '0.25rem 0.5rem',
+                                      borderRadius: '4px',
+                                      textDecoration: 'none',
+                                      fontSize: '0.75rem',
+                                      fontWeight: 'bold',
+                                      marginTop: '0.25rem',
+                                      textAlign: 'center'
+                                    }}
+                                  >
+                                    Abrir no Google Maps
+                                  </a>
+                                </div>
+                              )}
                               {m.text}
                             </div>
                             <div style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', textAlign: 'right', marginTop: '0.2rem' }}>
@@ -563,50 +789,116 @@ export const SupportPanel = () => {
                     <div ref={messagesEndRef} />
                   </div>
 
+                  {/* Hidden file input for photos (operator) */}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleOperatorPhotoSelected}
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                  />
+
                   {/* Operator reply input box */}
                   <form onSubmit={handleSendOperatorMessage} style={{
                     padding: '1rem',
                     borderTop: '1px solid rgba(255, 255, 255, 0.05)',
                     display: 'flex',
+                    alignItems: 'center',
                     gap: '0.5rem',
-                    background: 'rgba(255,255,255,0.01)'
+                    background: 'rgba(255,255,255,0.01)',
+                    position: 'relative'
                   }}>
-                    <input
-                      type="text"
-                      value={inputText}
-                      onChange={(e) => setInputText(e.target.value)}
-                      placeholder={selectedChat.assistantActive ? "Digite para intervir e responder diretamente (isso pausará a I.A.)..." : "Digite para responder ao cliente..."}
-                      style={{
-                        flex: 1,
-                        padding: '0.65rem 1rem',
-                        background: 'rgba(0, 0, 0, 0.3)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '8px',
-                        color: '#fff',
-                        fontSize: '0.88rem',
-                        outline: 'none'
-                      }}
-                    />
-                    <button
-                      type="submit"
-                      disabled={!inputText.trim()}
-                      style={{
-                        background: inputText.trim() ? 'var(--primary-gold)' : 'rgba(255,255,255,0.04)',
-                        color: inputText.trim() ? '#000' : 'var(--text-secondary)',
-                        border: 'none',
-                        borderRadius: '8px',
-                        padding: '0 1rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: inputText.trim() ? 'pointer' : 'default',
-                        fontWeight: 600,
-                        gap: '0.35rem'
-                      }}
-                    >
-                      <Send size={16} />
-                      Enviar
-                    </button>
+                    {isRecording ? (
+                      // Recording UI mode
+                      <div style={{ display: 'flex', flex: 1, alignItems: 'center', gap: '0.5rem', background: 'rgba(239, 68, 68, 0.05)', padding: '0.45rem 0.75rem', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', display: 'inline-block', animation: 'pulse-red 1s infinite' }} />
+                        <span style={{ fontSize: '0.8rem', color: '#ef4444', fontWeight: 600 }}>Gravando... {recordingTime}s</span>
+                        <div style={{ flex: 1 }} />
+                        <button
+                          type="button"
+                          onClick={cancelOperatorRecording}
+                          style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={stopAndSendOperatorRecording}
+                          style={{ background: 'var(--primary-gold)', border: 'none', color: '#000', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                        >
+                          <Send size={12} />
+                        </button>
+                      </div>
+                    ) : (
+                      // Normal Input UI mode
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          title="Enviar Foto"
+                          style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
+                        >
+                          <Image size={18} />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={sendOperatorLocation}
+                          title="Enviar Localização da Pastelaria"
+                          style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
+                        >
+                          <MapPin size={18} />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={startOperatorRecording}
+                          title="Gravar Áudio"
+                          style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
+                        >
+                          <Mic size={18} />
+                        </button>
+
+                        <input
+                          type="text"
+                          value={inputText}
+                          onChange={(e) => setInputText(e.target.value)}
+                          placeholder={selectedChat.assistantActive ? "Digite para intervir e responder diretamente (isso pausará a I.A.)..." : "Digite para responder ao cliente..."}
+                          style={{
+                            flex: 1,
+                            padding: '0.65rem 1rem',
+                            background: 'rgba(0, 0, 0, 0.3)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '8px',
+                            color: '#fff',
+                            fontSize: '0.88rem',
+                            outline: 'none'
+                          }}
+                        />
+                        
+                        <button
+                          type="submit"
+                          disabled={!inputText.trim()}
+                          style={{
+                            background: inputText.trim() ? 'var(--primary-gold)' : 'rgba(255,255,255,0.04)',
+                            color: inputText.trim() ? '#000' : 'var(--text-secondary)',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '0 1rem',
+                            height: '38px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: inputText.trim() ? 'pointer' : 'default',
+                            fontWeight: 600,
+                            gap: '0.35rem'
+                          }}
+                        >
+                          <Send size={16} />
+                          Enviar
+                        </button>
+                      </>
+                    )}
                   </form>
                 </>
               ) : (
