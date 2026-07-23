@@ -1416,15 +1416,16 @@ export const SettingsPage = () => {
                   <h4 style={{ margin: 0, fontSize: '1rem' }}>Cadastre a loja e os caixas (maquininhas)</h4>
                 </div>
                 <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                  Acesse: <a href="https://mercadopago.com.br/pointsmartintegration" target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', textDecoration: 'underline' }}>mercadopago.com.br/pointsmartintegration</a><br />
-                  No menu lateral, clique em <strong style={{ color: '#fff' }}>Seu negócio → Lojas e caixas</strong>.<br />
-                  <strong style={{ color: '#fff' }}>1.</strong> Crie uma loja chamada <em>&quot;Dona Lu Pastelaria&quot;</em>.<br />
-                  <strong style={{ color: '#fff' }}>2.</strong> Dentro da loja, clique em <strong style={{ color: '#fff' }}>&quot;Adicionar caixa&quot;</strong> e cadastre <strong style={{ color: '#fff' }}>um caixa para cada maquininha</strong> que você tiver:<br />
-                  &nbsp;&nbsp;— Point Smart 2 &nbsp;|&nbsp; Point Pro 3 &nbsp;|&nbsp; Point Air 2 &nbsp;|&nbsp; Point Mini NFC 2
+                  Como o link antigo agora redireciona para a página promocional de &quot;Sistema de Gestão&quot;, siga os passos abaixo para acessar a área correta de <strong style={{ color: '#fff' }}>Lojas e Caixas</strong>:<br />
+                  <strong style={{ color: '#fff' }}>1.</strong> Faça login na sua conta do <a href="https://www.mercadopago.com.br" target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', textDecoration: 'underline' }}>Mercado Pago</a>.<br />
+                  <strong style={{ color: '#fff' }}>2.</strong> No canto superior direito, clique sobre o seu nome ou foto de perfil (ex: <strong style={{ color: 'var(--primary-gold)' }}>{userData?.name || 'Rafael Jorge'}</strong>) e acesse <strong style={{ color: '#fff' }}>Configurar perfil</strong>.<br />
+                  <strong style={{ color: '#fff' }}>3.</strong> Na página <strong style={{ color: '#fff' }}>Seu perfil</strong> que se abrir, clique na aba <strong style={{ color: '#fff' }}>Negócio</strong> (que fica ao lado da aba <strong style={{ color: '#fff' }}>Conta</strong>, no meio da tela).<br />
+                  <strong style={{ color: '#fff' }}>4.</strong> Clique na opção <strong style={{ color: '#fff' }}>Lojas e caixas</strong> que aparecerá na listagem.<br />
+                  <strong style={{ color: '#fff' }}>5.</strong> Dentro do painel de Lojas e Caixas, crie uma loja chamada <em>&quot;Dona Lu Pastelaria&quot;</em> e depois clique em <strong style={{ color: '#fff' }}>&quot;Adicionar caixa&quot;</strong> para cadastrar um caixa para cada maquininha que você tiver (Point Smart 2, Pro 3, Air 2, Mini NFC 2).
                 </p>
                 <img src="/guide_step3.png" alt="Lojas e Caixas Mercado Pago" className="guide-img" />
                 <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '8px', padding: '0.6rem 1rem', fontSize: '0.82rem', color: '#fcd34d' }}>
-                  💡 <strong>Dica:</strong> Dê nomes claros para cada caixa, ex: <em>&quot;Smart 2 - Caixa 1&quot;</em>, <em>&quot;Pro 3 - Caixa 2&quot;</em>, <em>&quot;Air 2 - Caixa 3&quot;</em>, <em>&quot;Mini NFC - Caixa 4&quot;</em>. Isso facilita identificar depois.
+                  💡 <strong>Dica:</strong> Dê nomes claros para cada caixa, ex: <em>&quot;Smart_Caixa1&quot;</em>, <em>&quot;Pro_Caixa2&quot;</em>. Isso facilita identificar depois.
                 </div>
               </div>
 
