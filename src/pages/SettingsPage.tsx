@@ -448,7 +448,7 @@ export const SettingsPage = () => {
         disabledPaymentMethods: storeConfig.disabledPaymentMethods || [],
         disabledPaymentMethodsByOrderType: storeConfig.disabledPaymentMethodsByOrderType || {},
         paymentMethodsThemes: storeConfig.paymentMethodsThemes || {},
-        requireCashierApproval: storeConfig.requireCashierApproval !== undefined ? storeConfig.requireCashierApproval : true
+        requireCashierApproval: storeConfig.requireCashierApproval !== undefined ? storeConfig.requireCashierApproval : false
       });
 
       await logAuditAction({

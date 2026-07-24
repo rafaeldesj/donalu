@@ -1708,9 +1708,9 @@ export const ClientDashboard = ({
             total: finalTotal,
             deliveryFee: orderType === 'delivery' ? deliveryFee : 0,
             serviceFee: orderType === 'dine_in_table' ? serviceFee : 0,
-            status: storeConfig?.requireCashierApproval !== false ? 'aguardando_caixa' : 'pending',
+            status: storeConfig?.requireCashierApproval === true ? 'aguardando_caixa' : 'pending',
             createdAt: new Date().toISOString(),
-            ...(storeConfig?.requireCashierApproval === false ? { kitchenEnteredAt: new Date().toISOString() } : {}),
+            ...(storeConfig?.requireCashierApproval !== true ? { kitchenEnteredAt: new Date().toISOString() } : {}),
             orderType,
             tableNumber: orderType === 'dine_in_table' ? tableNumber : null,
             paymentMethod: type,
@@ -1766,12 +1766,24 @@ export const ClientDashboard = ({
   const completeCheckoutAfterPixPayment = async () => {
     // Se já existe um pedido salvo (criado quando o QR Code foi gerado), apenas atualiza o status
     if (pendingPixOrderId) {
-      await updateDoc(doc(db, 'orders', pendingPixOrderId), {
-        status: 'pending',
-        kitchenEnteredAt: new Date().toISOString(),
-        mercadoPagoPaymentId: pixPaymentId,
-        updatedAt: new Date().toISOString()
-      });
+      try {
+        const orderDocRef = doc(db, 'orders', pendingPixOrderId);
+        const orderSnap = await getDoc(orderDocRef);
+        if (orderSnap.exists()) {
+          const currentStatus = orderSnap.data().status;
+          const updates: any = {
+            mercadoPagoPaymentId: pixPaymentId,
+            updatedAt: new Date().toISOString()
+          };
+          if (currentStatus === 'awaiting_payment' || currentStatus === 'pending') {
+            updates.status = 'pending';
+            updates.kitchenEnteredAt = new Date().toISOString();
+          }
+          await updateDoc(orderDocRef, updates);
+        }
+      } catch (err) {
+        console.error('[PIX] Erro ao carregar/atualizar pedido Pix:', err);
+      }
       await processOrderLoyaltyStamps(pendingPixOrderId, { status: 'pending', paymentMethod: 'pix' });
     } else {
       // Fallback: cria o pedido agora caso não tenha sido criado previamente
@@ -2059,7 +2071,7 @@ export const ClientDashboard = ({
           if (orderType === 'dine_in_table') {
             finalStatus = 'pending';
           } else {
-            const requiresApproval = storeConfig?.requireCashierApproval !== false;
+            const requiresApproval = storeConfig?.requireCashierApproval === true;
             finalStatus = requiresApproval ? 'aguardando_caixa' : 'pending';
           }
         } catch (err: any) {
@@ -2157,9 +2169,9 @@ export const ClientDashboard = ({
             total: finalTotal,
             deliveryFee: orderType === 'delivery' ? deliveryFee : 0,
             serviceFee: orderType === 'dine_in_table' ? serviceFee : 0,
-            // 'awaiting_payment' = QR Code gerado mas pagamento ainda não confirmado
-            status: 'awaiting_payment',
+            status: storeConfig?.requireCashierApproval === true ? 'awaiting_payment' : 'pending',
             createdAt: new Date().toISOString(),
+            ...(storeConfig?.requireCashierApproval !== true ? { kitchenEnteredAt: new Date().toISOString() } : {}),
             orderType,
             tableNumber: orderType === 'dine_in_table' ? tableNumber : null,
             paymentMethod: 'pix',
@@ -2197,7 +2209,7 @@ export const ClientDashboard = ({
         if (orderType === 'dine_in_table') {
           finalStatus = 'pending';
         } else {
-          const requiresApproval = storeConfig?.requireCashierApproval !== false;
+          const requiresApproval = storeConfig?.requireCashierApproval === true;
           finalStatus = requiresApproval ? 'aguardando_caixa' : 'pending';
         }
       } else if (paymentMethod === 'credito') {

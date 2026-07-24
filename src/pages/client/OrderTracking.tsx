@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../hooks/useAuth';
 import type { OrderDocument } from '../../types/order';
@@ -230,7 +230,16 @@ const OrderPaymentRetry = ({ order, userData }: PaymentRetryProps) => {
         if (order.orderType === 'dine_in_table') {
           finalStatus = 'preparing';
         } else {
-          finalStatus = 'aguardando_caixa';
+          let requiresApproval = false;
+          try {
+            const storeSnap = await getDoc(doc(db, 'settings', 'store_config'));
+            if (storeSnap.exists()) {
+              requiresApproval = storeSnap.data().requireCashierApproval === true;
+            }
+          } catch (err) {
+            console.warn("Erro ao buscar store_config no retry payment:", err);
+          }
+          finalStatus = requiresApproval ? 'aguardando_caixa' : 'pending';
         }
       } else if (paymentMethod === 'credito') {
         const isUsingSavedCard = useSavedCard && !!userData?.pagbank_card_token;
