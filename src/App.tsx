@@ -851,7 +851,7 @@ const getRoleLabel = (r: string): React.ReactNode => {
             {activeView === 'admin' && <AdminDashboard />}
             {activeView === 'estoque' && <StockControl />}
             {activeView === 'painel_atendimento' && <SupportPanel />}
-            {activeView === 'suporte_virtual' && <ClientSupportChat />}
+            {activeView === 'suporte_virtual' && (isStaff ? <SupportPanel /> : <ClientSupportChat />)}
             {activeView === 'users' && <UserManagement />}
             {activeView === 'configuracoes' && <SettingsPage />}
             {activeView === 'mapa_mesas' && <TableMap />}
