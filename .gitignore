@@ -32,3 +32,10 @@ dist-ssr
 
 # Database / User Exports
 users.json
+
+# Temporary / Helper Scripts containing secrets
+get_fresh_token.js
+get_*.js
+check_*.js
+*.js
+!vite.config.ts

@@ -1417,6 +1417,8 @@ export const ClientDashboard = ({
     debito: 'Cartão de Débito',
     dinheiro: 'Dinheiro',
     pagar_final: 'Pagar no Final (na Mesa) 🍽️',
+    debito_point: 'Débito Maquininha 💴',
+    credito_point: 'Crédito Maquininha 💳',
   };
 
   const handleOpenSummary = () => {
@@ -1702,7 +1704,7 @@ export const ClientDashboard = ({
                 price: item.price,
                 quantity: item.quantity,
                 category: item.category,
-                size: item.size
+                size: item.size || null
               };
             }),
             total: finalTotal,
@@ -1722,8 +1724,8 @@ export const ClientDashboard = ({
               city: deliveryAddress!.city || 'Rio de Janeiro',
               zipCode: deliveryAddress!.zipCode || '',
               complement: deliveryAddress!.complement || '',
-              lat: deliveryAddress!.lat,
-              lng: deliveryAddress!.lng,
+              lat: deliveryAddress!.lat ?? null,
+              lng: deliveryAddress!.lng ?? null,
             } : null,
           };
 
@@ -1831,7 +1833,7 @@ export const ClientDashboard = ({
             price: item.price,
             quantity: item.quantity,
             category: item.category,
-            size: item.size
+            size: item.size || null
           };
         }),
         total: finalTotal,
@@ -1852,8 +1854,8 @@ export const ClientDashboard = ({
           city: deliveryAddress!.city || 'Rio de Janeiro',
           zipCode: deliveryAddress!.zipCode || '',
           complement: deliveryAddress!.complement || '',
-          lat: deliveryAddress!.lat,
-          lng: deliveryAddress!.lng,
+          lat: deliveryAddress!.lat ?? null,
+          lng: deliveryAddress!.lng ?? null,
         } : null,
       };
 
@@ -2163,7 +2165,7 @@ export const ClientDashboard = ({
                 price: item.price,
                 quantity: item.quantity,
                 category: item.category,
-                size: item.size
+                size: item.size || null
               };
             }),
             total: finalTotal,
@@ -2184,8 +2186,8 @@ export const ClientDashboard = ({
               city: deliveryAddress!.city || 'Rio de Janeiro',
               zipCode: deliveryAddress!.zipCode || '',
               complement: deliveryAddress!.complement || '',
-              lat: deliveryAddress!.lat,
-              lng: deliveryAddress!.lng,
+              lat: deliveryAddress!.lat ?? null,
+              lng: deliveryAddress!.lng ?? null,
             } : null,
           };
 
@@ -2319,7 +2321,7 @@ export const ClientDashboard = ({
             price: item.price,
             quantity: item.quantity,
             category: item.category,
-            size: item.size
+            size: item.size || null
           };
         }),
         total: finalTotal,
@@ -2340,8 +2342,8 @@ export const ClientDashboard = ({
           city: deliveryAddress!.city || 'Rio de Janeiro',
           zipCode: deliveryAddress!.zipCode || '',
           complement: deliveryAddress!.complement || '',
-          lat: deliveryAddress!.lat,
-          lng: deliveryAddress!.lng,
+          lat: deliveryAddress!.lat ?? null,
+          lng: deliveryAddress!.lng ?? null,
         } : null,
       };
 
