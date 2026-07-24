@@ -343,7 +343,10 @@ export const DeliveryActive = () => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetched: OrderDocument[] = [];
       snapshot.forEach((docSnap) => {
-        fetched.push({ id: docSnap.id, ...docSnap.data() } as OrderDocument);
+        const orderData = docSnap.data() as any;
+        if (!orderData.isTest || userData?.role === 'developer') {
+          fetched.push({ id: docSnap.id, ...orderData } as OrderDocument);
+        }
       });
       setOrders(fetched);
       setLoading(false);

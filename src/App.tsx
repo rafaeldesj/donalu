@@ -114,12 +114,16 @@ const MainLayout = () => {
       let newOrderDetected = false;
 
       snapshot.forEach((docSnap) => {
-        fetched.push({ id: docSnap.id, ...docSnap.data() } as OrderDocument);
+        const orderData = docSnap.data() as any;
+        if (!orderData.isTest || role === 'developer') {
+          fetched.push({ id: docSnap.id, ...orderData } as OrderDocument);
+        }
       });
 
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
-          const order = { id: change.doc.id, ...change.doc.data() } as OrderDocument;
+          const order = { id: change.doc.id, ...change.doc.data() } as any;
+          if (order.isTest && role !== 'developer') return;
           const orderTime = new Date(order.createdAt).getTime();
           const nowTime = Date.now();
           if (nowTime - orderTime < 30000 && order.status === 'pending') {

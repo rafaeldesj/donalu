@@ -240,6 +240,7 @@ export const ClientDashboard = ({
   const [categories, setCategories] = useState<string[]>(['Pastéis Gourmet Especiais', 'Bebidas']);
   const [activeCategory, setActiveCategory] = useState<string>('Pastéis Gourmet Especiais');
   const [waiveServiceFee, setWaiveServiceFee] = useState(false);
+  const [isTestOrder, setIsTestOrder] = useState(false);
 
   // States para scanner da mesa
   const [showTableScannerModal, setShowTableScannerModal] = useState(false);
@@ -1494,6 +1495,7 @@ export const ClientDashboard = ({
     }
 
     const orderData: any = {
+      isTest: isTestOrder || false,
       clientUid: user?.uid || '',
       clientName: user?.displayName || user?.email || 'Cliente Anônimo',
       clientPhone: userData?.phoneNumber || '',
@@ -1683,6 +1685,7 @@ export const ClientDashboard = ({
           }
 
           const orderData: any = {
+            isTest: isTestOrder || false,
             clientUid: user?.uid || '',
             clientName: user?.displayName || user?.email || 'Cliente Anônimo',
             clientPhone: userData?.phoneNumber || '',
@@ -1812,6 +1815,7 @@ export const ClientDashboard = ({
       const dailySeq = dailySnap.size + 1;
 
       const orderData: any = {
+        isTest: isTestOrder || false,
         clientUid: user?.uid || '',
         clientName: user?.displayName || user?.email || 'Cliente Anônimo',
         clientPhone: userData?.phoneNumber || '',
@@ -2300,6 +2304,7 @@ export const ClientDashboard = ({
       }
 
       const orderData: any = {
+        isTest: isTestOrder || false,
         clientUid: user?.uid || '',
         clientName: user?.displayName || user?.email || 'Cliente Anônimo',
         clientPhone: userData?.phoneNumber || '',
@@ -3494,6 +3499,31 @@ export const ClientDashboard = ({
                   );
                 })}
               </div>
+
+              {/* Opção de Pedido de Teste para desenvolvedores */}
+              {userData?.role === 'developer' && (
+                <div style={{
+                  marginTop: '0.75rem',
+                  padding: '0.75rem',
+                  background: 'rgba(245, 158, 11, 0.05)',
+                  border: '1px dashed var(--primary-gold)',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.6rem'
+                }}>
+                  <input
+                    type="checkbox"
+                    id="dev-test-order"
+                    checked={isTestOrder}
+                    onChange={(e) => setIsTestOrder(e.target.checked)}
+                    style={{ width: '18px', height: '18px', accentColor: 'var(--primary-gold)', cursor: 'pointer' }}
+                  />
+                  <label htmlFor="dev-test-order" style={{ fontSize: '0.85rem', color: '#f59e0b', fontWeight: 600, cursor: 'pointer', userSelect: 'none' }}>
+                    🧪 Pedido de Teste (Ignorar na produção)
+                  </label>
+                </div>
+              )}
 
               {/* Opção de Resgate Fidelidade (10+ carimbos) */}
               {stampsCount >= stampsNeeded && (

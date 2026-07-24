@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { useAuth } from '../../hooks/useAuth';
 import { db } from '../../config/firebase';
 import type { OrderDocument } from '../../types/order';
 import { Navigation, Check } from 'lucide-react';
@@ -143,6 +144,8 @@ const DeliveryRowMap = ({ orderId, address, clientCoords, deliveryCoords }: Deli
 };
 
 export default function ManagerDeliveryActive() {
+  const { userData } = useAuth();
+  const role = userData?.role || '';
   const [orders, setOrders] = useState<OrderDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [deliverers, setDeliverers] = useState<any[]>([]);
@@ -211,10 +214,13 @@ export default function ManagerDeliveryActive() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetched: OrderDocument[] = [];
       snapshot.forEach((docSnap) => {
-        fetched.push({
-          id: docSnap.id,
-          ...docSnap.data()
-        } as OrderDocument);
+        const orderData = docSnap.data() as any;
+        if (!orderData.isTest || role === 'developer') {
+          fetched.push({
+            id: docSnap.id,
+            ...orderData
+          } as OrderDocument);
+        }
       });
       const sorted = fetched.sort((a, b) => {
         const uidA = a.deliveryUid || '';

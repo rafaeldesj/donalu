@@ -381,29 +381,12 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetchedOrders: OrderDocument[] = [];
       snapshot.forEach((docSnap) => {
-        fetchedOrders.push({
-          id: docSnap.id,
-          ...docSnap.data()
-        } as OrderDocument);
-      });
-
-      // Handle auto-printing of incoming new orders in real-time
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === 'added') {
-          const order = { id: change.doc.id, ...change.doc.data() } as OrderDocument;
-          const orderTime = new Date(order.createdAt).getTime();
-          const nowTime = Date.now();
-          // If the order was created in the last 30 seconds and status is pending
-          if (nowTime - orderTime < 30000 && order.status === 'pending') {
-            try {
-              const printerSet = getPrinterSettings();
-              if (printerSet.autoPrintOnNew) {
-                printOrder(order).catch(err => console.error("Erro ao auto-imprimir novo pedido:", err));
-              }
-            } catch (err) {
-              console.error("Erro ao buscar configurações para auto-impressão:", err);
-            }
-          }
+        const orderData = docSnap.data() as any;
+        if (!orderData.isTest || userData?.role === 'developer') {
+          fetchedOrders.push({
+            id: docSnap.id,
+            ...orderData
+          } as OrderDocument);
         }
       });
 
