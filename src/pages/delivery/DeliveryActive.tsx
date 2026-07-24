@@ -364,6 +364,12 @@ export const DeliveryActive = () => {
     (o) => o.status === 'ready' && o.address && !o.deliveryUid
   );
 
+  const [cardConfirmed, setCardConfirmed] = useState(false);
+
+  useEffect(() => {
+    setCardConfirmed(false);
+  }, [activeOrder?.id]);
+
   // GPS do entregador em tempo real
   useEffect(() => {
     if (!activeOrder) {
@@ -511,14 +517,90 @@ export const DeliveryActive = () => {
               )}
             </div>
 
-            <button
-              type="button"
-              onClick={() => handleCompleteDelivery(activeOrder.id!)}
-              className="btn-small btn-success"
-              style={{ width: '100%', padding: '0.75rem', gap: '0.5rem', fontWeight: 600, fontSize: '0.95rem' }}
-            >
-              <Check size={18} /> Concluir Entrega (Pago)
-            </button>
+            {(() => {
+              const method = activeOrder.paymentMethod || '';
+              const isOnline = ['pix', 'credito', 'google_pay', 'debito_point', 'credito_point'].includes(method);
+              const isCash = method === 'dinheiro';
+              const isCardOffline = method === 'debito' || method === 'cartao';
+
+              if (isOnline) {
+                return (
+                  <button
+                    type="button"
+                    onClick={() => handleCompleteDelivery(activeOrder.id!)}
+                    className="btn-small btn-success"
+                    style={{ width: '100%', padding: '0.75rem', gap: '0.5rem', fontWeight: 600, fontSize: '0.95rem' }}
+                  >
+                    <Check size={18} /> Concluir Entrega (Já Pago Online)
+                  </button>
+                );
+              }
+
+              if (isCash) {
+                return (
+                  <button
+                    type="button"
+                    onClick={() => handleCompleteDelivery(activeOrder.id!)}
+                    className="btn-small btn-success"
+                    style={{ width: '100%', padding: '0.75rem', gap: '0.5rem', fontWeight: 600, fontSize: '0.95rem' }}
+                  >
+                    <Check size={18} /> Concluir Entrega (Recebido em Dinheiro)
+                  </button>
+                );
+              }
+
+              if (isCardOffline) {
+                if (!cardConfirmed) {
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => setCardConfirmed(true)}
+                      className="btn-small"
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        gap: '0.5rem',
+                        fontWeight: 700,
+                        fontSize: '0.95rem',
+                        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <AlertTriangle size={18} /> Confirmar Pagamento no Cartão
+                    </button>
+                  );
+                } else {
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => handleCompleteDelivery(activeOrder.id!)}
+                      className="btn-small btn-success animate-pulse"
+                      style={{ width: '100%', padding: '0.75rem', gap: '0.5rem', fontWeight: 600, fontSize: '0.95rem' }}
+                    >
+                      <Check size={18} /> Concluir Entrega (Pago)
+                    </button>
+                  );
+                }
+              }
+
+              // Fallback
+              return (
+                <button
+                  type="button"
+                  onClick={() => handleCompleteDelivery(activeOrder.id!)}
+                  className="btn-small btn-success"
+                  style={{ width: '100%', padding: '0.75rem', gap: '0.5rem', fontWeight: 600, fontSize: '0.95rem' }}
+                >
+                  <Check size={18} /> Concluir Entrega (Pago)
+                </button>
+              );
+            })()}
           </div>
 
           {/* Coluna direita — mapa de rota */}
