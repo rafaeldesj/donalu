@@ -47,8 +47,8 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
   const [selectedCheckoutOrder, setSelectedCheckoutOrder] = useState<OrderDocument | null>(null);
   const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<string>('dinheiro');
   const [checkoutChangeFor, setCheckoutChangeFor] = useState<string>('');
-  // Client filter inside table checkout modal
-  const [checkoutClientFilter, setCheckoutClientFilter] = useState<string>('all');
+  // Client selection inside table checkout modal (multi-select)
+  const [checkoutSelectedClients, setCheckoutSelectedClients] = useState<string[]>([]);
   // Mercado Pago Point states for operator checkout
   const [storeConfig, setStoreConfig] = useState<any>(null);
   const [pointPaymentStatus, setPointPaymentStatus] = useState<'idle' | 'pending' | 'approved' | 'rejected'>('idle');
@@ -64,6 +64,25 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
   const [devSelectedClientUid, setDevSelectedClientUid] = useState<string>('');
   const [deliverers, setDeliverers] = useState<any[]>([]);
   const [selectedDelivererMap, setSelectedDelivererMap] = useState<Record<string, string>>({});
+
+  // Dynamically initialize multi-selected checkout clients for the selected table
+  useEffect(() => {
+    if (selectedCheckoutTable) {
+      const todayStr = getBusinessDay(new Date().toISOString());
+      const allTableOrders = orders.filter(o =>
+        getBusinessDay(o.createdAt) === todayStr &&
+        o.status !== 'completed' &&
+        o.status !== 'cancelled' &&
+        o.orderType === 'dine_in_table' &&
+        o.tableNumber === selectedCheckoutTable &&
+        !['pix', 'credito', 'google_pay'].includes(o.paymentMethod || '')
+      );
+      const uniqueNames = Array.from(new Set(allTableOrders.map(o => o.clientName).filter(Boolean))) as string[];
+      setCheckoutSelectedClients(uniqueNames);
+    } else {
+      setCheckoutSelectedClients([]);
+    }
+  }, [selectedCheckoutTable, orders]);
 
   const handleAssignDeliverer = async (orderId: string, delivererId: string) => {
     if (!delivererId) {
@@ -209,11 +228,23 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
       await Promise.all(batchPromises);
       await checkAndFreeTable(tableNum, undefined);
       
-      const clientLabel = checkoutClientFilter !== 'all' ? ` (conta de ${checkoutClientFilter})` : '';
+      const todayStr = getBusinessDay(new Date().toISOString());
+      const allTableOrders = orders.filter(o =>
+        getBusinessDay(o.createdAt) === todayStr &&
+        o.status !== 'completed' &&
+        o.status !== 'cancelled' &&
+        o.orderType === 'dine_in_table' &&
+        o.tableNumber === tableNum &&
+        !['pix', 'credito', 'google_pay'].includes(o.paymentMethod || '')
+      );
+      const clientsAtTable = Array.from(new Set(allTableOrders.map(o => o.clientName).filter(Boolean))) as string[];
+      const isMesaCompleta = checkoutSelectedClients.length === clientsAtTable.length;
+      const clientLabel = isMesaCompleta ? '' : ` (conta de: ${checkoutSelectedClients.join(', ')})`;
+
       alert(`Mesa ${tableNum}${clientLabel} encerrada e paga com sucesso!`);
       setSelectedCheckoutTable(null);
       setCheckoutChangeFor('');
-      setCheckoutClientFilter('all');
+      setCheckoutSelectedClients([]);
       setPointPaymentStatus('idle');
       setPointIntentId('');
       setPointPaymentError(null);
@@ -2106,10 +2137,10 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
         // Lista de clientes únicos na mesa
         const clientsAtTable = Array.from(new Set(allTableOrders.map(o => o.clientName).filter(Boolean))) as string[];
 
-        // Pedidos filtrados pelo cliente selecionado (ou todos)
-        const filteredOrders = checkoutClientFilter === 'all'
-          ? allTableOrders
-          : allTableOrders.filter(o => o.clientName === checkoutClientFilter);
+        // Pedidos filtrados pelos clientes selecionados no checkout
+        const filteredOrders = allTableOrders.filter(o =>
+          checkoutSelectedClients.includes(o.clientName || '')
+        );
 
         const tableTotal = filteredOrders.reduce((sum, o) => sum + o.total, 0);
 
@@ -2165,7 +2196,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
               if (pointPaymentStatus !== 'pending') {
                 setSelectedCheckoutTable(null);
                 setCheckoutChangeFor('');
-                setCheckoutClientFilter('all');
+                setCheckoutSelectedClients([]);
                 setPointPaymentStatus('idle');
                 setPointIntentId('');
                 setPointPaymentError(null);
@@ -2202,7 +2233,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                     if (pointPaymentStatus !== 'pending') {
                       setSelectedCheckoutTable(null);
                       setCheckoutChangeFor('');
-                      setCheckoutClientFilter('all');
+                      setCheckoutSelectedClients([]);
                       setPointPaymentStatus('idle');
                       setPointIntentId('');
                       setPointPaymentError(null);
@@ -2214,34 +2245,72 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                 </button>
               </div>
 
-              {/* Filtro de Cliente (abas) */}
+              {/* Seleção de Cliente (multi-select) */}
               {clientsAtTable.length > 0 && (
                 <div>
-                  <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.4rem', letterSpacing: '0.06em' }}>Visualizar conta de:</span>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.4rem', letterSpacing: '0.06em' }}>Cobrar conta de (Seleção Múltipla):</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center' }}>
                     <button
                       type="button"
-                      onClick={() => { setCheckoutClientFilter('all'); setPointPaymentStatus('idle'); setPointIntentId(''); setPointPaymentError(null); }}
+                      onClick={() => {
+                        setCheckoutSelectedClients(clientsAtTable);
+                        setPointPaymentStatus('idle');
+                        setPointIntentId('');
+                        setPointPaymentError(null);
+                      }}
                       style={{
                         padding: '0.35rem 0.8rem', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
-                        border: checkoutClientFilter === 'all' ? '2px solid var(--primary-gold)' : '1px solid rgba(255,255,255,0.15)',
-                        background: checkoutClientFilter === 'all' ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.03)',
-                        color: checkoutClientFilter === 'all' ? 'var(--primary-gold)' : 'var(--text-secondary)'
+                        border: checkoutSelectedClients.length === clientsAtTable.length ? '2px solid var(--primary-gold)' : '1px solid rgba(255,255,255,0.15)',
+                        background: checkoutSelectedClients.length === clientsAtTable.length ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.03)',
+                        color: checkoutSelectedClients.length === clientsAtTable.length ? 'var(--primary-gold)' : 'var(--text-secondary)'
                       }}
                     >🍽️ Mesa Completa</button>
-                    {clientsAtTable.map(name => (
-                      <button
-                        key={name}
-                        type="button"
-                        onClick={() => { setCheckoutClientFilter(name); setPointPaymentStatus('idle'); setPointIntentId(''); setPointPaymentError(null); }}
-                        style={{
-                          padding: '0.35rem 0.8rem', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
-                          border: checkoutClientFilter === name ? '2px solid var(--primary-gold)' : '1px solid rgba(255,255,255,0.15)',
-                          background: checkoutClientFilter === name ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.03)',
-                          color: checkoutClientFilter === name ? 'var(--primary-gold)' : 'var(--text-secondary)'
-                        }}
-                      >👤 {name}</button>
-                    ))}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCheckoutSelectedClients([]);
+                        setPointPaymentStatus('idle');
+                        setPointIntentId('');
+                        setPointPaymentError(null);
+                      }}
+                      style={{
+                        padding: '0.35rem 0.8rem', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        background: checkoutSelectedClients.length === 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.03)',
+                        color: checkoutSelectedClients.length === 0 ? '#f87171' : 'var(--text-secondary)'
+                      }}
+                    >Limpar Seleção</button>
+
+                    {clientsAtTable.map(name => {
+                      const isSelected = checkoutSelectedClients.includes(name);
+                      return (
+                        <button
+                          key={name}
+                          type="button"
+                          onClick={() => {
+                            setPointPaymentStatus('idle');
+                            setPointIntentId('');
+                            setPointPaymentError(null);
+                            if (isSelected) {
+                              setCheckoutSelectedClients(checkoutSelectedClients.filter(c => c !== name));
+                            } else {
+                              setCheckoutSelectedClients([...checkoutSelectedClients, name]);
+                            }
+                          }}
+                          style={{
+                            padding: '0.35rem 0.8rem', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+                            border: isSelected ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.15)',
+                            background: isSelected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.03)',
+                            color: isSelected ? '#10b981' : 'var(--text-secondary)',
+                            display: 'flex', alignItems: 'center', gap: '0.3rem'
+                          }}
+                        >
+                          <span>{isSelected ? '✓' : '+'}</span>
+                          <span>👤 {name}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -2250,13 +2319,13 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <button
                   type="button"
-                  onClick={() => printTableBill(selectedCheckoutTable, filteredOrders, checkoutClientFilter !== 'all' ? checkoutClientFilter : undefined)}
+                  onClick={() => printTableBill(selectedCheckoutTable, filteredOrders, checkoutSelectedClients.length === clientsAtTable.length ? undefined : checkoutSelectedClients.join(', '))}
                   style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.9rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)', color: '#fff', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
                 >
                   <Printer size={14} />
-                  {checkoutClientFilter === 'all' ? 'Imprimir Conta da Mesa' : `Imprimir Conta de ${checkoutClientFilter}`}
+                  {checkoutSelectedClients.length === clientsAtTable.length ? 'Imprimir Conta da Mesa' : `Imprimir Conta (${checkoutSelectedClients.length} selecionados)`}
                 </button>
-                {checkoutClientFilter !== 'all' && (
+                {checkoutSelectedClients.length !== clientsAtTable.length && (
                   <button
                     type="button"
                     onClick={() => printTableBill(selectedCheckoutTable, allTableOrders)}
@@ -2297,7 +2366,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
               {/* Totalizador */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(245,158,11,0.05)', border: '1px dashed var(--primary-gold)', borderRadius: '12px', padding: '0.85rem' }}>
                 <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>
-                  {checkoutClientFilter === 'all' ? 'Total da Mesa:' : `Total de ${checkoutClientFilter}:`}
+                  {checkoutSelectedClients.length === clientsAtTable.length ? 'Total da Mesa:' : `Total Selecionado (${checkoutSelectedClients.length} pessoas):`}
                 </span>
                 <strong style={{ fontSize: '1.3rem', color: 'var(--primary-gold)' }}>R$ {tableTotal.toFixed(2).replace('.', ',')}</strong>
               </div>
@@ -2432,7 +2501,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                     if (pointPaymentStatus !== 'pending') {
                       setSelectedCheckoutTable(null);
                       setCheckoutChangeFor('');
-                      setCheckoutClientFilter('all');
+                      setCheckoutSelectedClients([]);
                       setPointPaymentStatus('idle');
                       setPointIntentId('');
                       setPointPaymentError(null);
