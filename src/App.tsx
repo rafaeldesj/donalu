@@ -8,6 +8,7 @@ import logoDonaluMobile from './assets/logo_donalu_mobile.png';
 import { doc, onSnapshot, collection, query, orderBy } from 'firebase/firestore';
 import entrouPedidoSound from './sounds/entrou-pedido.mp3';
 import pedidoProntoSound from './sounds/pedido-pronto.mp3';
+import olhaAMensagemSound from './sounds/olha-a-mensagem.mp3';
 import { printOrder, getPrinterSettings } from './utils/printer';
 import type { OrderDocument } from './types/order';
 import { db } from './config/firebase';
@@ -56,6 +57,9 @@ const MainLayout = () => {
 
   const isPendingSoundPlayingRef = useRef(false);
   const isPreparingSoundPlayingRef = useRef(false);
+  const messageAudioRef = useRef<HTMLAudioElement | null>(null);
+  const messageTimeoutRef = useRef<any>(null);
+  const isMessageSoundPlayingRef = useRef(false);
 
   const role = userData?.role || 'client';
   const staff = userData?.staffFunctions;
@@ -316,6 +320,113 @@ const MainLayout = () => {
       }
     };
   }, [orders, isStaff, role, staff]);
+
+  // Support chat global status listener and audio notification
+  const [supportChats, setSupportChats] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!user || !isStaff) {
+      setSupportChats([]);
+      return;
+    }
+
+    const q = collection(db, 'support_chats');
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list: any[] = [];
+      snapshot.forEach((docSnap) => {
+        list.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      setSupportChats(list);
+    }, (err) => {
+      console.error("Erro ao escutar chats no App:", err);
+    });
+
+    return () => unsubscribe();
+  }, [user, isStaff]);
+
+  useEffect(() => {
+    if (!isStaff || supportChats.length === 0) {
+      if (messageAudioRef.current) {
+        messageAudioRef.current.pause();
+        messageAudioRef.current = null;
+      }
+      if (messageTimeoutRef.current) {
+        clearTimeout(messageTimeoutRef.current);
+        messageTimeoutRef.current = null;
+      }
+      isMessageSoundPlayingRef.current = false;
+      return;
+    }
+
+    const hasNewMessage = supportChats.some(chat => {
+      const msgs = chat.messages || [];
+      if (msgs.length === 0) return false;
+      const lastMsg = msgs[msgs.length - 1];
+      return chat.unreadByOperator === true && chat.isAnswered !== true && lastMsg?.sender === 'client';
+    });
+
+    if (!messageAudioRef.current) {
+      messageAudioRef.current = new Audio(olhaAMensagemSound);
+      messageAudioRef.current.loop = false;
+      messageAudioRef.current.volume = 0.85;
+    }
+
+    if (!hasNewMessage) {
+      if (messageAudioRef.current) messageAudioRef.current.pause();
+      if (messageTimeoutRef.current) {
+        clearTimeout(messageTimeoutRef.current);
+        messageTimeoutRef.current = null;
+      }
+      isMessageSoundPlayingRef.current = false;
+      return;
+    }
+
+    const triggerMessageSoundCycle = () => {
+      const stillHasNew = supportChats.some(chat => {
+        const msgs = chat.messages || [];
+        if (msgs.length === 0) return false;
+        const lastMsg = msgs[msgs.length - 1];
+        return chat.unreadByOperator === true && chat.isAnswered !== true && lastMsg?.sender === 'client';
+      });
+
+      if (!stillHasNew) return;
+      isMessageSoundPlayingRef.current = true;
+
+      if (messageAudioRef.current) {
+        messageAudioRef.current.play().catch(err => {
+          console.warn("Autoplay olha-a-mensagem bloqueado:", err);
+          handleMessageSoundEnded();
+        });
+        messageAudioRef.current.onended = handleMessageSoundEnded;
+      }
+    };
+
+    const handleMessageSoundEnded = () => {
+      isMessageSoundPlayingRef.current = false;
+      const stillHasNew = supportChats.some(chat => {
+        const msgs = chat.messages || [];
+        if (msgs.length === 0) return false;
+        const lastMsg = msgs[msgs.length - 1];
+        return chat.unreadByOperator === true && chat.isAnswered !== true && lastMsg?.sender === 'client';
+      });
+
+      if (stillHasNew) {
+        if (messageTimeoutRef.current) clearTimeout(messageTimeoutRef.current);
+        messageTimeoutRef.current = setTimeout(triggerMessageSoundCycle, 30000);
+      }
+    };
+
+    if (!isMessageSoundPlayingRef.current) {
+      triggerMessageSoundCycle();
+    }
+
+    return () => {
+      if (messageTimeoutRef.current) {
+        clearTimeout(messageTimeoutRef.current);
+        messageTimeoutRef.current = null;
+      }
+    };
+  }, [supportChats, isStaff]);
 
   // Detect Mercado Pago OAuth redirect — store the code and navigate to settings
   useEffect(() => {

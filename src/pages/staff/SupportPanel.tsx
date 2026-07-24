@@ -23,6 +23,7 @@ interface ChatSession {
   assistantActive: boolean;
   lastMessageAt: string;
   unreadByOperator?: boolean;
+  isAnswered?: boolean;
 }
 
 interface AIConfig {
@@ -77,7 +78,8 @@ export const SupportPanel = () => {
         messages: updatedMessages,
         assistantActive: false, // Turn off AI since human operator is interacting!
         lastMessageAt: new Date().toISOString(),
-        unreadByOperator: false
+        unreadByOperator: false,
+        isAnswered: true
       });
     } catch (err) {
       console.error('Erro ao enviar mídia do operador:', err);
@@ -345,7 +347,8 @@ export const SupportPanel = () => {
         messages: updatedMessages,
         assistantActive: false, // Pausa a I.A. automaticamente!
         lastMessageAt: new Date().toISOString(),
-        unreadByOperator: false
+        unreadByOperator: false,
+        isAnswered: true
       });
 
     } catch (err) {
@@ -797,6 +800,45 @@ export const SupportPanel = () => {
                     accept="image/*"
                     style={{ display: 'none' }}
                   />
+
+                  {/* Checkbox "Mensagem Respondida" */}
+                  <div style={{
+                    padding: '0.5rem 1rem',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    fontSize: '0.82rem'
+                  }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: selectedChat.isAnswered ? '#10b981' : 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600, userSelect: 'none' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedChat.isAnswered || false}
+                        onChange={async (e) => {
+                          if (!selectedChatId) return;
+                          const checked = e.target.checked;
+                          try {
+                            const docRef = doc(db, 'support_chats', selectedChatId);
+                            await setDoc(docRef, { ...selectedChat, isAnswered: checked }, { merge: true });
+                          } catch (err) {
+                            console.error("Erro ao alterar estado de respondido:", err);
+                          }
+                        }}
+                        style={{ width: '16px', height: '16px', accentColor: '#10b981', cursor: 'pointer' }}
+                      />
+                      <span>Mensagem respondida</span>
+                    </label>
+                    {selectedChat.isAnswered ? (
+                      <span style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.78rem' }}>
+                        <Check size={14} /> Atendimento concluído
+                      </span>
+                    ) : (
+                      <span style={{ color: '#f59e0b', fontSize: '0.78rem' }}>
+                        Aguardando resposta do operador
+                      </span>
+                    )}
+                  </div>
 
                   {/* Operator reply input box */}
                   <form onSubmit={handleSendOperatorMessage} style={{

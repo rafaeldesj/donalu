@@ -95,7 +95,8 @@ export const ClientSupportChat = ({ isFloating = false, onClose }: ClientSupport
         messages: updatedMessages,
         assistantActive: chat ? chat.assistantActive : true,
         lastMessageAt: new Date().toISOString(),
-        unreadByOperator: true
+        unreadByOperator: true,
+        isAnswered: false
       });
 
       if (chat ? chat.assistantActive : true) {
@@ -251,7 +252,8 @@ export const ClientSupportChat = ({ isFloating = false, onClose }: ClientSupport
           messages: updatedMessages,
           assistantActive: chat ? chat.assistantActive : true,
           lastMessageAt: new Date().toISOString(),
-          unreadByOperator: true
+          unreadByOperator: true,
+          isAnswered: false
         });
 
         if (chat ? chat.assistantActive : true) {
@@ -574,7 +576,8 @@ Responda de forma extremamente curta e natural, como um atendente humano no What
         messages: updatedMessages,
         assistantActive: true,
         lastMessageAt: new Date().toISOString(),
-        unreadByOperator: true
+        unreadByOperator: true,
+        isAnswered: true
       });
 
     } catch (err) {
@@ -610,7 +613,8 @@ Responda de forma extremamente curta e natural, como um atendente humano no What
         messages: updatedMessages,
         assistantActive: isAssistantActive,
         lastMessageAt: new Date().toISOString(),
-        unreadByOperator: true
+        unreadByOperator: true,
+        isAnswered: false
       });
 
       if (isAssistantActive) {
