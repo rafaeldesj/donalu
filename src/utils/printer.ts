@@ -250,9 +250,11 @@ export function printOrderBrowser(order: OrderDocument, settings: PrinterSetting
       </div>
     `;
 
-    if (item.withCatupiry || item.withBorda || (item.ingredients && item.ingredients.length > 0)) {
+    if (item.withCatupiry || item.cheeseOption || item.withBorda || (item.ingredients && item.ingredients.length > 0)) {
       itemsHtml += `<div class="item-details">`;
-      if (item.withCatupiry) itemsHtml += `<div>+ Catupiry</div>`;
+      if (item.cheeseOption === 'catupiry' || item.withCatupiry) itemsHtml += `<div>+ Catupiry</div>`;
+      else if (item.cheeseOption === 'cheddar') itemsHtml += `<div>+ Cheddar</div>`;
+      else if (item.cheeseOption === 'cream_cheese') itemsHtml += `<div>+ Cream Cheese</div>`;
       if (item.withBorda) itemsHtml += `<div>+ Borda Recheada</div>`;
       if (item.ingredients && item.ingredients.length > 0) {
         itemsHtml += `<div>Adicionais/Ingr: ${item.ingredients.join(', ')}</div>`;
@@ -603,8 +605,12 @@ function encodeEscPos(order: OrderDocument, settings: PrinterSettings, summaryOn
       writeLine(`${' '.repeat(maxChars - priceStr.length)}${priceStr}`);
     }
 
-    if (item.withCatupiry) {
+    if (item.cheeseOption === 'catupiry' || item.withCatupiry) {
       writeLine('  + Catupiry');
+    } else if (item.cheeseOption === 'cheddar') {
+      writeLine('  + Cheddar');
+    } else if (item.cheeseOption === 'cream_cheese') {
+      writeLine('  + Cream Cheese');
     }
     if (item.withBorda) {
       writeLine('  + Borda Recheada');
@@ -846,9 +852,11 @@ export async function printTableBill(tableNum: string, ordersList: OrderDocument
             <span>R$ ${((item.price ?? 0) * item.quantity).toFixed(2).replace('.', ',')}</span>
           </div>
         `;
-        if (item.withCatupiry || item.withBorda || (item.ingredients && item.ingredients.length > 0)) {
+        if (item.withCatupiry || item.cheeseOption || item.withBorda || (item.ingredients && item.ingredients.length > 0)) {
           let details = [];
-          if (item.withCatupiry) details.push('+ Catupiry');
+          if (item.cheeseOption === 'catupiry' || item.withCatupiry) details.push('+ Catupiry');
+          else if (item.cheeseOption === 'cheddar') details.push('+ Cheddar');
+          else if (item.cheeseOption === 'cream_cheese') details.push('+ Cream Cheese');
           if (item.withBorda) details.push('+ Borda Recheada');
           if (item.ingredients && item.ingredients.length > 0) details.push(`Ingr: ${item.ingredients.join(', ')}`);
           itemsHtml += `<div style="font-size: 9px; font-weight: bold; margin-left: 10px; margin-bottom: 4px;">${details.join(' | ')}</div>`;

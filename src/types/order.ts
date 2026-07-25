@@ -9,6 +9,7 @@ export interface OrderItem {
   size?: 'grande' | 'kids';
   withCatupiry?: boolean;
   withBorda?: boolean;
+  cheeseOption?: 'catupiry' | 'cheddar' | 'cream_cheese' | null;
   ingredients?: string[];
 }
 

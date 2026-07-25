@@ -288,8 +288,8 @@ export const ClientDashboard = ({
 
   // States para customização de pastel antes de adicionar ao carrinho
   const [customizingPastel, setCustomizingPastel] = useState<any | null>(null);
-  const [tempWithCatupiry, setTempWithCatupiry] = useState(false);
   const [tempWithBorda, setTempWithBorda] = useState(false);
+  const [tempCheeseOption, setTempCheeseOption] = useState<'catupiry' | 'cheddar' | 'cream_cheese' | null>(null);
   const [tempIngredients, setTempIngredients] = useState<string[]>([]);
   const [tempPastelSize, setTempPastelSize] = useState<'grande' | 'kids'>('grande');
   
@@ -1304,8 +1304,8 @@ export const ClientDashboard = ({
     // Se for pastel (doce ou salgado), abre a janela sobreposta de opcionais/adicionais
     if (item.category === 'Pastéis Doces' || item.category === 'Pastéis Salgados') {
       setCustomizingPastel(item);
-      setTempWithCatupiry(false);
       setTempWithBorda(false);
+      setTempCheeseOption(null);
       setTempIngredients([]);
       setTempPastelSize('grande');
       return;
@@ -1507,7 +1507,9 @@ export const ClientDashboard = ({
           details.push(item.size === 'kids' ? 'Kids' : 'Grande');
         }
         if (item.category === 'Pastéis Salgados') {
-          if (item.withCatupiry) details.push('Catupiry');
+          if (item.cheeseOption === 'catupiry' || item.withCatupiry) details.push('Catupiry');
+          else if (item.cheeseOption === 'cheddar') details.push('Cheddar');
+          else if (item.cheeseOption === 'cream_cheese') details.push('Cream Cheese');
           if (item.withBorda) details.push('Borda de Queijo');
           if (item.ingredients && item.ingredients.length > 0) {
             details.push(`Adicionais: ${item.ingredients.join(', ')}`);
@@ -1697,7 +1699,9 @@ export const ClientDashboard = ({
                 details.push(item.size === 'kids' ? 'Kids' : 'Grande');
               }
               if (item.category === 'Pastéis Salgados') {
-                if (item.withCatupiry) details.push('Catupiry');
+                if (item.cheeseOption === 'catupiry' || item.withCatupiry) details.push('Catupiry');
+                else if (item.cheeseOption === 'cheddar') details.push('Cheddar');
+                else if (item.cheeseOption === 'cream_cheese') details.push('Cream Cheese');
                 if (item.withBorda) details.push('Borda de Queijo');
                 if (item.ingredients && item.ingredients.length > 0) {
                   details.push(`Adicionais: ${item.ingredients.join(', ')}`);
@@ -1827,7 +1831,9 @@ export const ClientDashboard = ({
             details.push(item.size === 'kids' ? 'Kids' : 'Grande');
           }
           if (item.category === 'Pastéis Salgados') {
-            if (item.withCatupiry) details.push('Catupiry');
+            if (item.cheeseOption === 'catupiry' || item.withCatupiry) details.push('Catupiry');
+            else if (item.cheeseOption === 'cheddar') details.push('Cheddar');
+            else if (item.cheeseOption === 'cream_cheese') details.push('Cream Cheese');
             if (item.withBorda) details.push('Borda de Queijo');
             if (item.ingredients && item.ingredients.length > 0) {
               details.push(`Adicionais: ${item.ingredients.join(', ')}`);
@@ -2162,7 +2168,9 @@ export const ClientDashboard = ({
                 details.push(item.size === 'kids' ? 'Kids' : 'Grande');
               }
               if (item.category === 'Pastéis Salgados') {
-                if (item.withCatupiry) details.push('Catupiry');
+                if (item.cheeseOption === 'catupiry' || item.withCatupiry) details.push('Catupiry');
+                else if (item.cheeseOption === 'cheddar') details.push('Cheddar');
+                else if (item.cheeseOption === 'cream_cheese') details.push('Cream Cheese');
                 if (item.withBorda) details.push('Borda de Queijo');
                 if (item.ingredients && item.ingredients.length > 0)
                   details.push(`Adicionais: ${item.ingredients.join(', ')}`);
@@ -2316,7 +2324,9 @@ export const ClientDashboard = ({
             details.push(item.size === 'kids' ? 'Kids' : 'Grande');
           }
           if (item.category === 'Pastéis Salgados') {
-            if (item.withCatupiry) details.push('Catupiry');
+            if (item.cheeseOption === 'catupiry' || item.withCatupiry) details.push('Catupiry');
+            else if (item.cheeseOption === 'cheddar') details.push('Cheddar');
+            else if (item.cheeseOption === 'cream_cheese') details.push('Cream Cheese');
             if (item.withBorda) details.push('Borda de Queijo');
             if (item.ingredients && item.ingredients.length > 0) {
               details.push(`Adicionais: ${item.ingredients.join(', ')}`);
@@ -5288,29 +5298,44 @@ export const ClientDashboard = ({
 
             {/* Corpo / Opções */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {/* Opcionais para Salgado */}
+              {/* Borda de Queijo — acima dos opcionais */}
               {customizingPastel.category === 'Pastéis Salgados' && (
                 <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
-                  <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', color: 'var(--primary-gold)' }}>Opcionais (Sem custo adicional):</h4>
-                  <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
-                      <input
-                        type="checkbox"
-                        checked={tempWithCatupiry}
-                        onChange={(e) => setTempWithCatupiry(e.target.checked)}
-                        style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '16px', height: '16px' }}
-                      />
-                      Adicionar Catupiry
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
-                      <input
-                        type="checkbox"
-                        checked={tempWithBorda}
-                        onChange={(e) => setTempWithBorda(e.target.checked)}
-                        style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '16px', height: '16px' }}
-                      />
-                      Borda de Queijo
-                    </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
+                    <input
+                      type="checkbox"
+                      checked={tempWithBorda}
+                      onChange={(e) => setTempWithBorda(e.target.checked)}
+                      style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '16px', height: '16px' }}
+                    />
+                    <span>🧀 Borda de Queijo <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>(Sem custo adicional)</span></span>
+                  </label>
+                </div>
+              )}
+
+              {/* Opcionais de Queijo para Salgado — seleção exclusiva */}
+              {customizingPastel.category === 'Pastéis Salgados' && (
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <h4 style={{ margin: '0 0 0.6rem 0', fontSize: '0.85rem', color: 'var(--primary-gold)' }}>Opcionais (Sem custo adicional):</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                    {([
+                      { value: 'catupiry', label: 'Adicionar Catupiry' },
+                      { value: 'cheddar', label: 'Adicionar Cheddar' },
+                      { value: 'cream_cheese', label: 'Adicionar Cream Cheese' },
+                    ] as { value: 'catupiry' | 'cheddar' | 'cream_cheese'; label: string }[]).map(opt => (
+                      <label
+                        key={opt.value}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={tempCheeseOption === opt.value}
+                          onChange={() => setTempCheeseOption(tempCheeseOption === opt.value ? null : opt.value)}
+                          style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '16px', height: '16px' }}
+                        />
+                        {opt.label}
+                      </label>
+                    ))}
                   </div>
                 </div>
               )}
@@ -5407,18 +5432,18 @@ export const ClientDashboard = ({
                   }
                   setCart((prevCart) => {
                     const selectedPrice = tempPastelSize === 'kids' ? 14.00 : 23.00;
-                    const existingIdx = prevCart.findIndex(i => 
-                      i.id === customizingPastel.id && 
+                    const existingIdx = prevCart.findIndex(i =>
+                      i.id === customizingPastel.id &&
                       i.size === tempPastelSize &&
-                      i.withCatupiry === tempWithCatupiry && 
-                      i.withBorda === tempWithBorda && 
+                      i.cheeseOption === tempCheeseOption &&
+                      i.withBorda === tempWithBorda &&
                       JSON.stringify((i.ingredients || []).slice().sort()) === JSON.stringify(tempIngredients.slice().sort())
                     );
-                    
+
                     if (existingIdx > -1) {
                       return prevCart.map((item, idx) => idx === existingIdx ? { ...item, quantity: item.quantity + 1 } : item);
                     }
-                    
+
                     return [...prevCart, {
                       id: customizingPastel.id,
                       name: customizingPastel.name,
@@ -5426,7 +5451,8 @@ export const ClientDashboard = ({
                       size: tempPastelSize,
                       quantity: 1,
                       category: customizingPastel.category || 'Pastéis Salgados',
-                      withCatupiry: tempWithCatupiry,
+                      withCatupiry: tempCheeseOption === 'catupiry',
+                      cheeseOption: tempCheeseOption,
                       withBorda: tempWithBorda,
                       ingredients: tempIngredients
                     }];
