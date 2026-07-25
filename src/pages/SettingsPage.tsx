@@ -1680,132 +1680,134 @@ export const SettingsPage = () => {
                 </div>
               </form>
 
-              <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '1rem' }}>
-                <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '1.15rem' }}>
-                  📟 Guia de Configuração — Maquininha Mercado Pago Point
-                </h3>
-                <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                  Siga este guia passo a passo para ativar o pagamento por débito automático via maquininha.
-                  O cliente seleciona "Débito" no app e a maquininha ativa sozinha esperando o cartão.
-                </p>
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
-                  {[
-                    { label: 'Point Smart 2', sub: 'Tela própria' },
-                    { label: 'Point Pro 3', sub: 'Tela grande' },
-                    { label: 'Point Air 2', sub: '4G + WiFi + NFC' },
-                    { label: 'Point Mini NFC 2', sub: 'Via celular' },
-                  ].map(m => (
-                    <span key={m.label} style={{ background: 'rgba(59,130,246,0.13)', border: '1px solid rgba(59,130,246,0.28)', color: '#60a5fa', borderRadius: '20px', padding: '0.25rem 0.85rem', fontSize: '0.78rem', fontWeight: 600, display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.3 }}>
-                      ✅ {m.label}<span style={{ fontSize: '0.68rem', color: '#93c5fd', fontWeight: 400 }}>{m.sub}</span>
-                    </span>
-                  ))}
-                  <span style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', color: '#34d399', borderRadius: '20px', padding: '0.25rem 0.75rem', fontSize: '0.78rem', fontWeight: 600 }}>⏱ ~25 min para configurar</span>
-                </div>
-                <img src="/guide_models.png" alt="Modelos de maquininha compatíveis" className="guide-img" />
-              </div>
+              {/* ── GUIA PRÁTICO — O QUE FAZER AGORA ── */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-              {/* PASSO 1 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '14px', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)', color: '#fff', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', flexShrink: 0 }}>1</span>
-                  <h4 style={{ margin: 0, fontSize: '1rem' }}>Acesse o painel de desenvolvedor do Mercado Pago</h4>
-                </div>
-                <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                  Abra o navegador e acesse: <a href="https://mercadopago.com.br/developers/panel/app" target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', textDecoration: 'underline' }}>mercadopago.com.br/developers/panel/app</a><br />
-                  Faça login com a conta Mercado Pago da pastelaria.<br />
-                  Clique em <strong style={{ color: '#fff' }}>&quot;Criar aplicação&quot;</strong> como mostrado na imagem abaixo.
-                </p>
-                <img src="/guide_step1.png" alt="Painel de Desenvolvedor Mercado Pago" className="guide-img" />
-                <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '8px', padding: '0.6rem 1rem', fontSize: '0.82rem', color: '#fcd34d' }}>
-                  💡 <strong>Dica:</strong> Se já tiver uma aplicação criada antes, pode usar ela. Basta clicar nela para acessar as credenciais.
-                </div>
-              </div>
-
-              {/* PASSO 2 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '14px', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)', color: '#fff', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', flexShrink: 0 }}>2</span>
-                  <h4 style={{ margin: 0, fontSize: '1rem' }}>Copie o Access Token de produção</h4>
-                </div>
-                <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                  Dentro da aplicação, vá na aba <strong style={{ color: '#fff' }}>Credenciais</strong>.<br />
-                  Em <strong style={{ color: '#fff' }}>&quot;Credenciais de produção&quot;</strong>, clique no ícone de copiar ao lado do campo <strong style={{ color: '#fff' }}>Access Token</strong>.<br />
-                  Ele começa com <code style={{ background: 'rgba(255,255,255,0.08)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.8rem' }}>APP_USR-</code> e é bem longo.
-                </p>
-                <img src="/guide_step2.png" alt="Copiar Access Token Mercado Pago" className="guide-img" />
-                <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.6rem 1rem', fontSize: '0.82rem', color: '#fca5a5' }}>
-                  ⚠️ <strong>Atenção:</strong> Use apenas o token de <strong>produção</strong> (não o de teste). O token de teste começa com <code style={{ background: 'rgba(255,255,255,0.08)', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>TEST-</code>.
-                </div>
-              </div>
-
-              {/* PASSO 3 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '14px', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)', color: '#fff', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', flexShrink: 0 }}>3</span>
-                  <h4 style={{ margin: 0, fontSize: '1rem' }}>Cadastre a loja e os caixas (maquininhas)</h4>
-                </div>
-                <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                  Como o link antigo agora redireciona para a página promocional de &quot;Sistema de Gestão&quot;, siga os passos abaixo para acessar a área correta de <strong style={{ color: '#fff' }}>Lojas e Caixas</strong>:<br />
-                  <strong style={{ color: '#fff' }}>1.</strong> Faça login na sua conta do <a href="https://www.mercadopago.com.br" target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', textDecoration: 'underline' }}>Mercado Pago</a>.<br />
-                  <strong style={{ color: '#fff' }}>2.</strong> No canto superior direito, clique sobre o seu nome ou foto de perfil (ex: <strong style={{ color: 'var(--primary-gold)' }}>{userData?.name || 'Rafael Jorge'}</strong>) e acesse <strong style={{ color: '#fff' }}>Configurar perfil</strong>.<br />
-                  <strong style={{ color: '#fff' }}>3.</strong> Na página <strong style={{ color: '#fff' }}>Seu perfil</strong> que se abrir, clique na aba <strong style={{ color: '#fff' }}>Negócio</strong> (que fica ao lado da aba <strong style={{ color: '#fff' }}>Conta</strong>, no meio da tela).<br />
-                  <strong style={{ color: '#fff' }}>4.</strong> Clique na opção <strong style={{ color: '#fff' }}>Lojas e caixas</strong> que aparecerá na listagem.<br />
-                  <strong style={{ color: '#fff' }}>5.</strong> Dentro do painel de Lojas e Caixas, crie uma loja chamada <em>&quot;Dona Lu Pastelaria&quot;</em> e depois clique em <strong style={{ color: '#fff' }}>&quot;Adicionar caixa&quot;</strong> para cadastrar um caixa para cada maquininha que você tiver (Point Smart 2, Pro 3, Air 2, Mini NFC 2).
-                </p>
-                <img src="/guide_step3.png" alt="Lojas e Caixas Mercado Pago" className="guide-img" />
-                <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '8px', padding: '0.6rem 1rem', fontSize: '0.82rem', color: '#fcd34d' }}>
-                  💡 <strong>Dica:</strong> Dê nomes claros para cada caixa, ex: <em>&quot;Smart_Caixa1&quot;</em>, <em>&quot;Pro_Caixa2&quot;</em>. Isso facilita identificar depois.
-                </div>
-              </div>
-
-              {/* PASSO 4 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '14px', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)', color: '#fff', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', flexShrink: 0 }}>4</span>
-                  <h4 style={{ margin: 0, fontSize: '1rem' }}>Ative o Modo PDV nas maquininhas</h4>
-                </div>
-                {/* Smart 2 / Pro 3 / Air 2 */}
-                <div style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.18)', borderRadius: '10px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📟 Point Smart 2 · Point Pro 3 · Point Air 2</span>
-                  <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                    <strong style={{ color: '#fff' }}>1.</strong> Na tela inicial da maquininha, toque nos <strong style={{ color: '#fff' }}>3 pontinhos (⋮)</strong> no canto superior direito ou acesse <strong style={{ color: '#fff' }}>Configurações</strong>.<br />
-                    <strong style={{ color: '#fff' }}>2.</strong> Procure a opção <strong style={{ color: '#fff' }}>&quot;Modo PDV&quot;</strong>, <strong style={{ color: '#fff' }}>&quot;Modo integrado&quot;</strong> ou <strong style={{ color: '#fff' }}>&quot;Integração com sistema&quot;</strong>.<br />
-                    <strong style={{ color: '#fff' }}>3.</strong> Ative o toggle. A tela exibirá <em>&quot;Aguardando integração&quot;</em> — isso é correto, pode deixar assim.
+                {/* Cabeçalho */}
+                <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '1rem' }}>
+                  <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '1.1rem' }}>
+                    📋 O que fazer agora — Passo a Passo
+                  </h3>
+                  <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                    As maquininhas já foram encontradas automaticamente acima. Siga este guia para concluir a configuração sem precisar de ajuda externa.
                   </p>
-                  <img src="/guide_step4.png" alt="Ativar Modo PDV na maquininha" className="guide-img" />
                 </div>
 
-                {/* Mini NFC 2 */}
-                <div style={{ background: 'rgba(168,85,247,0.06)', border: '1px solid rgba(168,85,247,0.2)', borderRadius: '10px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#c084fc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📱 Point Mini NFC 2 — Configuração pelo celular</span>
+                {/* PASSO A */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '14px', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)', color: '#fff', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', flexShrink: 0 }}>A</span>
+                    <h4 style={{ margin: 0, fontSize: '1rem' }}>Identifique qual maquininha é qual</h4>
+                  </div>
                   <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                    O Mini NFC 2 não tem tela — ele é controlado pelo app Mercado Pago no celular.<br />
-                    <strong style={{ color: '#fff' }}>1.</strong> Abra o app <strong style={{ color: '#fff' }}>Mercado Pago</strong> no celular já pareado com o Mini NFC 2.<br />
-                    <strong style={{ color: '#fff' }}>2.</strong> Vá em <strong style={{ color: '#fff' }}>Cobrar → Minha maquininha → Configurações</strong>.<br />
-                    <strong style={{ color: '#fff' }}>3.</strong> Em <strong style={{ color: '#fff' }}>&quot;Modo de uso&quot;</strong>, selecione <strong style={{ color: '#fff' }}>&quot;PDV (Integrado)&quot;</strong> ou <strong style={{ color: '#fff' }}>&quot;Modo PDV&quot;</strong>.<br />
-                    <strong style={{ color: '#fff' }}>4.</strong> Confirme. O Mini NFC passará a receber ordens do sistema automaticamente.
+                    As maquininhas apareceram como <strong style={{ color: '#fff' }}>"Unknown"</strong> porque a API do MP não retornou o modelo. Veja como descobrir qual ID corresponde a qual aparelho físico:
                   </p>
-                  <img src="/guide_step4b.png" alt="Ativar PDV no Mini NFC pelo app" className="guide-img-sm" />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {/* Método 1 */}
+                    <div style={{ background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#60a5fa', display: 'block', marginBottom: '0.4rem' }}>📊 MÉTODO 1 — Pelo painel do Mercado Pago (mais preciso)</span>
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                        <strong style={{ color: '#fff' }}>1.</strong> Abra: <a href="https://www.mercadopago.com.br/stores-and-pos" target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', textDecoration: 'underline' }}>mercadopago.com.br/stores-and-pos</a><br />
+                        <strong style={{ color: '#fff' }}>2.</strong> Clique em <strong style={{ color: '#fff' }}>Caixas</strong> — cada caixa cadastrado mostra o <strong style={{ color: '#fff' }}>nome que você deu</strong> + o ID numérico.<br />
+                        <strong style={{ color: '#fff' }}>3.</strong> Compare os IDs de lá com os IDs exibidos nos cards acima (ex: <code style={{ background: 'rgba(255,255,255,0.08)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>119579640</code>).
+                      </p>
+                    </div>
+                    {/* Método 2 */}
+                    <div style={{ background: 'rgba(168,85,247,0.07)', border: '1px solid rgba(168,85,247,0.2)', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#c084fc', display: 'block', marginBottom: '0.4rem' }}>🔌 MÉTODO 2 — Teste prático (mais rápido)</span>
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                        <strong style={{ color: '#fff' }}>1.</strong> Nos cards acima, ative o <strong style={{ color: '#fff' }}>toggle PDV</strong> em UMA maquininha de cada vez.<br />
+                        <strong style={{ color: '#fff' }}>2.</strong> Olhe qual aparelho físico muda a tela para <em>"Aguardando integração"</em> — esse é o correspondente.<br />
+                        <strong style={{ color: '#fff' }}>3.</strong> Anote e repita para as demais.
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
-                <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.6rem 1rem', fontSize: '0.82rem', color: '#fca5a5' }}>
-                  ⚠️ <strong>Importante:</strong> Com o Modo PDV ativado, a maquininha <strong>não funciona mais de forma independente</strong> para passar cartão manualmente — ela passa a receber ordens do sistema. Para usar manualmente, basta desativar o Modo PDV.
+                {/* PASSO B */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '14px', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)', color: '#fff', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', flexShrink: 0 }}>B</span>
+                    <h4 style={{ margin: 0, fontSize: '1rem' }}>Associe cada dispositivo ao modelo correto</h4>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                    Nos cards do <strong style={{ color: '#fff' }}>⚡ Configuração Automática</strong> acima, use o dropdown <strong style={{ color: '#fff' }}>"Este dispositivo é:"</strong> para cada maquininha:
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    {[
+                      { model: 'Point Smart 2', desc: 'tela própria, botões físicos, design compacto' },
+                      { model: 'Point Pro 3', desc: 'tela grande colorida, mais moderno' },
+                      { model: 'Point Air 2', desc: '4G + WiFi + NFC, funciona sem celular' },
+                      { model: 'Point Mini NFC 2', desc: 'pequenininho, conecta via Bluetooth ao celular' },
+                    ].map(item => (
+                      <div key={item.model} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '0.55rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.88rem', color: '#fff', minWidth: '140px' }}>📟 {item.model}</span>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{item.desc}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* PASSO 5 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '14px', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)', color: '#fff', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', flexShrink: 0 }}>5</span>
-                  <h4 style={{ margin: 0, fontSize: '1rem' }}>Copie o ID do caixa (external_id / pos_id)</h4>
+                {/* PASSO C */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '14px', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)', color: '#fff', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', flexShrink: 0 }}>C</span>
+                    <h4 style={{ margin: 0, fontSize: '1rem' }}>Ative o Modo PDV (integrado) nas maquininhas</h4>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                    Você pode fazer isso de <strong style={{ color: '#fff' }}>duas formas</strong> — pelo sistema aqui (mais fácil) <strong style={{ color: '#fff' }}>OU</strong> diretamente na maquininha:
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div style={{ background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#34d399', display: 'block', marginBottom: '0.4rem' }}>✅ OPÇÃO 1 — Pelo sistema (recomendado)</span>
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                        Nos cards acima, clique no <strong style={{ color: '#fff' }}>toggle "Modo PDV"</strong> para ativar (verde = integrado).<br />
+                        Quando ficar verde, a maquininha muda automaticamente e exibe <em>"Aguardando integração"</em>.
+                      </p>
+                    </div>
+                    <div style={{ background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#60a5fa', display: 'block', marginBottom: '0.4rem' }}>📟 OPÇÃO 2 — Direto na maquininha (Smart 2 / Pro 3 / Air 2)</span>
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                        <strong style={{ color: '#fff' }}>1.</strong> Na tela inicial, toque nos <strong style={{ color: '#fff' }}>3 pontinhos (⋮)</strong> no canto superior direito.<br />
+                        <strong style={{ color: '#fff' }}>2.</strong> Procure: <strong style={{ color: '#fff' }}>"Modo PDV"</strong>, <strong style={{ color: '#fff' }}>"Modo integrado"</strong> ou <strong style={{ color: '#fff' }}>"Integração com sistema"</strong>.<br />
+                        <strong style={{ color: '#fff' }}>3.</strong> Ative o toggle — a tela vai mostrar <em>"Aguardando integração"</em>.
+                      </p>
+                    </div>
+                    <div style={{ background: 'rgba(168,85,247,0.07)', border: '1px solid rgba(168,85,247,0.2)', borderRadius: '10px', padding: '0.85rem 1rem' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#c084fc', display: 'block', marginBottom: '0.4rem' }}>📱 OPÇÃO 2 — Point Mini NFC 2 (via app no celular)</span>
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                        <strong style={{ color: '#fff' }}>1.</strong> Abra o app <strong style={{ color: '#fff' }}>Mercado Pago</strong> no celular já pareado com o Mini NFC 2.<br />
+                        <strong style={{ color: '#fff' }}>2.</strong> Vá em <strong style={{ color: '#fff' }}>Cobrar → Minha maquininha → Configurações → Modo de uso</strong>.<br />
+                        <strong style={{ color: '#fff' }}>3.</strong> Selecione <strong style={{ color: '#fff' }}>"PDV (Integrado)"</strong> e confirme.
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.6rem 1rem', fontSize: '0.82rem', color: '#fca5a5' }}>
+                    ⚠️ <strong>Atenção:</strong> Com o Modo PDV ativo, a maquininha <strong>não funciona mais de forma independente</strong>. Para usar manualmente (sem o sistema), desative o Modo PDV — ela volta ao normal.
+                  </div>
                 </div>
-                <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                  De volta no painel do Mercado Pago, em <strong style={{ color: '#fff' }}>Lojas e caixas</strong>, clique no caixa que você criou.<br />
-                  Copie o valor do campo <strong style={{ color: '#fff' }}>external_id</strong> ou <strong style={{ color: '#fff' }}>ID do caixa</strong>.<br />
-                  Exemplo: <code style={{ background: 'rgba(255,255,255,0.08)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.8rem' }}>CAIXA_001</code> ou um número como <code style={{ background: 'rgba(255,255,255,0.08)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.8rem' }}>123456789</code>.
-                </p>
-                <img src="/guide_step5.png" alt="Copiar external_id do caixa" className="guide-img" />
+
+                {/* PASSO D */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '14px', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)', color: '#fff', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', flexShrink: 0 }}>D</span>
+                    <h4 style={{ margin: 0, fontSize: '1rem' }}>Salve e teste o pagamento</h4>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                    <p style={{ margin: 0 }}>
+                      <strong style={{ color: '#fff' }}>1.</strong> No card de cada maquininha acima, selecione o modelo no dropdown e garanta que o toggle PDV está <strong style={{ color: '#34d399' }}>verde ✓</strong>.<br />
+                      <strong style={{ color: '#fff' }}>2.</strong> Clique no botão <strong style={{ color: '#10b981' }}>✅ Salvar Configuração</strong> — os IDs são gravados automaticamente.<br />
+                      <strong style={{ color: '#fff' }}>3.</strong> Teste: abra o cardápio digital, faça um pedido e escolha <strong style={{ color: '#fff' }}>"Débito Maquininha"</strong>.<br />
+                      <strong style={{ color: '#fff' }}>4.</strong> A maquininha deve vibrar/acender e exibir o valor para passar o cartão. ✅
+                    </p>
+                  </div>
+                  <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: '8px', padding: '0.75rem 1rem', fontSize: '0.85rem', color: '#34d399', lineHeight: 1.6 }}>
+                    🎉 <strong>Pronto!</strong> A integração está completa. O débito e o crédito via maquininha passarão a funcionar automaticamente quando o cliente selecionar essa opção no cardápio digital.
+                  </div>
+                </div>
+
               </div>
+            </div>
 
               {/* PASSO 6 */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(16,185,129,0.06)', borderRadius: '14px', padding: '1.25rem', border: '1px solid rgba(16,185,129,0.2)' }}>
