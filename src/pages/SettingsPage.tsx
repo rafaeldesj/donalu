@@ -1808,35 +1808,6 @@ export const SettingsPage = () => {
 
               </div>
             </div>
-
-              {/* PASSO 6 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(16,185,129,0.06)', borderRadius: '14px', padding: '1.25rem', border: '1px solid rgba(16,185,129,0.2)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', flexShrink: 0 }}>6</span>
-                  <h4 style={{ margin: 0, fontSize: '1rem', color: '#34d399' }}>Informe os dados ao desenvolvedor</h4>
-                </div>
-                <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                  Passe os seguintes dados para o desenvolvedor cadastrar no sistema:
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {[
-                    { label: '🔑 Access Token (produção)', hint: 'Começa com APP_USR-...' },
-                    { label: '📟 ID do Caixa — Point Smart 2', hint: 'external_id (se tiver)' },
-                    { label: '📟 ID do Caixa — Point Pro 3', hint: 'external_id (se tiver)' },
-                    { label: '📟 ID do Caixa — Point Air 2', hint: 'external_id (se tiver)' },
-                    { label: '📟 ID do Caixa — Point Mini NFC 2', hint: 'external_id (se tiver)' },
-                  ].map(item => (
-                    <div key={item.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '8px', padding: '0.6rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>{item.label}</span>
-                      <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{item.hint}</span>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: '8px', padding: '0.6rem 1rem', fontSize: '0.82rem', color: '#34d399' }}>
-                  ✅ Com essas informações, o desenvolvedor faz a integração e o débito passa a funcionar automaticamente quando o cliente selecionar essa opção no app!
-                </div>
-              </div>
-            </div>
           )}
 
           {/* Aba 1: Meu Perfil */}
