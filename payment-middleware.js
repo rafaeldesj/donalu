@@ -514,6 +514,175 @@ export const checkPointOrderMiddleware = async (req, res) => {
 };
 
 /**
+ * Middleware local para listar os dispositivos (maquininhas) Point associados à conta MP.
+ * Espelha a lógica do serverless api/point/devices.js.
+ * GET /api/point/devices?token=...
+ */
+export const listPointDevicesMiddleware = async (req, res) => {
+  try {
+    const urlObj = new URL(req.url, 'http://localhost');
+    const token = urlObj.searchParams.get('token');
+
+    if (!token) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ success: false, message: 'token é obrigatório.' }));
+    }
+
+    const isMock = detectIsMock(token);
+
+    if (isMock) {
+      console.log('[Point Devices Dev] Rodando em modo MOCK.');
+      // Return simulated devices for local development
+      const mockDevices = [
+        { id: 'PAX_A910__SMARTPOS1234567890', external_id: 'PAX_A910__SMARTPOS1234567890', operating_mode: 'PDV', model: 'PAX_A910', serial_number: 'SN001', store_id: 'LOJA01', pos_id: 'CAIXA01', external_store_id: 'Dona Lu Pastelaria', external_pos_id: 'CAIXA_SMART2' },
+        { id: 'PAX_A920__SMARTPOS9876543210', external_id: 'PAX_A920__SMARTPOS9876543210', operating_mode: 'STANDALONE', model: 'PAX_A920', serial_number: 'SN002', store_id: 'LOJA01', pos_id: 'CAIXA02', external_store_id: 'Dona Lu Pastelaria', external_pos_id: 'CAIXA_PRO3' },
+        { id: 'INGENICO_MOVE5000__SN005', external_id: 'INGENICO_MOVE5000__SN005', operating_mode: 'STANDALONE', model: 'INGENICO_MOVE5000', serial_number: 'SN005', store_id: 'LOJA01', pos_id: 'CAIXA03', external_store_id: 'Dona Lu Pastelaria', external_pos_id: 'CAIXA_AIR2' },
+      ];
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ success: true, devices: mockDevices, isMock: true }));
+    }
+
+    // Chamada real — tenta nova API primeiro, fallback para legado
+    const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+    let devices = [];
+    let apiUsed = 'terminals_v1';
+
+    const newApiRes = await nativeRequest(
+      'https://api.mercadopago.com/terminals/v1/list?limit=50&offset=0',
+      'GET',
+      headers
+    );
+
+    if (newApiRes.ok && Array.isArray(newApiRes.json?.terminals)) {
+      devices = newApiRes.json.terminals.map(t => ({
+        id: t.id,
+        external_id: t.id,
+        operating_mode: t.operating_mode || 'STANDALONE',
+        model: t.model || 'Unknown',
+        serial_number: t.serial_number || '',
+        store_id: t.store_id || '',
+        pos_id: t.pos_id || '',
+        external_store_id: t.external_store_id || '',
+        external_pos_id: t.external_pos_id || ''
+      }));
+    } else {
+      apiUsed = 'point_integration_legacy';
+      const legacyRes = await nativeRequest('https://api.mercadopago.com/point/integration-api/devices', 'GET', headers);
+      if (!legacyRes.ok) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, message: legacyRes.json?.message || 'Erro ao listar dispositivos. Verifique as permissões do token.' }));
+      }
+      const devList = legacyRes.json?.devices || legacyRes.json || [];
+      devices = (Array.isArray(devList) ? devList : []).map(d => ({
+        id: d.id,
+        external_id: d.external_id || d.id,
+        operating_mode: d.operating_mode || 'STANDALONE',
+        model: d.model || 'Unknown',
+        serial_number: d.serial_number || '',
+        store_id: d.store_id || '',
+        pos_id: d.pos_id || '',
+        external_store_id: d.external_store_id || '',
+        external_pos_id: d.external_pos_id || ''
+      }));
+    }
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ success: true, devices, apiUsed }));
+
+  } catch (err) {
+    console.error('[Point Devices Dev] Erro interno:', err);
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ success: false, message: 'Erro interno ao listar dispositivos.' }));
+  }
+};
+
+/**
+ * Middleware local para alterar o modo de operação (PDV / STANDALONE) de uma maquininha Point.
+ * Espelha a lógica do serverless api/point/set-mode.js.
+ * PATCH /api/point/set-mode  Body: { token, deviceId, mode }
+ */
+export const setPointDeviceModeMiddleware = async (req, res) => {
+  let body = '';
+  req.on('data', chunk => { body += chunk.toString(); });
+
+  req.on('end', async () => {
+    try {
+      const data = JSON.parse(body);
+      const { token, deviceId, mode } = data;
+
+      if (!token) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, message: 'token é obrigatório.' }));
+      }
+      if (!deviceId) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, message: 'deviceId é obrigatório.' }));
+      }
+      if (!['PDV', 'STANDALONE'].includes(mode)) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, message: 'mode deve ser "PDV" ou "STANDALONE".' }));
+      }
+
+      const isMock = detectIsMock(token) || deviceId.includes('MOCK') || deviceId.includes('__');
+
+      if (isMock) {
+        console.log(`[Point SetMode Dev] MOCK — Modo ${mode} simulado para dispositivo ${deviceId}`);
+        await new Promise(resolve => setTimeout(resolve, 600));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({
+          success: true,
+          deviceId,
+          mode,
+          message: `Modo ${mode === 'PDV' ? 'PDV (Integrado)' : 'Autônomo'} ativado com sucesso. (simulação)`,
+          isMock: true
+        }));
+      }
+
+      const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+      // Legacy API (more widely supported for mode changes)
+      const legacyRes = await nativeRequest(
+        `https://api.mercadopago.com/point/integration-api/devices/${deviceId}`,
+        'PATCH',
+        headers,
+        { operating_mode: mode }
+      );
+
+      if (legacyRes.ok) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: true, deviceId, mode, message: `Modo ${mode === 'PDV' ? 'PDV (Integrado)' : 'Autônomo'} ativado com sucesso.` }));
+      }
+
+      // Fallback: new terminals API
+      const newApiRes = await nativeRequest(
+        'https://api.mercadopago.com/terminals/v1/setup',
+        'PATCH',
+        headers,
+        { terminal_id: deviceId, operating_mode: mode }
+      );
+
+      if (!newApiRes.ok) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({
+          success: false,
+          message: newApiRes.json?.message || 'Erro ao alterar modo.',
+          hint: 'Verifique se o token possui permissão write:pos e se a maquininha está conectada.',
+          details: newApiRes.json
+        }));
+      }
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ success: true, deviceId, mode, message: `Modo ${mode === 'PDV' ? 'PDV (Integrado)' : 'Autônomo'} ativado com sucesso.` }));
+
+    } catch (err) {
+      console.error('[Point SetMode Dev] Erro interno:', err);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ success: false, message: 'Erro interno ao alterar modo do dispositivo.' }));
+    }
+  });
+};
+
+/**
  * Middleware local para trocar o código OAuth do Mercado Pago por um access_token real.
  * Espelha a lógica do serverless api/mercadopago/exchange-token.js.
  * Em ambiente local, o MP_APP_SECRET deve estar no arquivo .env.local.

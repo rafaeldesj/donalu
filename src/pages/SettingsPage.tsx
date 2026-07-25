@@ -180,6 +180,135 @@ export const SettingsPage = () => {
   const [submittingStore, setSubmittingStore] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
+  // Point device management states
+  interface PointDevice {
+    id: string;
+    external_id: string;
+    operating_mode: 'PDV' | 'STANDALONE';
+    model: string;
+    serial_number: string;
+    store_id: string;
+    pos_id: string;
+    external_store_id: string;
+    external_pos_id: string;
+  }
+  const [pointDevices, setPointDevices] = useState<PointDevice[]>([]);
+  const [loadingDevices, setLoadingDevices] = useState(false);
+  const [deviceError, setDeviceError] = useState<string | null>(null);
+  // Map: deviceId -> which model slot it occupies ('smart2'|'pro3'|'air2'|'mininfc2'|'')
+  const [deviceModelMap, setDeviceModelMap] = useState<Record<string, string>>({});
+  const [settingMode, setSettingMode] = useState<Record<string, boolean>>({});
+  const [savingDeviceSelection, setSavingDeviceSelection] = useState(false);
+
+  const handleFetchDevices = async () => {
+    const token = storeConfig?.storeOwnerAccessToken;
+    if (!token) {
+      setDeviceError('Configure primeiro o Access Token do estabelecimento na aba "Avançado".');
+      return;
+    }
+    setLoadingDevices(true);
+    setDeviceError(null);
+    setPointDevices([]);
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+      const res = await fetch(`${API_BASE_URL}/api/point/devices?token=${encodeURIComponent(token)}`);
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Erro ao buscar dispositivos.');
+      }
+      setPointDevices(data.devices || []);
+      if ((data.devices || []).length === 0) {
+        setDeviceError('Nenhuma maquininha encontrada nesta conta. Verifique se as maquininhas estão cadastradas no painel do Mercado Pago.');
+      }
+      // Pre-fill deviceModelMap based on existing pointXxxId config
+      const existingMap: Record<string, string> = {};
+      const modelFields: [string, string][] = [
+        [storeConfig?.pointSmart2Id || '', 'smart2'],
+        [storeConfig?.pointPro3Id || '', 'pro3'],
+        [storeConfig?.pointAir2Id || '', 'air2'],
+        [storeConfig?.pointMiniNfc2Id || '', 'mininfc2'],
+      ];
+      for (const [storedId, slot] of modelFields) {
+        if (storedId) {
+          const matched = (data.devices || []).find((d: PointDevice) => d.id === storedId || d.external_id === storedId || d.pos_id === storedId);
+          if (matched) existingMap[matched.id] = slot;
+        }
+      }
+      setDeviceModelMap(existingMap);
+    } catch (err: any) {
+      setDeviceError(err.message || 'Erro ao buscar maquininhas.');
+    } finally {
+      setLoadingDevices(false);
+    }
+  };
+
+  const handleSetDeviceMode = async (deviceId: string, mode: 'PDV' | 'STANDALONE') => {
+    const token = storeConfig?.storeOwnerAccessToken;
+    if (!token) return;
+    setSettingMode(prev => ({ ...prev, [deviceId]: true }));
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+      const res = await fetch(`${API_BASE_URL}/api/point/set-mode`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, deviceId, mode })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Erro ao alterar modo.');
+      }
+      // Update local state
+      setPointDevices(prev => prev.map(d => d.id === deviceId ? { ...d, operating_mode: mode } : d));
+      showFeedback('success', `✅ ${data.message}`);
+    } catch (err: any) {
+      showFeedback('error', `❌ ${err.message}`);
+    } finally {
+      setSettingMode(prev => ({ ...prev, [deviceId]: false }));
+    }
+  };
+
+  const handleSaveDeviceSelection = async () => {
+    if (!user || !isAdmin) return;
+    setSavingDeviceSelection(true);
+    try {
+      const slotToId: Record<string, string> = { smart2: '', pro3: '', air2: '', mininfc2: '' };
+      for (const [devId, slot] of Object.entries(deviceModelMap)) {
+        if (slot && slotToId[slot] !== undefined) {
+          // Use pos_id if available (it's what the payment API uses), fallback to device id
+          const device = pointDevices.find(d => d.id === devId);
+          slotToId[slot] = device?.pos_id || device?.external_pos_id || devId;
+        }
+      }
+      const docRef = doc(db, 'settings', 'store_config');
+      await updateDoc(docRef, {
+        pointSmart2Id: slotToId.smart2,
+        pointPro3Id: slotToId.pro3,
+        pointAir2Id: slotToId.air2,
+        pointMiniNfc2Id: slotToId.mininfc2
+      });
+      setStoreConfig(prev => ({
+        ...prev,
+        pointSmart2Id: slotToId.smart2,
+        pointPro3Id: slotToId.pro3,
+        pointAir2Id: slotToId.air2,
+        pointMiniNfc2Id: slotToId.mininfc2
+      }));
+      await logAuditAction({
+        userId: user.uid,
+        userEmail: user.email || '',
+        userName: userData?.name || user.displayName || 'Administrador',
+        actionType: 'UPDATE_POINT_DEVICES',
+        title: 'Maquininhas Point Configuradas',
+        description: `IDs das maquininhas atualizados — Smart2: "${slotToId.smart2}", Pro3: "${slotToId.pro3}", Air2: "${slotToId.air2}", MiniNFC2: "${slotToId.mininfc2}"`
+      });
+      showFeedback('success', '✅ IDs das maquininhas salvos com sucesso!');
+    } catch (err) {
+      showFeedback('error', 'Erro ao salvar configuração das maquininhas.');
+    } finally {
+      setSavingDeviceSelection(false);
+    }
+  };
+
   // Sync profile details when userData updates
   useEffect(() => {
     if (userData) {
@@ -1288,6 +1417,205 @@ export const SettingsPage = () => {
           {/* Aba Guia Maquininha Point */}
           {activeTab === 'point_guide' && isAdmin && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+
+              {/* ── SEÇÃO: CONFIGURAÇÃO AUTOMÁTICA ── */}
+              <div style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(99,102,241,0.06) 100%)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: '16px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                    <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)', borderRadius: '8px', padding: '0.3rem 0.5rem', fontSize: '0.9rem' }}>⚡</span>
+                      Configuração Automática
+                    </h4>
+                    <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                      Busque as maquininhas diretamente da sua conta Mercado Pago, gerencie o modo PDV e salve tudo sem precisar copiar IDs manualmente.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleFetchDevices}
+                    disabled={loadingDevices}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '0.5rem',
+                      padding: '0.65rem 1.4rem', borderRadius: '10px', border: 'none',
+                      background: loadingDevices ? 'rgba(59,130,246,0.4)' : 'linear-gradient(135deg,#3b82f6,#6366f1)',
+                      color: '#fff', fontWeight: 700, fontSize: '0.88rem',
+                      cursor: loadingDevices ? 'wait' : 'pointer',
+                      boxShadow: '0 4px 15px rgba(59,130,246,0.3)',
+                      transition: 'all 0.2s', flexShrink: 0
+                    }}
+                  >
+                    {loadingDevices ? (
+                      <>
+                        <div className="spinner" style={{ width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#fff', flexShrink: 0 }} />
+                        Buscando...
+                      </>
+                    ) : (
+                      <>🔍 Buscar Maquininhas</>
+                    )}
+                  </button>
+                </div>
+
+                {/* Token missing warning */}
+                {!storeConfig?.storeOwnerAccessToken && (
+                  <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '10px', padding: '0.75rem 1rem', display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
+                    <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>⚠️</span>
+                    <div style={{ fontSize: '0.83rem', color: '#fcd34d', lineHeight: 1.5 }}>
+                      <strong>Token não configurado.</strong> Para usar a Configuração Automática, vá na aba <strong>Avançado</strong> e conecte a conta do estabelecimento via Mercado Pago OAuth.
+                    </div>
+                  </div>
+                )}
+
+                {/* Error message */}
+                {deviceError && (
+                  <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '10px', padding: '0.75rem 1rem', display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
+                    <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>❌</span>
+                    <span style={{ fontSize: '0.83rem', color: '#fca5a5', lineHeight: 1.5 }}>{deviceError}</span>
+                  </div>
+                )}
+
+                {/* Device Cards */}
+                {pointDevices.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#93c5fd' }}>
+                        📱 {pointDevices.length} maquininha{pointDevices.length !== 1 ? 's' : ''} encontrada{pointDevices.length !== 1 ? 's' : ''}
+                      </span>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                        Selecione o modelo e gerencie o modo PDV de cada dispositivo
+                      </span>
+                    </div>
+
+                    {pointDevices.map((device) => {
+                      const isPDV = device.operating_mode === 'PDV';
+                      const isChangingMode = !!settingMode[device.id];
+                      const assignedSlot = deviceModelMap[device.id] || '';
+                      const modelOptions = [
+                        { value: 'smart2', label: '📟 Point Smart 2' },
+                        { value: 'pro3', label: '📟 Point Pro 3' },
+                        { value: 'air2', label: '📡 Point Air 2' },
+                        { value: 'mininfc2', label: '📱 Point Mini NFC 2' },
+                      ];
+                      // Short model name for display
+                      const modelDisplay = device.model?.replace(/_/g, ' ') || 'Desconhecido';
+
+                      return (
+                        <div key={device.id} style={{
+                          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: '14px', padding: '1rem 1.25rem',
+                          display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center',
+                          transition: 'border-color 0.2s',
+                          borderLeft: isPDV ? '3px solid #10b981' : '3px solid rgba(255,255,255,0.1)'
+                        }}>
+                          {/* Device info */}
+                          <div style={{ flex: 1, minWidth: '180px', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                              <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#fff' }}>{modelDisplay}</span>
+                              <span style={{
+                                background: isPDV ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)',
+                                border: isPDV ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.1)',
+                                color: isPDV ? '#34d399' : 'var(--text-secondary)',
+                                borderRadius: '20px', padding: '0.15rem 0.6rem', fontSize: '0.72rem', fontWeight: 700
+                              }}>
+                                {isPDV ? '✓ PDV' : '○ Autônomo'}
+                              </span>
+                            </div>
+                            {device.serial_number && (
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+                                S/N: {device.serial_number}
+                              </span>
+                            )}
+                            {device.external_store_id && (
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                Loja: {device.external_store_id} {device.external_pos_id ? `· Caixa: ${device.external_pos_id}` : ''}
+                              </span>
+                            )}
+                            <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.25)', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                              ID: {device.pos_id || device.id}
+                            </span>
+                          </div>
+
+                          {/* Assign model */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', minWidth: '180px' }}>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Este dispositivo é:</span>
+                            <select
+                              value={assignedSlot}
+                              onChange={(e) => setDeviceModelMap(prev => ({ ...prev, [device.id]: e.target.value }))}
+                              style={{
+                                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: '8px', padding: '0.4rem 0.6rem', color: '#fff', fontSize: '0.82rem',
+                                cursor: 'pointer', outline: 'none'
+                              }}
+                            >
+                              <option value="" style={{ background: '#1a1f2e' }}>— Não configurar —</option>
+                              {modelOptions.map(opt => (
+                                <option key={opt.value} value={opt.value} style={{ background: '#1a1f2e' }}>{opt.label}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* PDV Mode toggle */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Modo PDV</span>
+                            <button
+                              type="button"
+                              onClick={() => handleSetDeviceMode(device.id, isPDV ? 'STANDALONE' : 'PDV')}
+                              disabled={isChangingMode}
+                              title={isPDV ? 'Clique para desativar o Modo PDV (voltar ao modo autônomo)' : 'Clique para ativar o Modo PDV (integração com o sistema)'}
+                              style={{
+                                position: 'relative', width: '52px', height: '28px', borderRadius: '14px', border: 'none',
+                                background: isChangingMode ? 'rgba(255,255,255,0.1)' : (isPDV ? '#10b981' : 'rgba(255,255,255,0.1)'),
+                                cursor: isChangingMode ? 'wait' : 'pointer', transition: 'background 0.3s', flexShrink: 0
+                              }}
+                            >
+                              {isChangingMode ? (
+                                <div className="spinner" style={{ width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#fff', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }} />
+                              ) : (
+                                <div style={{
+                                  position: 'absolute', top: '3px',
+                                  left: isPDV ? '27px' : '3px',
+                                  width: '22px', height: '22px', borderRadius: '50%',
+                                  background: '#fff', transition: 'left 0.3s',
+                                  boxShadow: '0 1px 4px rgba(0,0,0,0.3)'
+                                }} />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Save selection button */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                        💾 Ao salvar, os IDs são automaticamente preenchidos nos campos abaixo.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleSaveDeviceSelection}
+                        disabled={savingDeviceSelection || Object.values(deviceModelMap).every(v => !v)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '0.5rem',
+                          padding: '0.65rem 1.5rem', borderRadius: '10px', border: 'none',
+                          background: (savingDeviceSelection || Object.values(deviceModelMap).every(v => !v))
+                            ? 'rgba(16,185,129,0.3)' : '#10b981',
+                          color: '#fff', fontWeight: 700, fontSize: '0.88rem',
+                          cursor: (savingDeviceSelection || Object.values(deviceModelMap).every(v => !v)) ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {savingDeviceSelection ? (
+                          <>
+                            <div className="spinner" style={{ width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#fff', flexShrink: 0 }} />
+                            Salvando...
+                          </>
+                        ) : '✅ Salvar Configuração'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Formulário de Configuração de IDs */}
               <form onSubmit={handleSaveStoreConfig} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '12px', padding: '1.5rem', marginBottom: '1rem' }}>
                 <h4 style={{ margin: 0, color: 'var(--primary-gold)', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
