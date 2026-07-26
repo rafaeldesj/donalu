@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import mkcert from 'vite-plugin-mkcert'
 // @ts-ignore
-import { processPaymentMiddleware, createPixMiddleware, checkPixMiddleware, createPointOrderMiddleware, checkPointOrderMiddleware, mpOAuthExchangeMiddleware, listPointDevicesMiddleware, setPointDeviceModeMiddleware } from './payment-middleware.js'
+import { processPaymentMiddleware, createPixMiddleware, checkPixMiddleware, createPointOrderMiddleware, checkPointOrderMiddleware, mpOAuthExchangeMiddleware, listPointDevicesMiddleware, setPointDeviceModeMiddleware, cancelPointOrderMiddleware } from './payment-middleware.js'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -23,6 +23,8 @@ export default defineConfig({
             createPointOrderMiddleware(req, res);
           } else if (req.url?.startsWith('/api/pagamentos/check-point-order') && req.method === 'GET') {
             checkPointOrderMiddleware(req, res);
+          } else if (req.url?.startsWith('/api/pagamentos/cancel-point-order') && req.method === 'POST') {
+            cancelPointOrderMiddleware(req, res);
           } else if (req.url?.startsWith('/api/mercadopago/exchange-token') && req.method === 'POST') {
             mpOAuthExchangeMiddleware(req, res);
           } else if (req.url?.startsWith('/api/point/devices') && req.method === 'GET') {

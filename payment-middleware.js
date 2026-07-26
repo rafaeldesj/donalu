@@ -352,6 +352,9 @@ export const checkPixMiddleware = async (req, res) => {
 if (!global.mockPointIntents) {
   global.mockPointIntents = {};
 }
+if (!global.activePointIntents) {
+  global.activePointIntents = {};
+}
 
 export const createPointOrderMiddleware = async (req, res) => {
   let body = '';
@@ -367,6 +370,22 @@ export const createPointOrderMiddleware = async (req, res) => {
       const devIdStr = deviceId ? String(deviceId) : '';
       const isMock = !token || token === 'mock' || token === '' || token === 'null' || token === 'undefined' || devIdStr.includes('MOCK') || devIdStr === 'mock';
       
+      // Cancelar a intenção anterior silenciosamente se existir na memória global para este terminal
+      const previousIntentId = global.activePointIntents[devIdStr];
+      if (previousIntentId && !isMock) {
+        console.log(`[Mercado Pago Point] Cancelando intenção anterior ${previousIntentId} para o dispositivo ${devIdStr} antes de criar uma nova...`);
+        try {
+          const cancelUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}/payment-intents/${previousIntentId}`;
+          const cancelRes = await nativeRequest(cancelUrl, 'DELETE', {
+            'Authorization': `Bearer ${token}`
+          });
+          console.log(`[Mercado Pago Point] Resposta cancelamento anterior status: ${cancelRes.status}`);
+          delete global.activePointIntents[devIdStr];
+        } catch (cancelErr) {
+          console.error(`[Mercado Pago Point] Erro ao tentar cancelar intenção anterior:`, cancelErr);
+        }
+      }
+
       if (isMock) {
         console.log(`[Mercado Pago Point Dev] Rodando em modo MOCK. Dispositivo: ${devIdStr}`);
         const mockIntentId = 'INTENT_MOCK_' + Math.random().toString(36).substring(2, 11).toUpperCase();
@@ -477,6 +496,9 @@ export const createPointOrderMiddleware = async (req, res) => {
       }
 
       const r = response.json;
+      if (r.id) {
+        global.activePointIntents[devIdStr] = r.id;
+      }
       res.writeHead(200, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify({
         success: true,
@@ -546,6 +568,57 @@ export const checkPointOrderMiddleware = async (req, res) => {
     res.writeHead(500, { 'Content-Type': 'application/json' });
     return res.end(JSON.stringify({ success: false, message: 'Erro interno ao checar maquininha.' }));
   }
+};
+
+export const cancelPointOrderMiddleware = async (req, res) => {
+  let body = '';
+  req.on('data', chunk => {
+    body += chunk.toString();
+  });
+  
+  req.on('end', async () => {
+    try {
+      const data = JSON.parse(body);
+      const { token, deviceId, intentId } = data || {};
+      
+      const devIdStr = deviceId ? String(deviceId) : '';
+      const isMock = !token || token === 'mock' || !intentId || intentId.startsWith('INTENT_MOCK_');
+      
+      if (isMock) {
+        console.log(`[Mercado Pago Point Cancel] MOCK cancelamento de ${intentId}`);
+        if (global.mockPointIntents[intentId]) {
+          global.mockPointIntents[intentId].status = 'CANCELED';
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: true, message: 'Pagamento simulado cancelado.' }));
+      }
+      
+      const mpUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}/payment-intents/${intentId}`;
+      const headers = {
+        'Authorization': `Bearer ${token}`
+      };
+      
+      console.log(`[Mercado Pago Point Cancel] Cancelando intent ${intentId} para o dispositivo ${devIdStr}...`);
+      const response = await nativeRequest(mpUrl, 'DELETE', headers);
+      console.log(`[Mercado Pago Point Cancel] Status resposta: ${response.status}`);
+      
+      if (response.status === 200 || response.status === 204 || response.ok) {
+        if (global.activePointIntents[devIdStr] === intentId) {
+          delete global.activePointIntents[devIdStr];
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: true, message: 'Pagamento cancelado com sucesso.' }));
+      }
+      
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ success: false, message: response.json?.message || 'Erro ao cancelar pagamento na maquininha.' }));
+      
+    } catch (err) {
+      console.error('[Mercado Pago Point Cancel] Erro no middleware:', err);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ success: false, message: 'Erro interno ao cancelar pagamento.' }));
+    }
+  });
 };
 
 /**

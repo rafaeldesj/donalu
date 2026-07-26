@@ -53,6 +53,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
   const [storeConfig, setStoreConfig] = useState<any>(null);
   const [pointPaymentStatus, setPointPaymentStatus] = useState<'idle' | 'pending' | 'approved' | 'rejected'>('idle');
   const [pointIntentId, setPointIntentId] = useState<string>('');
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
   const [pointDeviceLabel, setPointDeviceLabel] = useState<string>('');
   const [pointPaymentLoading, setPointPaymentLoading] = useState<boolean>(false);
   const [pointPaymentError, setPointPaymentError] = useState<string | null>(null);
@@ -2203,6 +2204,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
             const result = await response.json();
             if (!result.success) throw new Error(result.message || 'Erro ao acionar maquininha.');
             setPointIntentId(result.intentId);
+            setSelectedDeviceId(deviceId);
             setPointDeviceLabel(label);
             setPointPaymentStatus('pending');
           } catch (err: any) {
@@ -2492,12 +2494,52 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
 
                 {/* Status do pagamento na maquininha */}
                 {isPointMethod && pointPaymentStatus === 'pending' && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.85rem 1rem', borderRadius: '12px', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.25)' }}>
-                    <span style={{ fontSize: '1.4rem' }}>⏳</span>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--primary-gold)' }}>Aguardando pagamento na {pointDeviceLabel}...</div>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Siga as instruções na tela da maquininha. O sistema confirmará automaticamente.</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', padding: '0.85rem 1rem', borderRadius: '12px', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.25)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <span style={{ fontSize: '1.4rem' }}>⏳</span>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--primary-gold)' }}>Aguardando pagamento na {pointDeviceLabel}...</div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Siga as instruções na tela da maquininha. O sistema confirmará automaticamente.</div>
+                      </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const intentId = pointIntentId;
+                        const deviceId = selectedDeviceId;
+                        setPointPaymentStatus('idle');
+                        setPointIntentId('');
+                        setPointPaymentError(null);
+                        
+                        if (intentId && deviceId) {
+                          try {
+                            let token = storeConfig?.storeOwnerAccessToken || storeConfig?.devAccessToken || 'mock';
+                            if (token === 'null' || token === 'undefined' || !token) token = 'mock';
+                            
+                            await fetch(`${API_BASE_URL}/api/pagamentos/cancel-point-order`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ token, deviceId, intentId })
+                            });
+                          } catch (err) {
+                            console.error("Erro ao cancelar pagamento no Mercado Pago:", err);
+                          }
+                        }
+                      }}
+                      style={{
+                        alignSelf: 'flex-start',
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        border: '1px solid rgba(239, 68, 68, 0.2)',
+                        color: '#f87171',
+                        padding: '0.4rem 1rem',
+                        borderRadius: '30px',
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ❌ Cancelar Pagamento
+                    </button>
                   </div>
                 )}
 

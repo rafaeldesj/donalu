@@ -1,11 +1,11 @@
 {
-  "ts": "2026-07-26T22:44:09.829Z",
+  "ts": "2026-07-26T23:17:13.047Z",
   "source": "auto-on-generation-start",
   "contexts": [
     {
       "ctxId": "main",
       "frameUrl": "vscode-file://vscode-app/c:/Users/rafae/AppData/Local/Programs/Antigravity%20IDE/resources/app/out/vs/code/electron-browser/workbench/workbench.html",
-      "totalBtns": 138,
+      "totalBtns": 131,
       "inputBoxFound": true,
       "inputBoxBtns": [
         {
@@ -426,12 +426,12 @@
           "innerHTML": "",
           "hasSvg": false,
           "dataAttrs": {},
-          "visible": true,
+          "visible": false,
           "rect": {
-            "x": 133,
-            "y": 207,
-            "w": 20,
-            "h": 20
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
           }
         },
         {
@@ -442,12 +442,12 @@
           "innerHTML": "",
           "hasSvg": false,
           "dataAttrs": {},
-          "visible": true,
+          "visible": false,
           "rect": {
-            "x": 153,
-            "y": 207,
-            "w": 20,
-            "h": 20
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
           }
         },
         {
@@ -458,12 +458,108 @@
           "innerHTML": "",
           "hasSvg": false,
           "dataAttrs": {},
-          "visible": true,
+          "visible": false,
           "rect": {
-            "x": 173,
-            "y": 207,
-            "w": 20,
-            "h": 20
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Abrir o Arquivo",
+          "title": "",
+          "cls": "action-label codicon codicon-go-to-file",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Preparar Alterações",
+          "title": "",
+          "cls": "action-label codicon codicon-add",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Mais Ações...",
+          "title": "",
+          "cls": "action-label codicon codicon-toolbar-more",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Abrir o Arquivo",
+          "title": "",
+          "cls": "action-label codicon codicon-go-to-file",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Preparar Alterações",
+          "title": "",
+          "cls": "action-label codicon codicon-add",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Mais Ações...",
+          "title": "",
+          "cls": "action-label codicon codicon-toolbar-more",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
           }
         },
         {
@@ -640,102 +736,6 @@
             "y": 373,
             "w": 20,
             "h": 20
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
           }
         }
       ]
@@ -743,7 +743,7 @@
     {
       "ctxId": 2,
       "frameUrl": "vscode-file://vscode-app/c:/Users/rafae/AppData/Local/Programs/Antigravity%20IDE/resources/app/out/vs/code/electron-browser/workbench/workbench.html",
-      "totalBtns": 138,
+      "totalBtns": 131,
       "inputBoxFound": true,
       "inputBoxBtns": [
         {
@@ -1164,12 +1164,12 @@
           "innerHTML": "",
           "hasSvg": false,
           "dataAttrs": {},
-          "visible": true,
+          "visible": false,
           "rect": {
-            "x": 133,
-            "y": 207,
-            "w": 20,
-            "h": 20
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
           }
         },
         {
@@ -1180,12 +1180,12 @@
           "innerHTML": "",
           "hasSvg": false,
           "dataAttrs": {},
-          "visible": true,
+          "visible": false,
           "rect": {
-            "x": 153,
-            "y": 207,
-            "w": 20,
-            "h": 20
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
           }
         },
         {
@@ -1196,12 +1196,108 @@
           "innerHTML": "",
           "hasSvg": false,
           "dataAttrs": {},
-          "visible": true,
+          "visible": false,
           "rect": {
-            "x": 173,
-            "y": 207,
-            "w": 20,
-            "h": 20
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Abrir o Arquivo",
+          "title": "",
+          "cls": "action-label codicon codicon-go-to-file",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Preparar Alterações",
+          "title": "",
+          "cls": "action-label codicon codicon-add",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Mais Ações...",
+          "title": "",
+          "cls": "action-label codicon codicon-toolbar-more",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Abrir o Arquivo",
+          "title": "",
+          "cls": "action-label codicon codicon-go-to-file",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Preparar Alterações",
+          "title": "",
+          "cls": "action-label codicon codicon-add",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Mais Ações...",
+          "title": "",
+          "cls": "action-label codicon codicon-toolbar-more",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
           }
         },
         {
@@ -1378,102 +1474,6 @@
             "y": 373,
             "w": 20,
             "h": 20
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
           }
         }
       ]
@@ -1481,7 +1481,7 @@
     {
       "ctxId": 1,
       "frameUrl": "vscode-file://vscode-app/c:/Users/rafae/AppData/Local/Programs/Antigravity%20IDE/resources/app/out/vs/code/electron-browser/workbench/workbench.html",
-      "totalBtns": 138,
+      "totalBtns": 131,
       "inputBoxFound": true,
       "inputBoxBtns": [
         {
@@ -1902,12 +1902,12 @@
           "innerHTML": "",
           "hasSvg": false,
           "dataAttrs": {},
-          "visible": true,
+          "visible": false,
           "rect": {
-            "x": 133,
-            "y": 207,
-            "w": 20,
-            "h": 20
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
           }
         },
         {
@@ -1918,12 +1918,12 @@
           "innerHTML": "",
           "hasSvg": false,
           "dataAttrs": {},
-          "visible": true,
+          "visible": false,
           "rect": {
-            "x": 153,
-            "y": 207,
-            "w": 20,
-            "h": 20
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
           }
         },
         {
@@ -1934,12 +1934,108 @@
           "innerHTML": "",
           "hasSvg": false,
           "dataAttrs": {},
-          "visible": true,
+          "visible": false,
           "rect": {
-            "x": 173,
-            "y": 207,
-            "w": 20,
-            "h": 20
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Abrir o Arquivo",
+          "title": "",
+          "cls": "action-label codicon codicon-go-to-file",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Preparar Alterações",
+          "title": "",
+          "cls": "action-label codicon codicon-add",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Mais Ações...",
+          "title": "",
+          "cls": "action-label codicon codicon-toolbar-more",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Abrir o Arquivo",
+          "title": "",
+          "cls": "action-label codicon codicon-go-to-file",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Preparar Alterações",
+          "title": "",
+          "cls": "action-label codicon codicon-add",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Mais Ações...",
+          "title": "",
+          "cls": "action-label codicon codicon-toolbar-more",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
           }
         },
         {
@@ -2116,102 +2212,6 @@
             "y": 373,
             "w": 20,
             "h": 20
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
           }
         }
       ]

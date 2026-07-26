@@ -4674,11 +4674,27 @@ export const ClientDashboard = ({
 
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
+                const intentId = pointPaymentId;
+                const deviceId = selectedDeviceId;
                 setShowPointLightbox(false);
                 setPointPaymentId('');
-                setPointPaymentStatus('pending');
-                alert('Pagamento cancelado na tela. A maquininha continuará ativa por alguns instantes.');
+                setPointPaymentStatus('idle');
+                
+                if (intentId) {
+                  try {
+                    let token = storeConfig?.storeOwnerAccessToken || storeConfig?.devAccessToken || 'mock';
+                    if (token === 'null' || token === 'undefined' || !token) token = 'mock';
+                    
+                    await fetch(`${API_BASE_URL}/api/pagamentos/cancel-point-order`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ token, deviceId, intentId })
+                    });
+                  } catch (err) {
+                    console.error("Erro ao cancelar pagamento no Mercado Pago:", err);
+                  }
+                }
               }}
               style={{
                 marginTop: '0.5rem',
