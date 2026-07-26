@@ -120,15 +120,6 @@ export default async function handler(req, res) {
       }
     };
 
-    // Add split payment fee if configured
-    if (devPercentage && devPercentage > 0) {
-      const feeCents = Math.round(amountCents * devPercentage / 100);
-      if (feeCents >= 1) {
-        payload.application_fee = feeCents;
-        console.log(`[Mercado Pago Point] Split ativado: application_fee = ${feeCents} centavos (${devPercentage}% de ${amountCents} centavos)`);
-      }
-    }
-
     const response = await nativeRequest(mpUrl, 'POST', headers, payload);
 
     if (!response.ok) {
