@@ -5,25 +5,29 @@ import https from 'https';
 function nativeRequest(url, method, headers, data) {
   return new Promise((resolve, reject) => {
     const urlObj = new URL(url);
+    const body = data ? (typeof data === 'string' ? data : JSON.stringify(data)) : null;
     const options = {
       hostname: urlObj.hostname,
       port: 443,
       path: urlObj.pathname + urlObj.search,
       method: method,
-      headers: headers
+      headers: {
+        ...headers,
+        ...(body ? { 'Content-Length': Buffer.byteLength(body).toString() } : {})
+      }
     };
 
     const req = https.request(options, (res) => {
-      let body = '';
+      let responseBody = '';
       res.on('data', chunk => {
-        body += chunk;
+        responseBody += chunk;
       });
       res.on('end', () => {
         try {
-          const parsed = JSON.parse(body);
+          const parsed = JSON.parse(responseBody);
           resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, json: parsed });
         } catch (e) {
-          resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, text: body });
+          resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, text: responseBody });
         }
       });
     });
@@ -32,9 +36,8 @@ function nativeRequest(url, method, headers, data) {
       reject(err);
     });
 
-    if (data) {
-      // If data is already a string (e.g. form-encoded), send as-is; otherwise serialize to JSON
-      req.write(typeof data === 'string' ? data : JSON.stringify(data));
+    if (body) {
+      req.write(body);
     }
     req.end();
   });
@@ -359,19 +362,20 @@ export const createPointOrderMiddleware = async (req, res) => {
   req.on('end', async () => {
     try {
       const data = JSON.parse(body);
-      const { token, deviceId, amount, paymentType, externalReference } = data;
+      const { token, deviceId, amount, paymentType, externalReference } = data || {};
       
-      const isMock = !token || token === 'mock' || token === '' || token === 'null' || token === 'undefined' || deviceId.includes('MOCK') || deviceId === 'mock';
+      const devIdStr = deviceId ? String(deviceId) : '';
+      const isMock = !token || token === 'mock' || token === '' || token === 'null' || token === 'undefined' || devIdStr.includes('MOCK') || devIdStr === 'mock';
       
       if (isMock) {
-        console.log(`[Mercado Pago Point Dev] Rodando em modo MOCK. Dispositivo: ${deviceId}`);
+        console.log(`[Mercado Pago Point Dev] Rodando em modo MOCK. Dispositivo: ${devIdStr}`);
         const mockIntentId = 'INTENT_MOCK_' + Math.random().toString(36).substring(2, 11).toUpperCase();
         
         global.mockPointIntents[mockIntentId] = {
           status: 'OPEN',
           createdAt: Date.now(),
           amount: parseFloat(amount),
-          deviceId
+          deviceId: devIdStr
         };
 
         // Simular aprovação automática após 10 segundos
@@ -393,7 +397,7 @@ export const createPointOrderMiddleware = async (req, res) => {
       }
 
       // Chamada real ao Mercado Pago Point
-      const mpUrl = `https://api.mercadopago.com/point/integration-api/devices/${deviceId}/payment-intents`;
+      const mpUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}/payment-intents`;
       const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -423,7 +427,7 @@ export const createPointOrderMiddleware = async (req, res) => {
           status: 'OPEN',
           createdAt: Date.now(),
           amount: parseFloat(amount),
-          deviceId
+          deviceId: devIdStr
         };
         setTimeout(() => {
           if (global.mockPointIntents[mockIntentId]) {
