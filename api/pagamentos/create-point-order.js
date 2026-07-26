@@ -98,6 +98,11 @@ export default async function handler(req, res) {
       });
     }
 
+    const amountCents = Math.round(parseFloat(amount) * 100);
+    if (amountCents < 100) {
+      return res.status(400).json({ success: false, message: 'O valor mínimo para pagamento na maquininha é de R$ 1,00.' });
+    }
+
     // Chamada oficial da API de Payment Intents do Mercado Pago
     // Endpoint: POST https://api.mercadopago.com/point/integration-api/devices/{device_id}/payment-intents
     const mpUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}/payment-intents`;
@@ -107,24 +112,20 @@ export default async function handler(req, res) {
     };
 
     const payload = {
-      amount: parseFloat(amount),
+      amount: amountCents,
       description: 'Pedido Dona Lu Pastelaria',
       additional_info: {
         external_reference: externalReference || 'PED_' + Date.now(),
         print_on_terminal: true
-      },
-      payment: {
-        installments: 1,
-        type: paymentType === 'pix' ? 'pix' : (paymentType === 'debito' || paymentType === 'debit_card' ? 'debit_card' : 'credit_card')
       }
     };
 
     // Add split payment fee if configured
     if (devPercentage && devPercentage > 0) {
-      const fee = parseFloat((parseFloat(amount) * devPercentage / 100).toFixed(2));
-      if (fee >= 0.01) {
-        payload.application_fee = fee;
-        console.log(`[Mercado Pago Point] Split ativado: application_fee = R$${fee.toFixed(2)} (${devPercentage}% de R$${amount})`);
+      const feeCents = Math.round(amountCents * devPercentage / 100);
+      if (feeCents >= 1) {
+        payload.application_fee = feeCents;
+        console.log(`[Mercado Pago Point] Split ativado: application_fee = ${feeCents} centavos (${devPercentage}% de ${amountCents} centavos)`);
       }
     }
 

@@ -276,7 +276,7 @@ export const SettingsPage = () => {
         if (slot && slotToId[slot] !== undefined) {
           // Use pos_id if available (it's what the payment API uses), fallback to device id
           const device = pointDevices.find(d => d.id === devId);
-          slotToId[slot] = device?.pos_id || device?.external_pos_id || devId;
+          slotToId[slot] = device?.id || device?.external_id || devId;
         }
       }
       const docRef = doc(db, 'settings', 'store_config');

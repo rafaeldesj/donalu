@@ -396,6 +396,12 @@ export const createPointOrderMiddleware = async (req, res) => {
         }));
       }
 
+      const amountCents = Math.round(parseFloat(amount) * 100);
+      if (amountCents < 100) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, message: 'O valor mínimo para pagamento na maquininha é de R$ 1,00.' }));
+      }
+
       // Chamada real ao Mercado Pago Point
       const mpUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}/payment-intents`;
       const headers = {
@@ -404,15 +410,11 @@ export const createPointOrderMiddleware = async (req, res) => {
       };
 
       const payload = {
-        amount: parseFloat(amount),
+        amount: amountCents,
         description: 'Pedido Dona Lu Pastelaria',
         additional_info: {
           external_reference: externalReference || 'PED_' + Date.now(),
           print_on_terminal: true
-        },
-        payment: {
-          installments: 1,
-          type: paymentType === 'debito' ? 'debit_card' : 'credit_card'
         }
       };
 
