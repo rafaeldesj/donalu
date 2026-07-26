@@ -1,11 +1,11 @@
 {
-  "ts": "2026-07-26T03:22:08.575Z",
+  "ts": "2026-07-26T22:44:09.829Z",
   "source": "auto-on-generation-start",
   "contexts": [
     {
       "ctxId": "main",
       "frameUrl": "vscode-file://vscode-app/c:/Users/rafae/AppData/Local/Programs/Antigravity%20IDE/resources/app/out/vs/code/electron-browser/workbench/workbench.html",
-      "totalBtns": 190,
+      "totalBtns": 138,
       "inputBoxFound": true,
       "inputBoxBtns": [
         {
@@ -16,12 +16,12 @@
           "innerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 -960 960 960\" fill=\"currentColor\" class=\"w-4 h-4\"><path d=\"M450-450H220v-60H450V-740h60v230H740v60H510v230H450V-450Z\"></path><",
           "hasSvg": true,
           "dataAttrs": {
-            "data-tooltip-id": "P0-587"
+            "data-tooltip-id": "P0-107"
           },
           "visible": true,
           "rect": {
-            "x": 952,
-            "y": 735,
+            "x": 1211,
+            "y": 820,
             "w": 28,
             "h": 28
           }
@@ -31,14 +31,14 @@
           "title": "",
           "cls": "",
           "text": "Gemini 3.5 Flash (Medium)",
-          "innerHTML": "<button type=\"button\" data-tooltip-id=\"P0-591\" aria-label=\"Select model, current: Gemini 3.5 Flash (Medium)\" class=\"flex min-w-0 max-w-full cursor-pointer items-center h-7 gap-1 rounded-lg pr-1 pl-2 t",
+          "innerHTML": "<button type=\"button\" data-tooltip-id=\"P0-111\" aria-label=\"Select model, current: Gemini 3.5 Flash (Medium)\" class=\"flex min-w-0 max-w-full cursor-pointer items-center h-7 gap-1 rounded-lg pr-1 pl-2 t",
           "hasSvg": true,
           "dataAttrs": {},
           "visible": true,
           "rect": {
-            "x": 981,
-            "y": 735,
-            "w": 159,
+            "x": 1240,
+            "y": 820,
+            "w": 177,
             "h": 28
           }
         },
@@ -47,16 +47,16 @@
           "title": "",
           "cls": "flex min-w-0 max-w-full cursor-pointer items-center h-7 gap-1 rounded-lg pr-1 pl-2 text-xs outline-n",
           "text": "Gemini 3.5 Flash (Medium)",
-          "innerHTML": "<span class=\"min-w-0 select-none overflow-hidden text-ellipsis whitespace-nowrap text-xs text-secondary-foreground\">Gemini 3.5 Flash (Medium)</span><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" h",
+          "innerHTML": "<span class=\"min-w-0 select-none overflow-hidden text-ellipsis whitespace-nowrap text-xs text-secondary-foreground\">Gemini 3.5 Flash (Medium)</span><div data-tooltip-id=\"P0-110\" class=\"flex shrink-0 p",
           "hasSvg": true,
           "dataAttrs": {
-            "data-tooltip-id": "P0-591"
+            "data-tooltip-id": "P0-111"
           },
           "visible": true,
           "rect": {
-            "x": 981,
-            "y": 735,
-            "w": 159,
+            "x": 1240,
+            "y": 820,
+            "w": 177,
             "h": 28
           }
         },
@@ -72,8 +72,8 @@
           },
           "visible": true,
           "rect": {
-            "x": 1372,
-            "y": 735,
+            "x": 1631,
+            "y": 820,
             "w": 28,
             "h": 28
           }
@@ -90,8 +90,8 @@
           },
           "visible": true,
           "rect": {
-            "x": 1404,
-            "y": 735,
+            "x": 1663,
+            "y": 820,
             "w": 28,
             "h": 28
           }
@@ -108,7 +108,7 @@
           "dataAttrs": {},
           "visible": true,
           "rect": {
-            "x": 1086,
+            "x": 1345,
             "y": 6,
             "w": 22,
             "h": 22
@@ -156,7 +156,7 @@
           "dataAttrs": {},
           "visible": true,
           "rect": {
-            "x": 1182,
+            "x": 1441,
             "y": 6,
             "w": 22,
             "h": 22
@@ -172,7 +172,7 @@
           "dataAttrs": {},
           "visible": true,
           "rect": {
-            "x": 1215,
+            "x": 1474,
             "y": 6,
             "w": 22,
             "h": 22
@@ -188,7 +188,7 @@
           "dataAttrs": {},
           "visible": true,
           "rect": {
-            "x": 1239,
+            "x": 1498,
             "y": 6,
             "w": 22,
             "h": 22
@@ -204,7 +204,7 @@
           "dataAttrs": {},
           "visible": true,
           "rect": {
-            "x": 1263,
+            "x": 1522,
             "y": 4,
             "w": 43,
             "h": 26
@@ -419,6 +419,102 @@
           }
         },
         {
+          "aria": "Abrir o Arquivo",
+          "title": "",
+          "cls": "action-label codicon codicon-go-to-file",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": true,
+          "rect": {
+            "x": 133,
+            "y": 207,
+            "w": 20,
+            "h": 20
+          }
+        },
+        {
+          "aria": "Preparar Alterações",
+          "title": "",
+          "cls": "action-label codicon codicon-add",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": true,
+          "rect": {
+            "x": 153,
+            "y": 207,
+            "w": 20,
+            "h": 20
+          }
+        },
+        {
+          "aria": "Mais Ações...",
+          "title": "",
+          "cls": "action-label codicon codicon-toolbar-more",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": true,
+          "rect": {
+            "x": 173,
+            "y": 207,
+            "w": 20,
+            "h": 20
+          }
+        },
+        {
+          "aria": "Abrir o Arquivo",
+          "title": "",
+          "cls": "action-label codicon codicon-go-to-file",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Preparar Alterações",
+          "title": "",
+          "cls": "action-label codicon codicon-add",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Mais Ações...",
+          "title": "",
+          "cls": "action-label codicon codicon-toolbar-more",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
           "aria": "Grafo Seção",
           "title": "",
           "cls": "pane-header expanded",
@@ -429,7 +525,7 @@
           "visible": true,
           "rect": {
             "x": 42,
-            "y": 304,
+            "y": 371,
             "w": 182,
             "h": 22
           }
@@ -445,7 +541,7 @@
           "visible": true,
           "rect": {
             "x": 82,
-            "y": 306,
+            "y": 373,
             "w": 84,
             "h": 20
           }
@@ -461,7 +557,7 @@
           "visible": true,
           "rect": {
             "x": 170,
-            "y": 306,
+            "y": 373,
             "w": 20,
             "h": 20
           }
@@ -477,7 +573,7 @@
           "visible": true,
           "rect": {
             "x": 194,
-            "y": 306,
+            "y": 373,
             "w": 20,
             "h": 20
           }
@@ -493,7 +589,7 @@
           "visible": true,
           "rect": {
             "x": 218,
-            "y": 306,
+            "y": 373,
             "w": 20,
             "h": 20
           }
@@ -509,7 +605,7 @@
           "visible": true,
           "rect": {
             "x": 242,
-            "y": 306,
+            "y": 373,
             "w": 20,
             "h": 20
           }
@@ -525,7 +621,7 @@
           "visible": true,
           "rect": {
             "x": 266,
-            "y": 306,
+            "y": 373,
             "w": 20,
             "h": 20
           }
@@ -541,105 +637,9 @@
           "visible": true,
           "rect": {
             "x": 290,
-            "y": 306,
+            "y": 373,
             "w": 20,
             "h": 20
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
           }
         },
         {
@@ -743,7 +743,7 @@
     {
       "ctxId": 2,
       "frameUrl": "vscode-file://vscode-app/c:/Users/rafae/AppData/Local/Programs/Antigravity%20IDE/resources/app/out/vs/code/electron-browser/workbench/workbench.html",
-      "totalBtns": 190,
+      "totalBtns": 138,
       "inputBoxFound": true,
       "inputBoxBtns": [
         {
@@ -754,12 +754,12 @@
           "innerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 -960 960 960\" fill=\"currentColor\" class=\"w-4 h-4\"><path d=\"M450-450H220v-60H450V-740h60v230H740v60H510v230H450V-450Z\"></path><",
           "hasSvg": true,
           "dataAttrs": {
-            "data-tooltip-id": "P0-587"
+            "data-tooltip-id": "P0-107"
           },
           "visible": true,
           "rect": {
-            "x": 952,
-            "y": 735,
+            "x": 1211,
+            "y": 820,
             "w": 28,
             "h": 28
           }
@@ -769,14 +769,14 @@
           "title": "",
           "cls": "",
           "text": "Gemini 3.5 Flash (Medium)",
-          "innerHTML": "<button type=\"button\" data-tooltip-id=\"P0-591\" aria-label=\"Select model, current: Gemini 3.5 Flash (Medium)\" class=\"flex min-w-0 max-w-full cursor-pointer items-center h-7 gap-1 rounded-lg pr-1 pl-2 t",
+          "innerHTML": "<button type=\"button\" data-tooltip-id=\"P0-111\" aria-label=\"Select model, current: Gemini 3.5 Flash (Medium)\" class=\"flex min-w-0 max-w-full cursor-pointer items-center h-7 gap-1 rounded-lg pr-1 pl-2 t",
           "hasSvg": true,
           "dataAttrs": {},
           "visible": true,
           "rect": {
-            "x": 981,
-            "y": 735,
-            "w": 159,
+            "x": 1240,
+            "y": 820,
+            "w": 177,
             "h": 28
           }
         },
@@ -785,16 +785,16 @@
           "title": "",
           "cls": "flex min-w-0 max-w-full cursor-pointer items-center h-7 gap-1 rounded-lg pr-1 pl-2 text-xs outline-n",
           "text": "Gemini 3.5 Flash (Medium)",
-          "innerHTML": "<span class=\"min-w-0 select-none overflow-hidden text-ellipsis whitespace-nowrap text-xs text-secondary-foreground\">Gemini 3.5 Flash (Medium)</span><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" h",
+          "innerHTML": "<span class=\"min-w-0 select-none overflow-hidden text-ellipsis whitespace-nowrap text-xs text-secondary-foreground\">Gemini 3.5 Flash (Medium)</span><div data-tooltip-id=\"P0-110\" class=\"flex shrink-0 p",
           "hasSvg": true,
           "dataAttrs": {
-            "data-tooltip-id": "P0-591"
+            "data-tooltip-id": "P0-111"
           },
           "visible": true,
           "rect": {
-            "x": 981,
-            "y": 735,
-            "w": 159,
+            "x": 1240,
+            "y": 820,
+            "w": 177,
             "h": 28
           }
         },
@@ -810,8 +810,8 @@
           },
           "visible": true,
           "rect": {
-            "x": 1372,
-            "y": 735,
+            "x": 1631,
+            "y": 820,
             "w": 28,
             "h": 28
           }
@@ -828,8 +828,8 @@
           },
           "visible": true,
           "rect": {
-            "x": 1404,
-            "y": 735,
+            "x": 1663,
+            "y": 820,
             "w": 28,
             "h": 28
           }
@@ -846,7 +846,7 @@
           "dataAttrs": {},
           "visible": true,
           "rect": {
-            "x": 1086,
+            "x": 1345,
             "y": 6,
             "w": 22,
             "h": 22
@@ -894,7 +894,7 @@
           "dataAttrs": {},
           "visible": true,
           "rect": {
-            "x": 1182,
+            "x": 1441,
             "y": 6,
             "w": 22,
             "h": 22
@@ -910,7 +910,7 @@
           "dataAttrs": {},
           "visible": true,
           "rect": {
-            "x": 1215,
+            "x": 1474,
             "y": 6,
             "w": 22,
             "h": 22
@@ -926,7 +926,7 @@
           "dataAttrs": {},
           "visible": true,
           "rect": {
-            "x": 1239,
+            "x": 1498,
             "y": 6,
             "w": 22,
             "h": 22
@@ -942,7 +942,7 @@
           "dataAttrs": {},
           "visible": true,
           "rect": {
-            "x": 1263,
+            "x": 1522,
             "y": 4,
             "w": 43,
             "h": 26
@@ -1157,6 +1157,102 @@
           }
         },
         {
+          "aria": "Abrir o Arquivo",
+          "title": "",
+          "cls": "action-label codicon codicon-go-to-file",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": true,
+          "rect": {
+            "x": 133,
+            "y": 207,
+            "w": 20,
+            "h": 20
+          }
+        },
+        {
+          "aria": "Preparar Alterações",
+          "title": "",
+          "cls": "action-label codicon codicon-add",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": true,
+          "rect": {
+            "x": 153,
+            "y": 207,
+            "w": 20,
+            "h": 20
+          }
+        },
+        {
+          "aria": "Mais Ações...",
+          "title": "",
+          "cls": "action-label codicon codicon-toolbar-more",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": true,
+          "rect": {
+            "x": 173,
+            "y": 207,
+            "w": 20,
+            "h": 20
+          }
+        },
+        {
+          "aria": "Abrir o Arquivo",
+          "title": "",
+          "cls": "action-label codicon codicon-go-to-file",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Preparar Alterações",
+          "title": "",
+          "cls": "action-label codicon codicon-add",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Mais Ações...",
+          "title": "",
+          "cls": "action-label codicon codicon-toolbar-more",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
           "aria": "Grafo Seção",
           "title": "",
           "cls": "pane-header expanded",
@@ -1167,7 +1263,7 @@
           "visible": true,
           "rect": {
             "x": 42,
-            "y": 304,
+            "y": 371,
             "w": 182,
             "h": 22
           }
@@ -1183,7 +1279,7 @@
           "visible": true,
           "rect": {
             "x": 82,
-            "y": 306,
+            "y": 373,
             "w": 84,
             "h": 20
           }
@@ -1199,7 +1295,7 @@
           "visible": true,
           "rect": {
             "x": 170,
-            "y": 306,
+            "y": 373,
             "w": 20,
             "h": 20
           }
@@ -1215,7 +1311,7 @@
           "visible": true,
           "rect": {
             "x": 194,
-            "y": 306,
+            "y": 373,
             "w": 20,
             "h": 20
           }
@@ -1231,7 +1327,7 @@
           "visible": true,
           "rect": {
             "x": 218,
-            "y": 306,
+            "y": 373,
             "w": 20,
             "h": 20
           }
@@ -1247,7 +1343,7 @@
           "visible": true,
           "rect": {
             "x": 242,
-            "y": 306,
+            "y": 373,
             "w": 20,
             "h": 20
           }
@@ -1263,7 +1359,7 @@
           "visible": true,
           "rect": {
             "x": 266,
-            "y": 306,
+            "y": 373,
             "w": 20,
             "h": 20
           }
@@ -1279,105 +1375,9 @@
           "visible": true,
           "rect": {
             "x": 290,
-            "y": 306,
+            "y": 373,
             "w": 20,
             "h": 20
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
           }
         },
         {
@@ -1481,7 +1481,7 @@
     {
       "ctxId": 1,
       "frameUrl": "vscode-file://vscode-app/c:/Users/rafae/AppData/Local/Programs/Antigravity%20IDE/resources/app/out/vs/code/electron-browser/workbench/workbench.html",
-      "totalBtns": 190,
+      "totalBtns": 138,
       "inputBoxFound": true,
       "inputBoxBtns": [
         {
@@ -1492,12 +1492,12 @@
           "innerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 -960 960 960\" fill=\"currentColor\" class=\"w-4 h-4\"><path d=\"M450-450H220v-60H450V-740h60v230H740v60H510v230H450V-450Z\"></path><",
           "hasSvg": true,
           "dataAttrs": {
-            "data-tooltip-id": "P0-587"
+            "data-tooltip-id": "P0-107"
           },
           "visible": true,
           "rect": {
-            "x": 952,
-            "y": 735,
+            "x": 1211,
+            "y": 820,
             "w": 28,
             "h": 28
           }
@@ -1507,14 +1507,14 @@
           "title": "",
           "cls": "",
           "text": "Gemini 3.5 Flash (Medium)",
-          "innerHTML": "<button type=\"button\" data-tooltip-id=\"P0-591\" aria-label=\"Select model, current: Gemini 3.5 Flash (Medium)\" class=\"flex min-w-0 max-w-full cursor-pointer items-center h-7 gap-1 rounded-lg pr-1 pl-2 t",
+          "innerHTML": "<button type=\"button\" data-tooltip-id=\"P0-111\" aria-label=\"Select model, current: Gemini 3.5 Flash (Medium)\" class=\"flex min-w-0 max-w-full cursor-pointer items-center h-7 gap-1 rounded-lg pr-1 pl-2 t",
           "hasSvg": true,
           "dataAttrs": {},
           "visible": true,
           "rect": {
-            "x": 981,
-            "y": 735,
-            "w": 159,
+            "x": 1240,
+            "y": 820,
+            "w": 177,
             "h": 28
           }
         },
@@ -1523,16 +1523,16 @@
           "title": "",
           "cls": "flex min-w-0 max-w-full cursor-pointer items-center h-7 gap-1 rounded-lg pr-1 pl-2 text-xs outline-n",
           "text": "Gemini 3.5 Flash (Medium)",
-          "innerHTML": "<span class=\"min-w-0 select-none overflow-hidden text-ellipsis whitespace-nowrap text-xs text-secondary-foreground\">Gemini 3.5 Flash (Medium)</span><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" h",
+          "innerHTML": "<span class=\"min-w-0 select-none overflow-hidden text-ellipsis whitespace-nowrap text-xs text-secondary-foreground\">Gemini 3.5 Flash (Medium)</span><div data-tooltip-id=\"P0-110\" class=\"flex shrink-0 p",
           "hasSvg": true,
           "dataAttrs": {
-            "data-tooltip-id": "P0-591"
+            "data-tooltip-id": "P0-111"
           },
           "visible": true,
           "rect": {
-            "x": 981,
-            "y": 735,
-            "w": 159,
+            "x": 1240,
+            "y": 820,
+            "w": 177,
             "h": 28
           }
         },
@@ -1548,8 +1548,8 @@
           },
           "visible": true,
           "rect": {
-            "x": 1372,
-            "y": 735,
+            "x": 1631,
+            "y": 820,
             "w": 28,
             "h": 28
           }
@@ -1566,8 +1566,8 @@
           },
           "visible": true,
           "rect": {
-            "x": 1404,
-            "y": 735,
+            "x": 1663,
+            "y": 820,
             "w": 28,
             "h": 28
           }
@@ -1584,7 +1584,7 @@
           "dataAttrs": {},
           "visible": true,
           "rect": {
-            "x": 1086,
+            "x": 1345,
             "y": 6,
             "w": 22,
             "h": 22
@@ -1632,7 +1632,7 @@
           "dataAttrs": {},
           "visible": true,
           "rect": {
-            "x": 1182,
+            "x": 1441,
             "y": 6,
             "w": 22,
             "h": 22
@@ -1648,7 +1648,7 @@
           "dataAttrs": {},
           "visible": true,
           "rect": {
-            "x": 1215,
+            "x": 1474,
             "y": 6,
             "w": 22,
             "h": 22
@@ -1664,7 +1664,7 @@
           "dataAttrs": {},
           "visible": true,
           "rect": {
-            "x": 1239,
+            "x": 1498,
             "y": 6,
             "w": 22,
             "h": 22
@@ -1680,7 +1680,7 @@
           "dataAttrs": {},
           "visible": true,
           "rect": {
-            "x": 1263,
+            "x": 1522,
             "y": 4,
             "w": 43,
             "h": 26
@@ -1895,6 +1895,102 @@
           }
         },
         {
+          "aria": "Abrir o Arquivo",
+          "title": "",
+          "cls": "action-label codicon codicon-go-to-file",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": true,
+          "rect": {
+            "x": 133,
+            "y": 207,
+            "w": 20,
+            "h": 20
+          }
+        },
+        {
+          "aria": "Preparar Alterações",
+          "title": "",
+          "cls": "action-label codicon codicon-add",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": true,
+          "rect": {
+            "x": 153,
+            "y": 207,
+            "w": 20,
+            "h": 20
+          }
+        },
+        {
+          "aria": "Mais Ações...",
+          "title": "",
+          "cls": "action-label codicon codicon-toolbar-more",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": true,
+          "rect": {
+            "x": 173,
+            "y": 207,
+            "w": 20,
+            "h": 20
+          }
+        },
+        {
+          "aria": "Abrir o Arquivo",
+          "title": "",
+          "cls": "action-label codicon codicon-go-to-file",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Preparar Alterações",
+          "title": "",
+          "cls": "action-label codicon codicon-add",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "aria": "Mais Ações...",
+          "title": "",
+          "cls": "action-label codicon codicon-toolbar-more",
+          "text": "",
+          "innerHTML": "",
+          "hasSvg": false,
+          "dataAttrs": {},
+          "visible": false,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
           "aria": "Grafo Seção",
           "title": "",
           "cls": "pane-header expanded",
@@ -1905,7 +2001,7 @@
           "visible": true,
           "rect": {
             "x": 42,
-            "y": 304,
+            "y": 371,
             "w": 182,
             "h": 22
           }
@@ -1921,7 +2017,7 @@
           "visible": true,
           "rect": {
             "x": 82,
-            "y": 306,
+            "y": 373,
             "w": 84,
             "h": 20
           }
@@ -1937,7 +2033,7 @@
           "visible": true,
           "rect": {
             "x": 170,
-            "y": 306,
+            "y": 373,
             "w": 20,
             "h": 20
           }
@@ -1953,7 +2049,7 @@
           "visible": true,
           "rect": {
             "x": 194,
-            "y": 306,
+            "y": 373,
             "w": 20,
             "h": 20
           }
@@ -1969,7 +2065,7 @@
           "visible": true,
           "rect": {
             "x": 218,
-            "y": 306,
+            "y": 373,
             "w": 20,
             "h": 20
           }
@@ -1985,7 +2081,7 @@
           "visible": true,
           "rect": {
             "x": 242,
-            "y": 306,
+            "y": 373,
             "w": 20,
             "h": 20
           }
@@ -2001,7 +2097,7 @@
           "visible": true,
           "rect": {
             "x": 266,
-            "y": 306,
+            "y": 373,
             "w": 20,
             "h": 20
           }
@@ -2017,105 +2113,9 @@
           "visible": true,
           "rect": {
             "x": 290,
-            "y": 306,
+            "y": 373,
             "w": 20,
             "h": 20
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
-          }
-        },
-        {
-          "aria": "Abrir as Alterações",
-          "title": "",
-          "cls": "action-label codicon codicon-diff-multiple",
-          "text": "",
-          "innerHTML": "",
-          "hasSvg": false,
-          "dataAttrs": {},
-          "visible": false,
-          "rect": {
-            "x": 0,
-            "y": 0,
-            "w": 0,
-            "h": 0
           }
         },
         {

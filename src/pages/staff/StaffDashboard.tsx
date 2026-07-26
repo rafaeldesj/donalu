@@ -84,6 +84,29 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
     }
   }, [selectedCheckoutTable, orders]);
 
+  // Reset checkout payment method if it becomes invisible for staff
+  useEffect(() => {
+    if (!storeConfig) return;
+    const visConfig = storeConfig.paymentMethodsVisibility || {};
+    const isMethodAllowed = (id: string) => {
+      let key = id;
+      if (id === 'maq_pix') key = 'pix';
+      else if (id === 'maq_debito') key = 'debito_point';
+      else if (id === 'maq_credito') key = 'credito_point';
+      else if (id === 'debito' || id === 'credito') key = 'cartao';
+      const vis = visConfig[key] || 'both';
+      return vis === 'staff' || vis === 'both';
+    };
+
+    if (!isMethodAllowed(checkoutPaymentMethod)) {
+      const defaultOrder = ['dinheiro', 'maq_pix', 'maq_debito', 'maq_credito', 'debito', 'credito', 'debito_point', 'credito_point', 'pix'];
+      const allowed = defaultOrder.find(m => isMethodAllowed(m));
+      if (allowed) {
+        setCheckoutPaymentMethod(allowed);
+      }
+    }
+  }, [storeConfig, checkoutPaymentMethod]);
+
   const handleAssignDeliverer = async (orderId: string, delivererId: string) => {
     if (!delivererId) {
       alert('Selecione um entregador.');
@@ -2375,12 +2398,24 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.06em' }}>Forma de Recebimento</span>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
-                  {([
-                    ['dinheiro', '💵', 'Dinheiro'],
-                    ['maq_pix', '🟡', 'Maq. Pix'],
-                    ['maq_debito', '💳', 'Maq. Débito'],
-                    ['maq_credito', '💳', 'Maq. Crédito'],
-                  ] as [string, string, string][]).map(([method, icon, label]) => (
+                  {(() => {
+                    const visConfig = storeConfig?.paymentMethodsVisibility || {};
+                    const isMethodAllowed = (id: string) => {
+                      let key = id;
+                      if (id === 'maq_pix') key = 'pix';
+                      else if (id === 'maq_debito') key = 'debito_point';
+                      else if (id === 'maq_credito') key = 'credito_point';
+                      const vis = visConfig[key] || 'both';
+                      return vis === 'staff' || vis === 'both';
+                    };
+                    const methods = [
+                      ['dinheiro', '💵', 'Dinheiro'],
+                      ['maq_pix', '🟡', 'Maq. Pix'],
+                      ['maq_debito', '💳', 'Maq. Débito'],
+                      ['maq_credito', '💳', 'Maq. Crédito'],
+                    ] as [string, string, string][];
+                    return methods.filter(([m]) => isMethodAllowed(m));
+                  })().map(([method, icon, label]) => (
                     <button
                       key={method}
                       type="button"
@@ -2609,14 +2644,24 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                 <div>
                   <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>Forma de Recebimento</span>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.4rem' }}>
-                    {[
-                      ['dinheiro', '💵 Dinheiro'],
-                      ['debito', '💳 Débito'],
-                      ['credito', '💳 Crédito'],
-                      ['debito_point', '💴 Maq. Débito'],
-                      ['credito_point', '💳 Maq. Crédito'],
-                      ['pix', '🟡 Pix Manual']
-                    ].map(([method, label]) => (
+                    {(() => {
+                      const visConfig = storeConfig?.paymentMethodsVisibility || {};
+                      const isMethodAllowed = (id: string) => {
+                        let key = id;
+                        if (id === 'debito' || id === 'credito') key = 'cartao';
+                        const vis = visConfig[key] || 'both';
+                        return vis === 'staff' || vis === 'both';
+                      };
+                      const methods = [
+                        ['dinheiro', '💵 Dinheiro'],
+                        ['debito', '💳 Débito'],
+                        ['credito', '💳 Crédito'],
+                        ['debito_point', '💴 Maq. Débito'],
+                        ['credito_point', '💳 Maq. Crédito'],
+                        ['pix', '🟡 Pix Manual']
+                      ];
+                      return methods.filter(([m]) => isMethodAllowed(m));
+                    })().map(([method, label]) => (
                       <button
                         key={method}
                         type="button"

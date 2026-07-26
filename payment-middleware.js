@@ -418,7 +418,36 @@ export const createPointOrderMiddleware = async (req, res) => {
         }
       };
 
+      if (paymentType) {
+        let mpPaymentType = '';
+        if (paymentType === 'debito') {
+          mpPaymentType = 'debit_card';
+        } else if (paymentType === 'credito') {
+          mpPaymentType = 'credit_card';
+        } else if (paymentType === 'pix') {
+          mpPaymentType = 'pix';
+        }
+
+        if (mpPaymentType) {
+          payload.payment = {
+            installments: 1,
+            type: mpPaymentType
+          };
+        }
+      }
+
+      console.log('[Mercado Pago Point] URL:', mpUrl);
+      console.log('[Mercado Pago Point] Headers:', JSON.stringify({ ...headers, Authorization: 'Bearer ***' }));
+      console.log('[Mercado Pago Point] Enviando Payload:', JSON.stringify(payload, null, 2));
+
       const response = await nativeRequest(mpUrl, 'POST', headers, payload);
+
+      console.log('[Mercado Pago Point] Resposta Status:', response.status);
+      if (response.json) {
+        console.log('[Mercado Pago Point] Resposta JSON:', JSON.stringify(response.json, null, 2));
+      } else if (response.text) {
+        console.log('[Mercado Pago Point] Resposta Texto:', response.text);
+      }
 
       if (!response.ok) {
         console.error('[Mercado Pago Point Dev] Erro ao criar intenção de pagamento:', response.json);
