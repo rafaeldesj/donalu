@@ -44,6 +44,7 @@ interface StoreConfig {
   pointMiniNfc2Id?: string;
   disabledPaymentMethods?: string[];
   paymentMethodsThemes?: Record<string, 'light' | 'dark'>;
+  paymentMethodsVisibility?: Record<string, 'client' | 'staff' | 'both'>;
   requireCashierApproval?: boolean;
   deliveryBaseKm?: number;
   deliveryBaseFee?: number;
@@ -577,6 +578,7 @@ export const SettingsPage = () => {
         disabledPaymentMethods: storeConfig.disabledPaymentMethods || [],
         disabledPaymentMethodsByOrderType: storeConfig.disabledPaymentMethodsByOrderType || {},
         paymentMethodsThemes: storeConfig.paymentMethodsThemes || {},
+        paymentMethodsVisibility: storeConfig.paymentMethodsVisibility || {},
         requireCashierApproval: storeConfig.requireCashierApproval !== undefined ? storeConfig.requireCashierApproval : false
       });
 
@@ -1246,7 +1248,7 @@ export const SettingsPage = () => {
                           </span>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                           {/* Segmented Control for Theme Selection */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Tema:</span>
@@ -1299,6 +1301,77 @@ export const SettingsPage = () => {
                               </button>
                             </div>
                           </div>
+
+                          {/* Visibility Checkboxes: Clientes / Funcionários */}
+                          {(() => {
+                            const vis = storeConfig?.paymentMethodsVisibility?.[method.id] || 'both';
+                            const showClient = vis === 'both' || vis === 'client';
+                            const showStaff = vis === 'both' || vis === 'staff';
+                            const setVis = (forClient: boolean, forStaff: boolean) => {
+                              let newVis: 'client' | 'staff' | 'both' = 'both';
+                              if (forClient && !forStaff) newVis = 'client';
+                              else if (!forClient && forStaff) newVis = 'staff';
+                              else newVis = 'both';
+                              setStoreConfig(prev => prev ? {
+                                ...prev,
+                                paymentMethodsVisibility: {
+                                  ...(prev.paymentMethodsVisibility || {}),
+                                  [method.id]: newVis
+                                }
+                              } : prev);
+                            };
+                            return (
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.75rem',
+                                background: 'rgba(255,255,255,0.03)',
+                                border: '1px solid rgba(255,255,255,0.07)',
+                                borderRadius: '10px',
+                                padding: '0.4rem 0.75rem'
+                              }}>
+                                <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}>Visível para:</span>
+                                <label
+                                  title="Exibir para clientes"
+                                  style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.3rem',
+                                    cursor: 'pointer', userSelect: 'none', fontSize: '0.8rem',
+                                    color: showClient ? '#34d399' : 'var(--text-secondary)',
+                                    fontWeight: showClient ? 700 : 400,
+                                    transition: 'color 0.2s'
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    id={`vis-client-${method.id}`}
+                                    checked={showClient}
+                                    onChange={(e) => setVis(e.target.checked, showStaff)}
+                                    style={{ accentColor: '#34d399', width: '15px', height: '15px', cursor: 'pointer' }}
+                                  />
+                                  👤 Clientes
+                                </label>
+                                <label
+                                  title="Exibir para funcionários"
+                                  style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.3rem',
+                                    cursor: 'pointer', userSelect: 'none', fontSize: '0.8rem',
+                                    color: showStaff ? '#60a5fa' : 'var(--text-secondary)',
+                                    fontWeight: showStaff ? 700 : 400,
+                                    transition: 'color 0.2s'
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    id={`vis-staff-${method.id}`}
+                                    checked={showStaff}
+                                    onChange={(e) => setVis(showClient, e.target.checked)}
+                                    style={{ accentColor: '#60a5fa', width: '15px', height: '15px', cursor: 'pointer' }}
+                                  />
+                                  🧑‍💼 Funcionários
+                                </label>
+                              </div>
+                            );
+                          })()}
 
                           {/* Toggle Switch */}
                           <button

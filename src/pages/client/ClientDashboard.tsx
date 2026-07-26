@@ -316,32 +316,40 @@ export const ClientDashboard = ({
     return () => unsubscribe();
   }, []);
 
-  // Reset selected payment method if it becomes disabled for the current orderType
+  // Reset selected payment method if it becomes disabled or invisible for the current orderType
   useEffect(() => {
     if (!storeConfig) return;
     
     const disabled = storeConfig.disabledPaymentMethodsByOrderType?.[orderType] || storeConfig.disabledPaymentMethods || [];
+    const visConfig = storeConfig.paymentMethodsVisibility || {};
+    const isClient = role === 'client';
+    const isMethodVisible = (id: string) => {
+      if (disabled.includes(id)) return false;
+      const vis = visConfig[id] || 'both';
+      if (isClient) return vis === 'client' || vis === 'both';
+      return vis === 'staff' || vis === 'both';
+    };
     
     setPaymentMethod(current => {
-      if (disabled.includes(current)) {
+      if (!isMethodVisible(current)) {
         const allMethods = orderType === 'dine_in_table'
-          ? ['pix', 'credito', 'google_pay', 'debito_point', 'credito_point', 'pagar_final', 'dinheiro']
-          : ['pix', 'credito', 'google_pay', 'debito_point', 'credito_point', 'dinheiro'];
-        const firstEnabled = allMethods.find(m => !disabled.includes(m)) as any;
+          ? ['pix', 'credito', 'google_pay', 'debito_point', 'credito_point', 'pagar_final', 'dinheiro', 'cartao']
+          : ['pix', 'credito', 'google_pay', 'debito_point', 'credito_point', 'dinheiro', 'cartao'];
+        const firstEnabled = allMethods.find(m => isMethodVisible(m)) as any;
         return firstEnabled || current;
       }
       return current;
     });
 
     setBillPaymentMethod(current => {
-      if (disabled.includes(current)) {
-        const allBillMethods = ['pix', 'credito', 'google_pay', 'debito_point', 'credito_point', 'dinheiro'];
-        const firstEnabledBill = allBillMethods.find(m => !disabled.includes(m)) as any;
+      const allBillMethods = ['pix', 'credito', 'google_pay', 'debito_point', 'credito_point', 'dinheiro', 'cartao'];
+      if (!isMethodVisible(current)) {
+        const firstEnabledBill = allBillMethods.find(m => isMethodVisible(m)) as any;
         return firstEnabledBill || current;
       }
       return current;
     });
-  }, [orderType, storeConfig]);
+  }, [orderType, storeConfig, role]);
 
   // Verifica status do pagamento Pix do fechamento de conta periodicamente
   useEffect(() => {
@@ -3422,6 +3430,14 @@ export const ClientDashboard = ({
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                 {(() => {
                   const disabled = storeConfig?.disabledPaymentMethodsByOrderType?.[orderType] || storeConfig?.disabledPaymentMethods || [];
+                  const visConfig = storeConfig?.paymentMethodsVisibility || {};
+                  const isClient = role === 'client';
+                  const isMethodAllowed = (id: string) => {
+                    if (disabled.includes(id)) return false;
+                    const vis = visConfig[id] || 'both';
+                    if (isClient) return vis === 'client' || vis === 'both';
+                    return vis === 'staff' || vis === 'both';
+                  };
                   let methods = [];
                   if (orderType === 'dine_in_table') {
                     methods = [
@@ -3445,7 +3461,7 @@ export const ClientDashboard = ({
                       ['cartao', 'Cartão 💳']
                     ];
                   }
-                  return methods.filter(([val]) => !disabled.includes(val)) as any;
+                  return methods.filter(([val]) => isMethodAllowed(val)) as any;
                 })().map(([val, label]: [string, string]) => {
                   const isSelected = paymentMethod === val;
                   const buttonTheme = storeConfig?.paymentMethodsThemes?.[val] || 'dark';
@@ -4858,6 +4874,14 @@ export const ClientDashboard = ({
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
                            {(() => {
                             const disabled = storeConfig?.disabledPaymentMethodsByOrderType?.['dine_in_table'] || storeConfig?.disabledPaymentMethods || [];
+                            const visConfig = storeConfig?.paymentMethodsVisibility || {};
+                            const isClient = role === 'client';
+                            const isMethodAllowed = (id: string) => {
+                              if (disabled.includes(id)) return false;
+                              const vis = visConfig[id] || 'both';
+                              if (isClient) return vis === 'client' || vis === 'both';
+                              return vis === 'staff' || vis === 'both';
+                            };
                             const methods = [
                               ['pix', 'Pix 🟡'],
                               ['credito', 'Crédito Online 💳'],
@@ -4867,7 +4891,7 @@ export const ClientDashboard = ({
                               ['dinheiro', 'Dinheiro 💵'],
                               ['cartao', 'Cartão 💳']
                             ];
-                            return methods.filter(([val]) => !disabled.includes(val)) as any;
+                            return methods.filter(([val]) => isMethodAllowed(val)) as any;
                           })().map(([val, label]: [string, string]) => {
                             const isSelected = billPaymentMethod === val;
                             const buttonTheme = storeConfig?.paymentMethodsThemes?.[val] || 'dark';
