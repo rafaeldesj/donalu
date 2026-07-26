@@ -4679,7 +4679,7 @@ export const ClientDashboard = ({
                 const deviceId = selectedDeviceId;
                 setShowPointLightbox(false);
                 setPointPaymentId('');
-                setPointPaymentStatus('idle');
+                setPointPaymentStatus('pending');
                 
                 if (intentId) {
                   try {
