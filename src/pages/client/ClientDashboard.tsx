@@ -1580,7 +1580,7 @@ export const ClientDashboard = ({
     }, 1500);
   };
 
-  const handleStartPointPayment = async (deviceId: string, label: string) => {
+  const handleStartPointPayment = async (deviceId: string, label: string, directAmount?: number, directType?: 'debito' | 'credito') => {
     try {
       setBillError(null);
       setError(null);
@@ -1595,14 +1595,17 @@ export const ClientDashboard = ({
         token = 'mock';
       }
 
+      const finalAmount = directAmount !== undefined ? directAmount : pointAmount;
+      const finalType = directType !== undefined ? directType : pointType;
+
       const response = await fetch(`${API_BASE_URL}/api/pagamentos/create-point-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token,
           deviceId,
-          amount: pointAmount,
-          paymentType: pointType,
+          amount: finalAmount,
+          paymentType: finalType,
           externalReference: 'PED_' + Date.now()
         })
       });
@@ -1781,7 +1784,7 @@ export const ClientDashboard = ({
 
     if (devices.length === 1) {
       // Ativa diretamente a única maquininha
-      handleStartPointPayment(devices[0].id, devices[0].label);
+      handleStartPointPayment(devices[0].id, devices[0].label, amount, type);
     } else {
       // Abre o seletor de maquininhas
       setShowPointDeviceSelector(true);
