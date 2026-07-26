@@ -1,11 +1,11 @@
 {
-  "ts": "2026-07-26T23:28:19.422Z",
+  "ts": "2026-07-26T23:37:58.915Z",
   "source": "auto-on-generation-start",
   "contexts": [
     {
       "ctxId": "main",
       "frameUrl": "vscode-file://vscode-app/c:/Users/rafae/AppData/Local/Programs/Antigravity%20IDE/resources/app/out/vs/code/electron-browser/workbench/workbench.html",
-      "totalBtns": 133,
+      "totalBtns": 122,
       "inputBoxFound": true,
       "inputBoxBtns": [
         {
@@ -743,7 +743,7 @@
     {
       "ctxId": 2,
       "frameUrl": "vscode-file://vscode-app/c:/Users/rafae/AppData/Local/Programs/Antigravity%20IDE/resources/app/out/vs/code/electron-browser/workbench/workbench.html",
-      "totalBtns": 133,
+      "totalBtns": 122,
       "inputBoxFound": true,
       "inputBoxBtns": [
         {
@@ -1481,7 +1481,7 @@
     {
       "ctxId": 1,
       "frameUrl": "vscode-file://vscode-app/c:/Users/rafae/AppData/Local/Programs/Antigravity%20IDE/resources/app/out/vs/code/electron-browser/workbench/workbench.html",
-      "totalBtns": 133,
+      "totalBtns": 122,
       "inputBoxFound": true,
       "inputBoxBtns": [
         {

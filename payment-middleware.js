@@ -1,4 +1,17 @@
 import https from 'https';
+import fs from 'fs';
+import path from 'path';
+
+// Função utilitária para gravar logs de depuração do Point no arquivo point-debug.log
+function logToFile(message) {
+  try {
+    const logPath = path.join(process.cwd(), 'point-debug.log');
+    const timestamp = new Date().toISOString();
+    fs.appendFileSync(logPath, `[${timestamp}] ${message}\n`);
+  } catch (err) {
+    console.error('Erro ao escrever no arquivo de log do Point:', err);
+  }
+}
 
 // Função auxiliar para fazer requisições HTTP usando o módulo nativo 'https' para máxima compatibilidade no Node.js
 // Aceita `data` como objeto (serializa em JSON) ou string (envia como-está, para form-encoded).
@@ -374,15 +387,18 @@ export const createPointOrderMiddleware = async (req, res) => {
       const previousIntentId = global.activePointIntents[devIdStr];
       if (previousIntentId && !isMock) {
         console.log(`[Mercado Pago Point] Cancelando intenção anterior ${previousIntentId} para o dispositivo ${devIdStr} antes de criar uma nova...`);
+        logToFile(`[Silent Cancel Request] Device: ${devIdStr}, IntentId: ${previousIntentId}`);
         try {
           const cancelUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}/payment-intents/${previousIntentId}`;
           const cancelRes = await nativeRequest(cancelUrl, 'DELETE', {
             'Authorization': `Bearer ${token}`
           });
           console.log(`[Mercado Pago Point] Resposta cancelamento anterior status: ${cancelRes.status}`);
+          logToFile(`[Silent Cancel Response] Status: ${cancelRes.status}, Body: ${JSON.stringify(cancelRes.json || cancelRes.text || '')}`);
           delete global.activePointIntents[devIdStr];
         } catch (cancelErr) {
           console.error(`[Mercado Pago Point] Erro ao tentar cancelar intenção anterior:`, cancelErr);
+          logToFile(`[Silent Cancel Error] Msg: ${cancelErr.message || cancelErr}`);
         }
       }
 
@@ -458,6 +474,7 @@ export const createPointOrderMiddleware = async (req, res) => {
       console.log('[Mercado Pago Point] URL:', mpUrl);
       console.log('[Mercado Pago Point] Headers:', JSON.stringify({ ...headers, Authorization: 'Bearer ***' }));
       console.log('[Mercado Pago Point] Enviando Payload:', JSON.stringify(payload, null, 2));
+      logToFile(`[Create Request] Device: ${devIdStr}, Amount: ${amount}, Type: ${paymentType}, Payload: ${JSON.stringify(payload)}`);
 
       const response = await nativeRequest(mpUrl, 'POST', headers, payload);
 
@@ -467,6 +484,7 @@ export const createPointOrderMiddleware = async (req, res) => {
       } else if (response.text) {
         console.log('[Mercado Pago Point] Resposta Texto:', response.text);
       }
+      logToFile(`[Create Response] Status: ${response.status}, Body: ${JSON.stringify(response.json || response.text || '')}`);
 
       if (!response.ok) {
         console.error('[Mercado Pago Point Dev] Erro ao criar intenção de pagamento:', response.json);
@@ -599,8 +617,12 @@ export const cancelPointOrderMiddleware = async (req, res) => {
       };
       
       console.log(`[Mercado Pago Point Cancel] Cancelando intent ${intentId} para o dispositivo ${devIdStr}...`);
+      logToFile(`[Cancel Request] Device: ${devIdStr}, IntentId: ${intentId}`);
+      
       const response = await nativeRequest(mpUrl, 'DELETE', headers);
+      
       console.log(`[Mercado Pago Point Cancel] Status resposta: ${response.status}`);
+      logToFile(`[Cancel Response] Status: ${response.status}, Body: ${JSON.stringify(response.json || response.text || '')}`);
       
       if (response.status === 200 || response.status === 204 || response.ok) {
         if (global.activePointIntents[devIdStr] === intentId) {
