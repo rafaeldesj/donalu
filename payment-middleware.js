@@ -383,21 +383,22 @@ export const createPointOrderMiddleware = async (req, res) => {
       const devIdStr = deviceId ? String(deviceId) : '';
       const isMock = !token || token === 'mock' || token === '' || token === 'null' || token === 'undefined' || devIdStr.includes('MOCK') || devIdStr === 'mock';
       
-      // Cancelar a intenção anterior silenciosamente se existir na memória global para este terminal
+      // Cancelar a ordem anterior se existir na memória global para este terminal (Orders API)
       const previousIntentId = global.activePointIntents[devIdStr];
       if (previousIntentId && !isMock) {
-        console.log(`[Mercado Pago Point] Cancelando intenção anterior ${previousIntentId} para o dispositivo ${devIdStr} antes de criar uma nova...`);
+        console.log(`[Mercado Pago Point] Cancelando ordem anterior ${previousIntentId} para o dispositivo ${devIdStr} antes de criar uma nova... (Orders API)`);
         logToFile(`[Silent Cancel Request] Device: ${devIdStr}, IntentId: ${previousIntentId}`);
         try {
-          const cancelUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}/payment-intents/${previousIntentId}`;
-          const cancelRes = await nativeRequest(cancelUrl, 'DELETE', {
-            'Authorization': `Bearer ${token}`
+          const cancelUrl = `https://api.mercadopago.com/v1/orders/${previousIntentId}/cancel`;
+          const cancelRes = await nativeRequest(cancelUrl, 'POST', {
+            'Authorization': `Bearer ${token}`,
+            'X-Idempotency-Key': `cancel_${previousIntentId}_${Date.now()}`
           });
           console.log(`[Mercado Pago Point] Resposta cancelamento anterior status: ${cancelRes.status}`);
           logToFile(`[Silent Cancel Response] Status: ${cancelRes.status}, Body: ${JSON.stringify(cancelRes.json || cancelRes.text || '')}`);
           delete global.activePointIntents[devIdStr];
         } catch (cancelErr) {
-          console.error(`[Mercado Pago Point] Erro ao tentar cancelar intenção anterior:`, cancelErr);
+          console.error(`[Mercado Pago Point] Erro ao tentar cancelar ordem anterior:`, cancelErr);
           logToFile(`[Silent Cancel Error] Msg: ${cancelErr.message || cancelErr}`);
         }
       }
@@ -431,53 +432,63 @@ export const createPointOrderMiddleware = async (req, res) => {
         }));
       }
 
-      const amountCents = Math.round(parseFloat(amount) * 100);
-      if (amountCents < 100) {
+      const numericAmount = parseFloat(amount);
+      if (numericAmount < 1.00) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ success: false, message: 'O valor mínimo para pagamento na maquininha é de R$ 1,00.' }));
       }
 
-      // Chamada real ao Mercado Pago Point
-      const mpUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}/payment-intents`;
+      // Chamada real ao Mercado Pago Point (Orders API)
+      const mpUrl = `https://api.mercadopago.com/v1/orders`;
       const headers = {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Idempotency-Key': `create_${devIdStr}_${Date.now()}`
       };
 
       const payload = {
-        amount: amountCents,
+        type: 'point',
+        external_reference: externalReference || 'PED_' + Date.now(),
         description: 'Pedido Dona Lu Pastelaria',
-        additional_info: {
-          external_reference: externalReference || 'PED_' + Date.now(),
-          print_on_terminal: true
+        total_amount: numericAmount,
+        items: [
+          {
+            title: 'Pedido Dona Lu',
+            unit_price: numericAmount,
+            quantity: 1
+          }
+        ],
+        point_of_interaction: {
+          type: 'POINT',
+          business_info: {
+            device_id: devIdStr
+          }
         }
       };
 
-      // Envia o payload limpo como no comportamento original que funcionava
-      console.log('[Mercado Pago Point] URL:', mpUrl);
-      console.log('[Mercado Pago Point] Headers:', JSON.stringify({ ...headers, Authorization: 'Bearer ***' }));
-      console.log('[Mercado Pago Point] Enviando Payload:', JSON.stringify(payload, null, 2));
-      logToFile(`[Create Request] Device: ${devIdStr}, Amount: ${amount}, Type: ${paymentType}, Payload: ${JSON.stringify(payload)}`);
+      console.log('[Mercado Pago Point v1/orders] URL:', mpUrl);
+      console.log('[Mercado Pago Point v1/orders] Enviando Payload:', JSON.stringify(payload, null, 2));
+      logToFile(`[Create Request] Device: ${devIdStr}, Amount: ${amount}, Payload: ${JSON.stringify(payload)}`);
 
       const response = await nativeRequest(mpUrl, 'POST', headers, payload);
 
-      console.log('[Mercado Pago Point] Resposta Status:', response.status);
+      console.log('[Mercado Pago Point v1/orders] Resposta Status:', response.status);
       if (response.json) {
-        console.log('[Mercado Pago Point] Resposta JSON:', JSON.stringify(response.json, null, 2));
+        console.log('[Mercado Pago Point v1/orders] Resposta JSON:', JSON.stringify(response.json, null, 2));
       } else if (response.text) {
-        console.log('[Mercado Pago Point] Resposta Texto:', response.text);
+        console.log('[Mercado Pago Point v1/orders] Resposta Texto:', response.text);
       }
       logToFile(`[Create Response] Status: ${response.status}, Body: ${JSON.stringify(response.json || response.text || '')}`);
 
       if (!response.ok) {
-        console.error('[Mercado Pago Point Dev] Erro ao criar intenção de pagamento:', response.json);
+        console.error('[Mercado Pago Point Dev] Erro ao criar ordem de pagamento:', response.json);
         
         // Fallback para mock em desenvolvimento se der erro na API
         const mockIntentId = 'INTENT_MOCK_' + Math.random().toString(36).substring(2, 11).toUpperCase();
         global.mockPointIntents[mockIntentId] = {
           status: 'OPEN',
           createdAt: Date.now(),
-          amount: parseFloat(amount),
+          amount: numericAmount,
           deviceId: devIdStr
         };
         setTimeout(() => {
@@ -504,7 +515,7 @@ export const createPointOrderMiddleware = async (req, res) => {
       return res.end(JSON.stringify({
         success: true,
         intentId: r.id,
-        status: r.state || 'OPEN',
+        status: r.status || 'created',
         isMock: false
       }));
 
@@ -539,8 +550,8 @@ export const checkPointOrderMiddleware = async (req, res) => {
       return res.end(JSON.stringify({ success: true, status: mockIntent.status, isMock: true }));
     }
 
-    // Consulta real ao Mercado Pago Point
-    const mpUrl = `https://api.mercadopago.com/point/integration-api/payment-intents/${intentId}`;
+    // Consulta real ao Mercado Pago (Orders API)
+    const mpUrl = `https://api.mercadopago.com/v1/orders/${intentId}`;
     const headers = {
       'Authorization': `Bearer ${token}`
     };
@@ -548,7 +559,7 @@ export const checkPointOrderMiddleware = async (req, res) => {
     const response = await nativeRequest(mpUrl, 'GET', headers);
 
     if (!response.ok) {
-      console.error('[Mercado Pago Point Dev] Erro ao consultar intenção:', response.json);
+      console.error('[Mercado Pago Point Dev] Erro ao consultar ordem:', response.json);
       
       const mockIntent = global.mockPointIntents[intentId];
       if (mockIntent) {
@@ -561,8 +572,21 @@ export const checkPointOrderMiddleware = async (req, res) => {
     }
 
     const r = response.json;
+    
+    // Mapeamento de status da Orders API
+    let finalStatus = 'OPEN';
+    if (r.status === 'processed' || r.status === 'paid') {
+      finalStatus = 'FINISHED';
+    } else if (r.status === 'canceled' || r.status === 'expired') {
+      finalStatus = 'CANCELED';
+    } else if (r.status === 'created' || r.status === 'action_required') {
+      finalStatus = 'OPEN';
+    } else {
+      finalStatus = 'ERROR';
+    }
+
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({ success: true, status: r.state || 'OPEN', isMock: false }));
+    return res.end(JSON.stringify({ success: true, status: finalStatus, isMock: false }));
 
   } catch (err) {
     console.error('[Mercado Pago Point Status Dev] Erro no middleware:', err);
@@ -594,20 +618,21 @@ export const cancelPointOrderMiddleware = async (req, res) => {
         return res.end(JSON.stringify({ success: true, message: 'Pagamento simulado cancelado.' }));
       }
       
-      const mpUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}/payment-intents/${intentId}`;
+      const mpUrl = `https://api.mercadopago.com/v1/orders/${intentId}/cancel`;
       const headers = {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'X-Idempotency-Key': `cancel_${intentId}_${Date.now()}`
       };
       
-      console.log(`[Mercado Pago Point Cancel] Cancelando intent ${intentId} para o dispositivo ${devIdStr}...`);
+      console.log(`[Mercado Pago Point Cancel] Cancelando ordem ${intentId} para o dispositivo ${devIdStr} (Orders API)...`);
       logToFile(`[Cancel Request] Device: ${devIdStr}, IntentId: ${intentId}`);
       
-      const response = await nativeRequest(mpUrl, 'DELETE', headers);
+      const response = await nativeRequest(mpUrl, 'POST', headers);
       
       console.log(`[Mercado Pago Point Cancel] Status resposta: ${response.status}`);
       logToFile(`[Cancel Response] Status: ${response.status}, Body: ${JSON.stringify(response.json || response.text || '')}`);
       
-      if (response.status === 200 || response.status === 204 || response.ok) {
+      if (response.status === 200 || response.ok) {
         if (global.activePointIntents[devIdStr] === intentId) {
           delete global.activePointIntents[devIdStr];
         }

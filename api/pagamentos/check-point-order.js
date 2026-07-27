@@ -85,9 +85,9 @@ export default async function handler(req, res) {
       });
     }
 
-    // Consulta real à API de Payment Intents do Mercado Pago
-    // Endpoint: GET https://api.mercadopago.com/point/integration-api/payment-intents/{payment_intent_id}
-    const mpUrl = `https://api.mercadopago.com/point/integration-api/payment-intents/${intentId}`;
+    // Consulta real à Orders API do Mercado Pago
+    // Endpoint: GET https://api.mercadopago.com/v1/orders/{order_id}
+    const mpUrl = `https://api.mercadopago.com/v1/orders/${intentId}`;
     const headers = {
       'Authorization': `Bearer ${token}`
     };
@@ -95,9 +95,8 @@ export default async function handler(req, res) {
     const response = await nativeRequest(mpUrl, 'GET', headers);
 
     if (!response.ok) {
-      console.error('[Mercado Pago Point] Erro ao consultar intenção:', response.json);
+      console.error('[Mercado Pago Point] Erro ao consultar ordem:', response.json);
       
-      // Fallback para mock caso dê erro na API real durante a consulta (ex: o ID era mock de fallback)
       const mockIntent = global.mockPointIntents[intentId];
       if (mockIntent) {
         return res.status(200).json({
@@ -111,10 +110,22 @@ export default async function handler(req, res) {
     }
 
     const r = response.json;
-    // Os estados retornados pelo Mercado Pago Point são: 'OPEN', 'FINISHED', 'CANCELED', 'ERROR', etc.
+    
+    // Mapeamento de status da Orders API para o formato esperado pelo frontend
+    let finalStatus = 'OPEN';
+    if (r.status === 'processed' || r.status === 'paid') {
+      finalStatus = 'FINISHED';
+    } else if (r.status === 'canceled' || r.status === 'expired') {
+      finalStatus = 'CANCELED';
+    } else if (r.status === 'created' || r.status === 'action_required') {
+      finalStatus = 'OPEN';
+    } else {
+      finalStatus = 'ERROR';
+    }
+
     return res.status(200).json({
       success: true,
-      status: r.state || 'OPEN',
+      status: finalStatus,
       isMock: false
     });
 

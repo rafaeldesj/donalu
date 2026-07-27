@@ -41,9 +41,11 @@ function nativeRequest(url, method, headers, data) {
   });
 }
 
-// Armazenamento em memória global ou local para mocks
 if (!global.mockPointIntents) {
   global.mockPointIntents = {};
+}
+if (!global.activePointIntents) {
+  global.activePointIntents = {};
 }
 
 export default async function handler(req, res) {
@@ -65,10 +67,26 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { token, deviceId, amount, paymentType, externalReference, devPercentage } = req.body || {};
+    const { token, deviceId, amount, paymentType, externalReference } = req.body || {};
 
     const devIdStr = deviceId ? String(deviceId) : '';
     const isMock = !token || token === 'mock' || token === '' || token === 'null' || token === 'undefined' || devIdStr.includes('MOCK') || devIdStr === 'mock';
+
+    // Cancelar a ordem anterior se existir na memória global para este terminal
+    const previousIntentId = global.activePointIntents[devIdStr];
+    if (previousIntentId && !isMock) {
+      console.log(`[Mercado Pago Point] Cancelando ordem anterior ${previousIntentId} para o dispositivo ${devIdStr} antes de criar uma nova... (Orders API)`);
+      try {
+        const cancelUrl = `https://api.mercadopago.com/v1/orders/${previousIntentId}/cancel`;
+        await nativeRequest(cancelUrl, 'POST', {
+          'Authorization': `Bearer ${token}`,
+          'X-Idempotency-Key': `cancel_${previousIntentId}_${Date.now()}`
+        });
+        delete global.activePointIntents[devIdStr];
+      } catch (cancelErr) {
+        console.error(`[Mercado Pago Point] Erro ao tentar cancelar ordem anterior:`, cancelErr);
+      }
+    }
 
     if (isMock) {
       console.log(`[Mercado Pago Point] Rodando em modo MOCK. Dispositivo: ${devIdStr}`);
@@ -98,52 +116,49 @@ export default async function handler(req, res) {
       });
     }
 
-    const amountCents = Math.round(parseFloat(amount) * 100);
-    if (amountCents < 100) {
+    const numericAmount = parseFloat(amount);
+    if (numericAmount < 1.00) {
       return res.status(400).json({ success: false, message: 'O valor mínimo para pagamento na maquininha é de R$ 1,00.' });
     }
 
-    // Cancelar a intenção anterior se existir na memória global para este terminal
-    if (!global.activePointIntents) {
-      global.activePointIntents = {};
-    }
-    const previousIntentId = global.activePointIntents[devIdStr];
-    if (previousIntentId && !isMock) {
-      console.log(`[Mercado Pago Point] Cancelando intenção anterior ${previousIntentId} para o dispositivo ${devIdStr} antes de criar uma nova...`);
-      try {
-        const cancelUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}/payment-intents/${previousIntentId}`;
-        await nativeRequest(cancelUrl, 'DELETE', {
-          'Authorization': `Bearer ${token}`
-        });
-        delete global.activePointIntents[devIdStr];
-      } catch (cancelErr) {
-        console.error(`[Mercado Pago Point] Erro ao tentar cancelar intenção anterior:`, cancelErr);
-      }
-    }
-
-    // Chamada oficial da API de Payment Intents do Mercado Pago
-    // Endpoint: POST https://api.mercadopago.com/point/integration-api/devices/{device_id}/payment-intents
-    const mpUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}/payment-intents`;
+    // Chamada oficial da Orders API do Mercado Pago Point
+    const mpUrl = `https://api.mercadopago.com/v1/orders`;
     const headers = {
       'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'X-Idempotency-Key': `create_${devIdStr}_${Date.now()}`
     };
 
     const payload = {
-      amount: amountCents,
+      type: 'point',
+      external_reference: externalReference || 'PED_' + Date.now(),
       description: 'Pedido Dona Lu Pastelaria',
-      additional_info: {
-        external_reference: externalReference || 'PED_' + Date.now(),
-        print_on_terminal: true
+      total_amount: numericAmount,
+      items: [
+        {
+          title: 'Pedido Dona Lu',
+          unit_price: numericAmount,
+          quantity: 1
+        }
+      ],
+      point_of_interaction: {
+        type: 'POINT',
+        business_info: {
+          device_id: devIdStr
+        }
       }
     };
 
-    // Envia o payload limpo como no comportamento original que funcionava
+    console.log('[Mercado Pago Point v1/orders] URL:', mpUrl);
+    console.log('[Mercado Pago Point v1/orders] Enviando Payload:', JSON.stringify(payload, null, 2));
 
     const response = await nativeRequest(mpUrl, 'POST', headers, payload);
 
+    console.log('[Mercado Pago Point v1/orders] Resposta Status:', response.status);
+    console.log('[Mercado Pago Point v1/orders] Resposta JSON:', JSON.stringify(response.json, null, 2));
+
     if (!response.ok) {
-      console.error('[Mercado Pago Point] Erro ao criar intenção de pagamento:', response.json);
+      console.error('[Mercado Pago Point v1/orders] Erro ao criar ordem de pagamento:', response.json);
       
       // Fallback para mock caso dê erro na API real, para não travar a pastelaria durante testes
       console.log('[Mercado Pago Point] Iniciando MOCK de fallback devido a erro na API.');
@@ -151,8 +166,8 @@ export default async function handler(req, res) {
       global.mockPointIntents[mockIntentId] = {
         status: 'OPEN',
         createdAt: Date.now(),
-        amount: parseFloat(amount),
-        deviceId
+        amount: numericAmount,
+        deviceId: devIdStr
       };
       setTimeout(() => {
         if (global.mockPointIntents[mockIntentId]) {
@@ -173,10 +188,11 @@ export default async function handler(req, res) {
     if (r.id) {
       global.activePointIntents[devIdStr] = r.id;
     }
+    
     return res.status(200).json({
       success: true,
       intentId: r.id,
-      status: r.state || 'OPEN',
+      status: r.status || 'created',
       isMock: false
     });
 
