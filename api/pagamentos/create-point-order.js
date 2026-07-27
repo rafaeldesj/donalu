@@ -103,6 +103,24 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: 'O valor mínimo para pagamento na maquininha é de R$ 1,00.' });
     }
 
+    // Cancelar a intenção anterior se existir na memória global para este terminal
+    if (!global.activePointIntents) {
+      global.activePointIntents = {};
+    }
+    const previousIntentId = global.activePointIntents[devIdStr];
+    if (previousIntentId && !isMock) {
+      console.log(`[Mercado Pago Point] Cancelando intenção anterior ${previousIntentId} para o dispositivo ${devIdStr} antes de criar uma nova...`);
+      try {
+        const cancelUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}/payment-intents/${previousIntentId}`;
+        await nativeRequest(cancelUrl, 'DELETE', {
+          'Authorization': `Bearer ${token}`
+        });
+        delete global.activePointIntents[devIdStr];
+      } catch (cancelErr) {
+        console.error(`[Mercado Pago Point] Erro ao tentar cancelar intenção anterior:`, cancelErr);
+      }
+    }
+
     // Chamada oficial da API de Payment Intents do Mercado Pago
     // Endpoint: POST https://api.mercadopago.com/point/integration-api/devices/{device_id}/payment-intents
     const mpUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}/payment-intents`;
@@ -119,6 +137,24 @@ export default async function handler(req, res) {
         print_on_terminal: true
       }
     };
+
+    if (paymentType) {
+      let mpPaymentType = '';
+      if (paymentType === 'debito') {
+        mpPaymentType = 'debit_card';
+      } else if (paymentType === 'credito') {
+        mpPaymentType = 'credit_card';
+      } else if (paymentType === 'pix') {
+        mpPaymentType = 'pix';
+      }
+
+      if (mpPaymentType) {
+        payload.payment = {
+          installments: 1,
+          type: mpPaymentType
+        };
+      }
+    }
 
     const response = await nativeRequest(mpUrl, 'POST', headers, payload);
 
@@ -150,6 +186,9 @@ export default async function handler(req, res) {
     }
 
     const r = response.json;
+    if (r.id) {
+      global.activePointIntents[devIdStr] = r.id;
+    }
     return res.status(200).json({
       success: true,
       intentId: r.id,
