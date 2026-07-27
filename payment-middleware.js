@@ -463,10 +463,10 @@ export const createPointOrderMiddleware = async (req, res) => {
           mpPaymentType = 'pix';
         }
 
-        if (mpPaymentType) {
+        if (mpPaymentType && mpPaymentType !== 'pix') {
           payload.payment = {
             installments: 1,
-            type: mpPaymentType
+            payment_mode: mpPaymentType
           };
         }
       }
