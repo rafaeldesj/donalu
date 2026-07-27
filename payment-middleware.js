@@ -453,24 +453,7 @@ export const createPointOrderMiddleware = async (req, res) => {
         }
       };
 
-      if (paymentType) {
-        let mpPaymentType = '';
-        if (paymentType === 'debito') {
-          mpPaymentType = 'debit_card';
-        } else if (paymentType === 'credito') {
-          mpPaymentType = 'credit_card';
-        } else if (paymentType === 'pix') {
-          mpPaymentType = 'pix';
-        }
-
-        if (mpPaymentType && mpPaymentType !== 'pix') {
-          payload.payment = {
-            installments: 1,
-            payment_mode: mpPaymentType
-          };
-        }
-      }
-
+      // Envia o payload limpo como no comportamento original que funcionava
       console.log('[Mercado Pago Point] URL:', mpUrl);
       console.log('[Mercado Pago Point] Headers:', JSON.stringify({ ...headers, Authorization: 'Bearer ***' }));
       console.log('[Mercado Pago Point] Enviando Payload:', JSON.stringify(payload, null, 2));

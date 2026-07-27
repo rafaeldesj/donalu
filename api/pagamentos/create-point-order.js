@@ -138,23 +138,7 @@ export default async function handler(req, res) {
       }
     };
 
-    if (paymentType) {
-      let mpPaymentType = '';
-      if (paymentType === 'debito') {
-        mpPaymentType = 'debit_card';
-      } else if (paymentType === 'credito') {
-        mpPaymentType = 'credit_card';
-      } else if (paymentType === 'pix') {
-        mpPaymentType = 'pix';
-      }
-
-      if (mpPaymentType && mpPaymentType !== 'pix') {
-        payload.payment = {
-          installments: 1,
-          payment_mode: mpPaymentType
-        };
-      }
-    }
+    // Envia o payload limpo como no comportamento original que funcionava
 
     const response = await nativeRequest(mpUrl, 'POST', headers, payload);
 
