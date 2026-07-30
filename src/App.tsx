@@ -470,6 +470,10 @@ const MainLayout = () => {
         setStoreStatus({ status: 'closed', label: 'Fechado' });
         return;
       }
+      if (storeConfig.isTemporarilyClosed === true) {
+        setStoreStatus({ status: 'closed', label: 'Fechado hoje' });
+        return;
+      }
 
       // A verificação de horário agora é executada para todos os usuários para mostrar a situação real da loja no badge.
       // Usuários privilegiados (dev, owner, manager) ainda conseguem realizar pedidos de teste no cardápio mesmo com a loja fechada.

@@ -2579,13 +2579,31 @@ export const ClientDashboard = ({
         }}>
           {canEdit ? (
             <>
-              <strong>⚠️ Modo Administrativo / Testes Ativo:</strong>
-              <span>A pastelaria está atualmente <strong>fechada</strong> para clientes externos (fora do horário de funcionamento: {storeConfig?.openingTime || '18:00'} às {storeConfig?.closingTime || '23:30'}). No entanto, como você possui privilégios de <strong>{role === 'developer' ? 'Desenvolvedor' : role === 'owner' ? 'Proprietário' : 'Gerente'}</strong>, você pode navegar e realizar pedidos de teste normalmente.</span>
+              {storeConfig?.isTemporarilyClosed ? (
+                <>
+                  <strong>⚠️ Modo Administrativo / Testes Ativo (Fechado Temporariamente):</strong>
+                  <span>A pastelaria está marcada como <strong>fechada hoje</strong> pelo seguinte motivo: <strong>{storeConfig?.temporaryCloseReason || 'Hoje não estamos funcionando.'}</strong>. No entanto, como você possui privilégios de <strong>{role === 'developer' ? 'Desenvolvedor' : role === 'owner' ? 'Proprietário' : 'Gerente'}</strong>, você pode navegar e realizar pedidos de teste normalmente.</span>
+                </>
+              ) : (
+                <>
+                  <strong>⚠️ Modo Administrativo / Testes Ativo:</strong>
+                  <span>A pastelaria está atualmente <strong>fechada</strong> para clientes externos (fora do horário de funcionamento: {storeConfig?.openingTime || '18:00'} às {storeConfig?.closingTime || '23:30'}). No entanto, como você possui privilégios de <strong>{role === 'developer' ? 'Desenvolvedor' : role === 'owner' ? 'Proprietário' : 'Gerente'}</strong>, você pode navegar e realizar pedidos de teste normalmente.</span>
+                </>
+              )}
             </>
           ) : (
             <>
-              <strong>🔴 Pastelaria Fechada no Momento:</strong>
-              <span>Estamos fora do horário de atendimento. Nosso horário de funcionamento é das <strong>{storeConfig?.openingTime || '18:00'}</strong> às <strong>{storeConfig?.closingTime || '23:30'}</strong>. Você pode olhar nosso cardápio, mas não será possível adicionar produtos ao carrinho ou enviar novos pedidos agora. Agradecemos a compreensão!</span>
+              {storeConfig?.isTemporarilyClosed ? (
+                <>
+                  <strong>🔴 Hoje Não Estamos Funcionando:</strong>
+                  <span>{storeConfig?.temporaryCloseReason || 'Hoje não estamos funcionando.'}</span>
+                </>
+              ) : (
+                <>
+                  <strong>🔴 Pastelaria Fechada no Momento:</strong>
+                  <span>Estamos fora do horário de atendimento. Nosso horário de funcionamento é das <strong>{storeConfig?.openingTime || '18:00'}</strong> às <strong>{storeConfig?.closingTime || '23:30'}</strong>. Você pode olhar nosso cardápio, mas não será possível adicionar produtos ao carrinho ou enviar novos pedidos agora. Agradecemos a compreensão!</span>
+                </>
+              )}
             </>
           )}
         </div>

@@ -51,6 +51,8 @@ interface StoreConfig {
   deliveryAdditionalKmFee?: number;
   openDays?: (number | string)[];
   disabledPaymentMethodsByOrderType?: Record<string, string[]>;
+  isTemporarilyClosed?: boolean;
+  temporaryCloseReason?: string;
 }
 
 export const SettingsPage = () => {
@@ -377,7 +379,9 @@ export const SettingsPage = () => {
               dinheiro: 'dark',
               pagar_final: 'dark'
             },
-            requireCashierApproval: true
+            requireCashierApproval: true,
+            isTemporarilyClosed: false,
+            temporaryCloseReason: ''
           };
           await setDoc(docRef, defaults);
           setStoreConfig(defaults);
@@ -2089,6 +2093,83 @@ export const SettingsPage = () => {
                     >
                       {storeConfig.isOpen ? 'ABERTO' : 'FECHADO'}
                     </button>
+                  </div>
+
+                  {/* Fechamento Excepcional (Hoje) */}
+                  <div style={{
+                    background: 'rgba(255,255,255,0.01)',
+                    border: '1px solid rgba(255,255,255,0.05)',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '1rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <strong style={{ fontSize: '1.05rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          ⚠️ Fechamento Excepcional (Hoje)
+                        </strong>
+                        <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                          Ative esta opção caso precise fechar a pastelaria hoje excepcionalmente (ex: feriado, folga).
+                        </p>
+                      </div>
+                      <label style={{ position: 'relative', display: 'inline-block', width: '50px', height: '26px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={storeConfig.isTemporarilyClosed || false}
+                          onChange={(e) => setStoreConfig(prev => ({ ...prev, isTemporarilyClosed: e.target.checked }))}
+                          style={{ opacity: 0, width: 0, height: 0 }}
+                        />
+                        <span style={{
+                          position: 'absolute',
+                          cursor: 'pointer',
+                          top: 0, left: 0, right: 0, bottom: 0,
+                          backgroundColor: storeConfig.isTemporarilyClosed ? 'var(--primary-gold)' : '#475569',
+                          transition: '0.4s',
+                          borderRadius: '34px'
+                        }}>
+                          <span style={{
+                            position: 'absolute',
+                            content: '""',
+                            height: '18px',
+                            width: '18px',
+                            left: '4px',
+                            bottom: '4px',
+                            backgroundColor: '#fff',
+                            transition: '0.4s',
+                            borderRadius: '50%',
+                            transform: storeConfig.isTemporarilyClosed ? 'translateX(24px)' : 'none'
+                          }} />
+                        </span>
+                      </label>
+                    </div>
+
+                    {storeConfig.isTemporarilyClosed && (
+                      <div className="input-group animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', transition: 'all 0.3s' }}>
+                        <label style={{ fontSize: '0.85rem', color: 'var(--primary-gold)', fontWeight: 600 }}>
+                          Escreva a mensagem que os clientes visualizarão:
+                        </label>
+                        <textarea
+                          className="pastel-edit-input"
+                          placeholder="Ex: Hoje não estamos funcionando devido a um treinamento interno da equipe. Retornaremos amanhã a partir das 18h!"
+                          value={storeConfig.temporaryCloseReason || ''}
+                          onChange={(e) => setStoreConfig(prev => ({ ...prev, temporaryCloseReason: e.target.value }))}
+                          style={{
+                            minHeight: '80px',
+                            resize: 'vertical',
+                            padding: '0.6rem',
+                            fontSize: '0.9rem',
+                            lineHeight: '1.4',
+                            borderRadius: '8px',
+                            background: 'rgba(0,0,0,0.2)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            color: '#fff'
+                          }}
+                          required={storeConfig.isTemporarilyClosed}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Horários */}
