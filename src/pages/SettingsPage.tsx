@@ -1220,7 +1220,7 @@ export const SettingsPage = () => {
                     { id: 'debito_point', name: 'Débito Maquininha', desc: 'Débito presencial via maquininha Point.', label: 'Débito Maquininha 💴' },
                     { id: 'credito_point', name: 'Crédito Maquininha', desc: 'Crédito presencial via maquininha Point.', label: 'Crédito Maquininha 💳' },
                     { id: 'dinheiro', name: 'Dinheiro', desc: 'Pagamento em dinheiro vivo.', label: 'Dinheiro 💵' },
-                    { id: 'cartao', name: 'Cartão', desc: 'Pagamento presencial via cartão (débito/crédito) com baixa manual pelo operador.', label: 'Cartão 💳' },
+                    { id: 'cartao', name: 'Cartões ou Pix', desc: 'Pagamento presencial via cartão ou Pix com baixa manual pelo operador.', label: 'Cartões ou Pix 💳' },
                     { id: 'pagar_final', name: 'Pagar no Final', desc: 'Permitir que o cliente pague ao final do atendimento na mesa.', label: 'Pagar no Final 🍽️' }
                   ].map((method) => {
                     const map = storeConfig?.disabledPaymentMethodsByOrderType || {};

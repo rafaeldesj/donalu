@@ -1608,7 +1608,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                                         R$ {order.total.toFixed(2).replace('.', ',')}
                                       </strong>
                                       <span style={{ fontSize: '0.7rem', color: 'var(--primary-gold)' }}>
-                                        {order.paymentMethod === 'dinheiro' ? '💵 Dinheiro' : order.paymentMethod === 'debito' ? '💳 Débito' : order.paymentMethod === 'pagar_final' ? '🍽️ Pagar no Final' : order.paymentMethod === 'cartao' ? '💳 Cartão (Manual)' : '💴 Outro'}
+                                        {order.paymentMethod === 'dinheiro' ? '💵 Dinheiro' : order.paymentMethod === 'debito' ? '💳 Débito' : order.paymentMethod === 'pagar_final' ? '🍽️ Pagar no Final' : order.paymentMethod === 'cartao' ? '💳 Cartões ou Pix' : '💴 Outro'}
                                       </span>
                                     </div>
                                   </div>
@@ -1667,7 +1667,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                               <div>Nome: <strong style={{ color: '#fff' }}>{order.clientName}</strong></div>
                               {order.clientPhone && <div>Celular: <strong style={{ color: '#fff' }}>{order.clientPhone}</strong></div>}
                               <div>Tipo: <strong style={{ color: '#fff' }}>{getOrderTypeLabel(order)}</strong></div>
-                              <div>Método: <strong style={{ color: 'var(--primary-gold)' }}>{order.paymentMethod === 'dinheiro' ? '💵 Dinheiro' : order.paymentMethod === 'pagar_final' ? '🍽️ Pagar no Final' : order.paymentMethod === 'debito' ? '💳 Débito' : order.paymentMethod === 'debito_point' ? '💴 Débito Maquininha' : order.paymentMethod === 'credito_point' ? '💳 Crédito Maquininha' : order.paymentMethod === 'pix' ? '🟢 Pix (aguardando confirmação)' : order.paymentMethod === 'cartao' ? '💳 Cartão (Baixa Manual)' : '💴 Cartão (maquininha)'}</strong></div>
+                              <div>Método: <strong style={{ color: 'var(--primary-gold)' }}>{order.paymentMethod === 'dinheiro' ? '💵 Dinheiro' : order.paymentMethod === 'pagar_final' ? '🍽️ Pagar no Final' : order.paymentMethod === 'debito' ? '💳 Débito' : order.paymentMethod === 'debito_point' ? '💴 Débito Maquininha' : order.paymentMethod === 'credito_point' ? '💳 Crédito Maquininha' : order.paymentMethod === 'pix' ? '🟢 Pix (aguardando confirmação)' : order.paymentMethod === 'cartao' ? '💳 Cartões ou Pix (Baixa Manual)' : '💴 Cartão (maquininha)'}</strong></div>
                               {order.paymentMethod === 'dinheiro' && order.changeFor && (
                                 <div style={{ color: '#ef4444' }}>Troco para: <strong>R$ {order.changeFor.toFixed(2).replace('.', ',')}</strong> (Troco: R$ {(order.changeFor - order.total).toFixed(2).replace('.', ',')})</div>
                               )}
@@ -2940,7 +2940,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                           <span>•</span>
                           <span>Tipo: <strong style={{ color: '#fff' }}>{getOrderTypeLabel(order)}</strong></span>
                           <span>•</span>
-                          <span>Pagamento: <strong style={{ color: '#fff' }}>{order.paymentMethod === 'dinheiro' ? '💵 Dinheiro' : order.paymentMethod === 'debito' ? '💳 Débito' : order.paymentMethod === 'credito' ? '💳 Crédito' : order.paymentMethod === 'pagar_final' ? '🍽️ Pagar no Final' : order.paymentMethod === 'cartao' ? '💳 Cartão' : order.paymentMethod || 'Não definido'}</strong></span>
+                          <span>Pagamento: <strong style={{ color: '#fff' }}>{order.paymentMethod === 'dinheiro' ? '💵 Dinheiro' : order.paymentMethod === 'debito' ? '💳 Débito' : order.paymentMethod === 'credito' ? '💳 Crédito' : order.paymentMethod === 'pagar_final' ? '🍽️ Pagar no Final' : order.paymentMethod === 'cartao' ? '💳 Cartões ou Pix' : order.paymentMethod || 'Não definido'}</strong></span>
                         </div>
 
                         {/* Itens */}

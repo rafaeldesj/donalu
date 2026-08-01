@@ -845,7 +845,7 @@ export const ClientDashboard = ({
 
       let methodLabel = 'Dinheiro';
       if (billPaymentMethod === 'debito') methodLabel = 'Débito';
-      if (billPaymentMethod === 'cartao') methodLabel = 'Cartão';
+      if (billPaymentMethod === 'cartao') methodLabel = 'Cartões ou Pix';
       alert(`Solicitação de fechamento enviada ao Caixa! Por favor, dirija-se ao balcão para pagar em ${methodLabel}.`);
       setShowCloseBillModal(false);
     } catch (err: any) {
@@ -3468,7 +3468,7 @@ export const ClientDashboard = ({
                       ['credito_point', 'Crédito Maquininha 💳'],
                       ['pagar_final', 'Pagar no Final 🍽️'],
                       ['dinheiro', 'Dinheiro 💵'],
-                      ['cartao', 'Cartão 💳']
+                      ['cartao', 'Cartões ou Pix 💳']
                     ];
                   } else {
                     methods = [
@@ -3478,7 +3478,7 @@ export const ClientDashboard = ({
                       ['debito_point', 'Débito Maquininha 💴'],
                       ['credito_point', 'Crédito Maquininha 💳'],
                       ['dinheiro', 'Dinheiro 💵'],
-                      ['cartao', 'Cartão 💳']
+                      ['cartao', 'Cartões ou Pix 💳']
                     ];
                   }
                   return methods.filter(([val]) => isMethodAllowed(val)) as any;
@@ -4831,7 +4831,7 @@ export const ClientDashboard = ({
                       let methodText = 'Pagar no Final';
                       if (order.paymentMethod === 'dinheiro') methodText = 'Dinheiro';
                       if (order.paymentMethod === 'debito') methodText = 'Débito';
-                      if (order.paymentMethod === 'cartao') methodText = 'Cartão';
+                      if (order.paymentMethod === 'cartao') methodText = 'Cartões ou Pix';
                       return (
                         <div key={order.id} style={{ padding: '0.6rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '10px', fontSize: '0.82rem' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
@@ -4925,7 +4925,7 @@ export const ClientDashboard = ({
                               ['debito_point', 'Débito Maquininha 💴'],
                               ['credito_point', 'Crédito Maquininha 💳'],
                               ['dinheiro', 'Dinheiro 💵'],
-                              ['cartao', 'Cartão 💳']
+                              ['cartao', 'Cartões ou Pix 💳']
                             ];
                             return methods.filter(([val]) => isMethodAllowed(val)) as any;
                           })().map(([val, label]: [string, string]) => {
