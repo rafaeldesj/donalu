@@ -483,14 +483,13 @@ export function printOrderBrowser(order: OrderDocument, settings: PrinterSetting
         <!-- Cupons Individuais de Cozinha -->
         ${individualSlipsHtml}
 
-        <!-- Espaço no final para evitar que o corte do papel corte o texto -->
-        <div style="display: block; clear: both; line-height: 1.5; font-size: 14px;">
-          &nbsp;<br/>
-          &nbsp;<br/>
-          &nbsp;<br/>
-          &nbsp;<br/>
-          &nbsp;<br/>
-          &nbsp;
+        <!-- Texto final repetido 5 vezes para evitar que o corte corte o texto do pedido -->
+        <div style="display: block; clear: both; text-align: center; font-size: 11px; font-weight: bold; margin-top: 15px; line-height: 1.4;">
+          <div>Dona Lu - Feito com Amor</div>
+          <div>Dona Lu - Feito com Amor</div>
+          <div>Dona Lu - Feito com Amor</div>
+          <div>Dona Lu - Feito com Amor</div>
+          <div>Dona Lu - Feito com Amor</div>
         </div>
       </body>
     </html>
@@ -947,14 +946,13 @@ export async function printTableBill(tableNum: string, ordersList: OrderDocument
             <div>Conferir consumo antes de efetuar o pagamento.</div>
             <div class="bold">Obrigado pela visita!</div>
           </div>
-          <!-- Espaço no final para evitar que o corte do papel corte o texto -->
-          <div style="display: block; clear: both; line-height: 1.5; font-size: 14px;">
-            &nbsp;<br/>
-            &nbsp;<br/>
-            &nbsp;<br/>
-            &nbsp;<br/>
-            &nbsp;<br/>
-            &nbsp;
+          <!-- Texto final repetido 5 vezes para evitar que o corte corte o texto do pedido -->
+          <div style="display: block; clear: both; text-align: center; font-size: 11px; font-weight: bold; margin-top: 15px; line-height: 1.4;">
+            <div>Obrigado pela visita!</div>
+            <div>Obrigado pela visita!</div>
+            <div>Obrigado pela visita!</div>
+            <div>Obrigado pela visita!</div>
+            <div>Obrigado pela visita!</div>
           </div>
         </body>
       </html>
