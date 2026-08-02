@@ -113,7 +113,7 @@ export const SettingsPage = () => {
     setPrintError(null);
     setPrintSuccess(false);
     try {
-      await connectSerial();
+      await connectSerial(printerSettings.baudRate);
       setPrintSuccess(true);
       setTimeout(() => setPrintSuccess(false), 3000);
     } catch (err: any) {
@@ -2974,6 +2974,23 @@ export const SettingsPage = () => {
                     </p>
                   </div>
 
+                  {printerSettings.method === 'serial' && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', fontWeight: 600 }}>TAXA DE TRANSMISSÃO (BAUD RATE)</label>
+                      <select
+                        value={printerSettings.baudRate || 9600}
+                        onChange={(e) => handleSavePrinterSettings({ ...printerSettings, baudRate: parseInt(e.target.value) })}
+                        style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '10px', background: '#0b0f19', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}
+                      >
+                        <option value={9600}>9600 bps (Padrão)</option>
+                        <option value={19200}>19200 bps</option>
+                        <option value={38400}>38400 bps</option>
+                        <option value={57600}>57600 bps</option>
+                        <option value={115200}>115200 bps</option>
+                      </select>
+                    </div>
+                  )}
+
                   <div className="responsive-grid-2">
                     <div>
                       <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', fontWeight: 600 }}>TAMANHO DA BOBINA</label>
@@ -3070,9 +3087,35 @@ export const SettingsPage = () => {
                   )}
 
                   {printerSettings.method === 'browser' && (
-                    <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                      Como você está usando o método **Navegador (Padrão do Sistema)**, a conexão direta não é necessária. O sistema utilizará o driver e as impressoras instaladas no seu sistema operacional (perfeito para cabos USB comuns).
-                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                        Como você está usando o método **Navegador (Padrão do Sistema)**, a conexão direta não é necessária. O sistema utilizará o driver e as impressoras instaladas no seu sistema operacional (perfeito para cabos USB comuns).
+                      </p>
+                      
+                      <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px dashed rgba(245, 158, 11, 0.25)', borderRadius: '10px', padding: '1rem', marginTop: '0.5rem' }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-gold)', display: 'block', marginBottom: '0.3rem' }}>
+                          ⚡ DICA: IMPRESSÃO DIRETA/SILENCIOSA
+                        </span>
+                        <span style={{ fontSize: '0.78rem', color: '#cbd5e1', display: 'block', lineHeight: '1.3', marginBottom: '0.6rem' }}>
+                          Para imprimir direto sem abrir a janela de confirmação de impressão do navegador, adicione o parâmetro abaixo no final do campo <strong>Destino</strong> nas propriedades do atalho do Chrome:
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#0b0f19', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '0.5rem 0.75rem', justifyContent: 'space-between' }}>
+                          <code style={{ fontSize: '0.85rem', color: '#10b981', fontFamily: 'monospace', fontWeight: 600 }}>--kiosk-printing</code>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText('--kiosk-printing');
+                              alert('Parâmetro copiado para a área de transferência!');
+                            }}
+                            style={{ padding: '0.3rem 0.6rem', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', transition: 'background 0.2s' }}
+                            onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
+                            onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+                          >
+                            Copiar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   )}
 
                   <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>

@@ -7,6 +7,7 @@ export interface PrinterSettings {
   autoPrintOnAccept: boolean;
   autoPrintOnReady: boolean;
   copies: number;
+  baudRate?: number;
 }
 
 const STORAGE_KEY = 'donalu_printer_settings';
@@ -18,6 +19,7 @@ export const DEFAULT_PRINTER_SETTINGS: PrinterSettings = {
   autoPrintOnAccept: true,
   autoPrintOnReady: false,
   copies: 1,
+  baudRate: 9600,
 };
 
 // Global variables for active Web Bluetooth connection
@@ -34,6 +36,15 @@ let activeSerialPort: any = null;
 // Listeners for Serial connection changes
 type SerialConnectionCallback = (connected: boolean, name?: string) => void;
 const serialConnectionListeners: Set<SerialConnectionCallback> = new Set();
+
+if (typeof navigator !== 'undefined' && (navigator as any).serial) {
+  (navigator as any).serial.addEventListener('disconnect', (event: any) => {
+    if (activeSerialPort && event.port === activeSerialPort) {
+      activeSerialPort = null;
+      notifySerialConnectionListeners();
+    }
+  });
+}
 
 export function subscribeToSerialState(callback: SerialConnectionCallback) {
   serialConnectionListeners.add(callback);
@@ -171,7 +182,7 @@ export function getConnectedDeviceName(): string {
 // -------------------------------------------------------------
 // Web Serial Connection Manager (USB / Serial Cable)
 // -------------------------------------------------------------
-export async function connectSerial(): Promise<string> {
+export async function connectSerial(baudRate?: number): Promise<string> {
   const serialAPI = (navigator as any).serial;
   if (!serialAPI) {
     throw new Error('Web Serial não é suportado neste navegador. Use Google Chrome, Edge ou Opera no computador.');
@@ -179,7 +190,17 @@ export async function connectSerial(): Promise<string> {
 
   try {
     const port = await serialAPI.requestPort();
-    await port.open({ baudRate: 9600 });
+    const settings = getPrinterSettings();
+    const selectedBaudRate = baudRate || settings.baudRate || 9600;
+    await port.open({ baudRate: selectedBaudRate });
+    
+    // Configurar DTR e RTS para true. Muitas impressoras térmicas USB/Serial requerem esses sinais.
+    try {
+      await port.setSignals({ dataTerminalReady: true, requestToSend: true });
+    } catch (sigErr) {
+      console.warn('Não foi possível definir sinais DTR/RTS na porta serial:', sigErr);
+    }
+    
     activeSerialPort = port;
     notifySerialConnectionListeners();
     return 'Impressora USB (Serial)';
@@ -326,7 +347,7 @@ export function printOrderBrowser(order: OrderDocument, settings: PrinterSetting
 
       individualSlipsHtml += `
         ${spacerHtml}
-        <div style="font-family: 'Courier New', Courier, monospace; font-size: 11px;">
+        <div style="font-family: Arial, Helvetica, sans-serif; font-size: 12px; font-weight: 600;">
           <div class="bold">================================</div>
           <div><strong>PEDIDO:</strong> ${seq}</div>
           <div><strong>CLIENTE:</strong> ${order.clientName}</div>
@@ -351,8 +372,9 @@ export function printOrderBrowser(order: OrderDocument, settings: PrinterSetting
           body {
             margin: 0;
             padding: 4mm 2mm 8mm 2mm;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 11px;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            font-weight: 600;
             width: ${paperWidth};
             color: #000;
             background: #fff;
@@ -387,11 +409,11 @@ export function printOrderBrowser(order: OrderDocument, settings: PrinterSetting
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 4px;
-            font-size: 11px;
+            font-size: 12px;
           }
           .item-details {
             margin-left: 10px;
-            font-size: 9px;
+            font-size: 10px;
             font-weight: bold;
             margin-bottom: 6px;
           }
@@ -755,14 +777,15 @@ export async function printOrderSerial(order: OrderDocument, settings: PrinterSe
     throw new Error('A impressora USB está desconectada. Conecte-a nas Configurações.');
   }
 
+  const data = encodeEscPos(order, settings, summaryOnly);
+  const writer = activeSerialPort.writable.getWriter();
   try {
-    const data = encodeEscPos(order, settings, summaryOnly);
-    const writer = activeSerialPort.writable.getWriter();
     await writer.write(data);
-    writer.releaseLock();
   } catch (err: any) {
     console.error('Erro ao enviar dados para a impressora Serial:', err);
     throw new Error('Falha ao enviar dados de impressão via cabo. Reconecte a impressora.');
+  } finally {
+    writer.releaseLock();
   }
 }
 
@@ -847,7 +870,7 @@ export async function printTableBill(tableNum: string, ordersList: OrderDocument
     ordersList.forEach(order => {
       order.items.forEach(item => {
         itemsHtml += `
-          <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 3px;">
+          <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px;">
             <span>${item.quantity}x <strong>${item.name}</strong></span>
             <span>R$ ${((item.price ?? 0) * item.quantity).toFixed(2).replace('.', ',')}</span>
           </div>
@@ -859,7 +882,7 @@ export async function printTableBill(tableNum: string, ordersList: OrderDocument
           else if (item.cheeseOption === 'cream_cheese') details.push('+ Cream Cheese');
           if (item.withBorda) details.push('+ Borda Recheada');
           if (item.ingredients && item.ingredients.length > 0) details.push(`Ingr: ${item.ingredients.join(', ')}`);
-          itemsHtml += `<div style="font-size: 9px; font-weight: bold; margin-left: 10px; margin-bottom: 4px;">${details.join(' | ')}</div>`;
+          itemsHtml += `<div style="font-size: 10px; font-weight: bold; margin-left: 10px; margin-bottom: 4px;">${details.join(' | ')}</div>`;
         }
       });
     });
@@ -872,14 +895,14 @@ export async function printTableBill(tableNum: string, ordersList: OrderDocument
         <head>
           <style>
             @page { margin: 0; size: auto; }
-            body { margin: 0; padding: 4mm 2mm 8mm 2mm; font-family: 'Courier New', Courier, monospace; font-size: 11px; width: ${paperWidth}; color: #000; background: #fff; }
+            body { margin: 0; padding: 4mm 2mm 8mm 2mm; font-family: Arial, Helvetica, sans-serif; font-size: 12px; font-weight: 600; width: ${paperWidth}; color: #000; background: #fff; }
             .center { text-align: center; }
             .bold { font-weight: bold; }
             .header-title { font-size: 16px; margin-bottom: 2px; }
             .divider { border-top: 1px dashed #000; margin: 6px 0; font-size: 8px; }
             .seq-box { font-size: 18px; font-weight: bold; border: 2px solid #000; padding: 4px; margin: 6px auto; width: fit-content; text-align: center; }
             .right { text-align: right; }
-            .total-row { font-size: 14px; font-weight: bold; display: flex; justify-content: space-between; margin-top: 6px; }
+            .total-row { font-size: 15px; font-weight: bold; display: flex; justify-content: space-between; margin-top: 6px; }
           </style>
         </head>
         <body>
@@ -1017,8 +1040,11 @@ export async function printTableBill(tableNum: string, ordersList: OrderDocument
       }
     } else if (settings.method === 'serial' && isSerialConnected() && activeSerialPort) {
       const writer = activeSerialPort.writable.getWriter();
-      await writer.write(binaryData);
-      writer.releaseLock();
+      try {
+        await writer.write(binaryData);
+      } finally {
+        writer.releaseLock();
+      }
     }
   }
 }
