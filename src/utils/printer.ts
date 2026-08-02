@@ -740,11 +740,13 @@ function encodeEscPos(order: OrderDocument, settings: PrinterSettings, summaryOn
     });
   }
 
-  // Adiciona 6 linhas vazias para evitar que o corte da impressora corte o texto final
-  buffer.push(...LINE_FEED, ...LINE_FEED, ...LINE_FEED, ...LINE_FEED, ...LINE_FEED, ...LINE_FEED);
+  // Print and feed 8 lines (ESC d 8) to push the text past the tear bar / cutter
+  buffer.push(0x1B, 0x64, 0x08);
 
-  // Paper Cut Command
-  buffer.push(0x1D, 0x56, 0x42, 0x00);
+  // Paper Cut Command (only for 80mm printers which usually have auto-cutters)
+  if (settings.paperSize === '80mm') {
+    buffer.push(0x1D, 0x56, 0x42, 0x00);
+  }
 
   return new Uint8Array(buffer);
 }
@@ -1028,19 +1030,13 @@ export async function printTableBill(tableNum: string, ordersList: OrderDocument
     divider();
     writeLine('Conferir consumo antes de pagar.');
     writeLine('Obrigado pela visita!');
-    // Adiciona 6 linhas vazias para evitar que o corte da impressora corte o texto final
-    buffer.push(
-      ...LINE_FEED,
-      ...LINE_FEED,
-      ...LINE_FEED,
-      ...LINE_FEED,
-      ...LINE_FEED,
-      ...LINE_FEED,
-      0x1D,
-      0x56,
-      0x42,
-      0x00
-    );
+    // Print and feed 8 lines (ESC d 8) to push the text past the tear bar / cutter
+    buffer.push(0x1B, 0x64, 0x08);
+
+    // Paper Cut Command (only for 80mm printers which usually have auto-cutters)
+    if (settings.paperSize === '80mm') {
+      buffer.push(0x1D, 0x56, 0x42, 0x00);
+    }
 
     const binaryData = new Uint8Array(buffer);
 
