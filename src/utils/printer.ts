@@ -740,7 +740,8 @@ function encodeEscPos(order: OrderDocument, settings: PrinterSettings, summaryOn
     });
   }
 
-  buffer.push(...LINE_FEED, ...LINE_FEED, ...LINE_FEED, ...LINE_FEED);
+  // Adiciona 6 linhas vazias para evitar que o corte da impressora corte o texto final
+  buffer.push(...LINE_FEED, ...LINE_FEED, ...LINE_FEED, ...LINE_FEED, ...LINE_FEED, ...LINE_FEED);
 
   // Paper Cut Command
   buffer.push(0x1D, 0x56, 0x42, 0x00);
@@ -1027,7 +1028,19 @@ export async function printTableBill(tableNum: string, ordersList: OrderDocument
     divider();
     writeLine('Conferir consumo antes de pagar.');
     writeLine('Obrigado pela visita!');
-    buffer.push(...LINE_FEED, ...LINE_FEED, ...LINE_FEED, ...LINE_FEED, 0x1D, 0x56, 0x42, 0x00);
+    // Adiciona 6 linhas vazias para evitar que o corte da impressora corte o texto final
+    buffer.push(
+      ...LINE_FEED,
+      ...LINE_FEED,
+      ...LINE_FEED,
+      ...LINE_FEED,
+      ...LINE_FEED,
+      ...LINE_FEED,
+      0x1D,
+      0x56,
+      0x42,
+      0x00
+    );
 
     const binaryData = new Uint8Array(buffer);
 
