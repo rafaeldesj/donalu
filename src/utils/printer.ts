@@ -482,6 +482,9 @@ export function printOrderBrowser(order: OrderDocument, settings: PrinterSetting
 
         <!-- Cupons Individuais de Cozinha -->
         ${individualSlipsHtml}
+
+        <!-- Espaço no final para evitar que o corte do papel corte o texto -->
+        <div style="height: 6em;"></div>
       </body>
     </html>
   `;
@@ -937,6 +940,8 @@ export async function printTableBill(tableNum: string, ordersList: OrderDocument
             <div>Conferir consumo antes de efetuar o pagamento.</div>
             <div class="bold">Obrigado pela visita!</div>
           </div>
+          <!-- Espaço no final para evitar que o corte do papel corte o texto -->
+          <div style="height: 6em;"></div>
         </body>
       </html>
     `;
