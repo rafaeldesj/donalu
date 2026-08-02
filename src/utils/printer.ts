@@ -484,7 +484,14 @@ export function printOrderBrowser(order: OrderDocument, settings: PrinterSetting
         ${individualSlipsHtml}
 
         <!-- Espaço no final para evitar que o corte do papel corte o texto -->
-        <div style="height: 6em;"></div>
+        <div style="display: block; clear: both; line-height: 1.5; font-size: 14px;">
+          &nbsp;<br/>
+          &nbsp;<br/>
+          &nbsp;<br/>
+          &nbsp;<br/>
+          &nbsp;<br/>
+          &nbsp;
+        </div>
       </body>
     </html>
   `;
@@ -941,7 +948,14 @@ export async function printTableBill(tableNum: string, ordersList: OrderDocument
             <div class="bold">Obrigado pela visita!</div>
           </div>
           <!-- Espaço no final para evitar que o corte do papel corte o texto -->
-          <div style="height: 6em;"></div>
+          <div style="display: block; clear: both; line-height: 1.5; font-size: 14px;">
+            &nbsp;<br/>
+            &nbsp;<br/>
+            &nbsp;<br/>
+            &nbsp;<br/>
+            &nbsp;<br/>
+            &nbsp;
+          </div>
         </body>
       </html>
     `;
