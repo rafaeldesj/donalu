@@ -3,6 +3,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { ChefHat, CreditCard, Bell, Play, Check, Navigation, TrendingUp, DollarSign, Clock, Printer } from 'lucide-react';
 import { collection, query, onSnapshot, doc, updateDoc, orderBy, addDoc, getDocs, where, deleteDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { logAuditAction } from '../../utils/audit';
 import { processOrderLoyaltyStamps } from '../../utils/loyalty';
 import type { OrderDocument } from '../../types/order';
 import { printOrder, getPrinterSettings, printTableBill } from '../../utils/printer';
@@ -122,6 +123,19 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
         deliveryName: deliverer.name || deliverer.displayName || deliverer.email || 'Entregador',
         dispatchedAt: new Date().toISOString()
       });
+
+      if (userData) {
+        await logAuditAction({
+          userId: userData.uid || '',
+          userEmail: userData.email || '',
+          userName: userData.name || 'Funcionário',
+          actionType: 'ORDER_DISPATCH',
+          title: 'Pedido Despachado',
+          description: `Despachou o pedido para o entregador "${deliverer.name || 'Entregador'}" (Pedido ID: "${orderId}").`,
+          userRole: userData.role || 'staff',
+          metadata: { orderId, delivererId, delivererName: deliverer.name }
+        });
+      }
     } catch (err) {
       console.error('Erro ao atribuir entregador:', err);
       alert('Erro ao atribuir entregador.');
@@ -612,6 +626,34 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
       }
       await updateDoc(orderDocRef, updates);
 
+      // Log status update audit trail
+      if (userData) {
+        const order = orders.find(o => o.id === orderId);
+        let statusLabel = newStatus.toUpperCase();
+        switch (newStatus) {
+          case 'pending': statusLabel = 'PENDENTE'; break;
+          case 'preparing': statusLabel = 'EM PREPARO'; break;
+          case 'prepared': statusLabel = 'PREPARADO'; break;
+          case 'ready': statusLabel = 'PRONTO'; break;
+          case 'completed': statusLabel = 'FINALIZADO'; break;
+          case 'cancelled': statusLabel = 'CANCELADO'; break;
+          case 'aguardando_caixa': statusLabel = 'FECHANDO CONTA'; break;
+          case 'pendente_pagamento': statusLabel = 'PGTO PENDENTE'; break;
+          default: statusLabel = newStatus.toUpperCase();
+        }
+
+        await logAuditAction({
+          userId: userData.uid || '',
+          userEmail: userData.email || '',
+          userName: userData.name || 'Funcionário',
+          actionType: 'ORDER_STATUS_UPDATE',
+          title: 'Status do Pedido Atualizado',
+          description: `Alterou o status do Pedido ${order?.dailySeq || ''} (ID: "${orderId}") para "${statusLabel}".`,
+          userRole: userData.role || 'staff',
+          metadata: { orderId, dailySeq: order?.dailySeq, previousStatus: order?.status, newStatus }
+        });
+      }
+
       // Auto-printing trigger on status transition
       try {
         const order = orders.find(o => o.id === orderId);
@@ -660,6 +702,19 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
         deliveredAt: new Date().toISOString()
       });
 
+      if (userData) {
+        await logAuditAction({
+          userId: userData.uid || '',
+          userEmail: userData.email || '',
+          userName: userData.name || 'Funcionário',
+          actionType: 'ORDER_DELIVERY',
+          title: 'Pedido Confirmado como Entregue',
+          description: `Confirmou a entrega do Pedido ${order.dailySeq || ''} (ID: "${order.id}") (Novo status: "${nextStatus.toUpperCase()}").`,
+          userRole: userData.role || 'staff',
+          metadata: { orderId: order.id, dailySeq: order.dailySeq, clientName: order.clientName, nextStatus }
+        });
+      }
+
       if (nextStatus === 'completed') {
         await processOrderLoyaltyStamps(order.id, { ...order, status: 'completed' });
       }
@@ -689,6 +744,19 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
         cancelledAt: new Date().toISOString(),
         cancelledBy: userData?.name || userData?.email || 'Admin',
       });
+
+      if (userData) {
+        await logAuditAction({
+          userId: userData.uid || '',
+          userEmail: userData.email || '',
+          userName: userData.name || 'Funcionário',
+          actionType: 'ORDER_CANCEL',
+          title: 'Pedido Cancelado',
+          description: `Cancelou o Pedido ${order?.dailySeq || ''} (ID: "${cancelOrderId}") com o motivo: "${reason}".`,
+          userRole: userData.role || 'staff',
+          metadata: { orderId: cancelOrderId, dailySeq: order?.dailySeq, clientName: order?.clientName, reason }
+        });
+      }
 
       if (order) {
         await checkAndFreeTable(order.tableNumber, cancelOrderId);

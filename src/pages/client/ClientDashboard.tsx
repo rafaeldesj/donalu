@@ -8,6 +8,7 @@ import type { MapAddress } from '../../components/DeliveryMap';
 import { collection, addDoc, query, where, getDocs, doc, updateDoc, getDoc, onSnapshot, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { processOrderLoyaltyStamps } from '../../utils/loyalty';
+import { logAuditAction } from '../../utils/audit';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { geocodeAddress } from '../../utils/geocoding';
@@ -192,6 +193,25 @@ export const ClientDashboard = ({
   storeStatus
 }: ClientDashboardProps) => {
   const { user, userData, updatePhoneNumber } = useAuth();
+
+  const createOrderAndLog = async (orderData: any) => {
+    const docRef = await addDoc(collection(db, 'orders'), orderData);
+    try {
+      await logAuditAction({
+        userId: user?.uid || 'guest',
+        userEmail: user?.email || 'anonimo@donalu.web.app',
+        userName: userData?.name || user?.displayName || 'Cliente',
+        actionType: 'ORDER_CREATION',
+        title: 'Pedido Realizado',
+        description: `Realizou o Pedido ${orderData.dailySeq || ''} (ID: "${docRef.id}") no valor de R$ ${orderData.total.toFixed(2).replace('.', ',')}.`,
+        userRole: userData?.role || 'client',
+        metadata: { orderId: docRef.id, dailySeq: orderData.dailySeq, total: orderData.total, itemsCount: orderData.items?.length }
+      });
+    } catch (err) {
+      console.error("Erro ao registrar log de criação de pedido:", err);
+    }
+    return docRef;
+  };
 
   const defaultPastels = [
     { id: 1, name: 'Pastel de Carne com Queijo', price: 12.00, description: 'Carne moída temperada com queijo mussarela derretido.', image: pastelCrocante, category: 'Pastéis Salgados' },
@@ -1564,7 +1584,7 @@ export const ClientDashboard = ({
     };
 
     await decrementStock(cart);
-    await addDoc(collection(db, 'orders'), orderData);
+    await createOrderAndLog(orderData);
     setCart([]);
     setUseFidelityRescue(false);
     setDeliveryAddress(null);
@@ -1756,7 +1776,7 @@ export const ClientDashboard = ({
           };
 
           await decrementStock(cart);
-          await addDoc(collection(db, 'orders'), orderData);
+          await createOrderAndLog(orderData);
           setCart([]);
           setUseFidelityRescue(false);
           setDeliveryAddress(null);
@@ -1888,7 +1908,7 @@ export const ClientDashboard = ({
         } : null,
       };
 
-      await addDoc(collection(db, 'orders'), orderData);
+      await createOrderAndLog(orderData);
     }
 
     await decrementStock(cart);
@@ -2221,7 +2241,7 @@ export const ClientDashboard = ({
             } : null,
           };
 
-          const pixOrderRef = await addDoc(collection(db, 'orders'), pixOrderData);
+          const pixOrderRef = await createOrderAndLog(pixOrderData);
           setPendingPixOrderId(pixOrderRef.id);
           console.log('[PIX] Pedido registrado antecipadamente. ID:', pixOrderRef.id);
         } catch (saveErr) {
@@ -2381,7 +2401,7 @@ export const ClientDashboard = ({
       };
 
       await decrementStock(cart);
-      await addDoc(collection(db, 'orders'), orderData);
+      await createOrderAndLog(orderData);
       setCart([]);
       setUseFidelityRescue(false);
       setDeliveryAddress(null);

@@ -29,6 +29,7 @@ const TableMap = lazy(() => import('./pages/staff/TableMap'));
 const StockControl = lazy(() => import('./pages/staff/StockControl'));
 const SupportPanel = lazy(() => import('./pages/staff/SupportPanel'));
 const RiderLocationMonitor = lazy(() => import('./pages/manager/RiderLocationMonitor'));
+const SystemLogs = lazy(() => import('./pages/manager/SystemLogs'));
 
 // Premium feedback state for lazy loading
 const ViewLoader = () => (
@@ -689,6 +690,11 @@ const MainLayout = () => {
       menuItems.push({ id: 'users', label: 'Usuários', icon: Users });
     }
 
+    // Registros / Auditoria (admin, owner, dev)
+    if (['developer', 'owner', 'manager'].includes(role)) {
+      menuItems.push({ id: 'registros', label: 'Registros', icon: FileText });
+    }
+
     // Controle de Estoque — visível a todos, menos clientes e entregadores
     if (role !== 'client' && !(role === 'staff' && staff?.delivery)) {
       menuItems.push({ id: 'estoque', label: 'Controle de Estoque', icon: Boxes });
@@ -709,7 +715,7 @@ const MainLayout = () => {
     { label: 'Cardápio / Cliente', ids: ['menu', 'tracking', 'fidelidade', 'suporte_virtual'] },
     { label: 'Operações de Entrega', ids: ['entrega_andamento', 'entrega_finalizada', 'teste_mapa'] },
     { label: 'Painéis de Trabalho', ids: ['cozinha', 'atendimento', 'caixa', 'mapa_mesas', 'estoque', 'painel_atendimento', 'admin'] },
-    { label: 'Configurações', ids: ['users', 'configuracoes'] },
+    { label: 'Configurações', ids: ['users', 'registros', 'configuracoes'] },
   ];
 const getRoleLabel = (r: string): React.ReactNode => {
     switch (r) {
@@ -857,6 +863,7 @@ const getRoleLabel = (r: string): React.ReactNode => {
             {activeView === 'painel_atendimento' && <SupportPanel />}
             {activeView === 'suporte_virtual' && (isStaff ? <SupportPanel /> : <ClientSupportChat />)}
             {activeView === 'users' && <UserManagement />}
+            {activeView === 'registros' && <SystemLogs />}
             {activeView === 'configuracoes' && <SettingsPage />}
             {activeView === 'mapa_mesas' && <TableMap />}
             {activeView === 'teste_mapa' && <RiderLocationMonitor />}

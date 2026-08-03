@@ -3179,3 +3179,30 @@ select:focus {
   color: var(--text-secondary);
   font-size: 0.75rem;
 }
+
+/* Responsive grid for audit logs filters page */
+.audit-filters-grid {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 1.5fr 1.2fr 1.2fr;
+  gap: 1rem;
+  align-items: end;
+}
+
+@media (max-width: 1024px) {
+  .audit-filters-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .audit-filters-grid .search-field {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .audit-filters-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  .audit-filters-grid .search-field {
+    grid-column: span 1;
+  }
+}

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { collection, query, onSnapshot, doc, setDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { Boxes, Search, Plus, Minus, EyeOff, Eye, AlertTriangle } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import { logAuditAction } from '../../utils/audit';
 
 interface Product {
   id: number;
@@ -15,6 +17,7 @@ interface Product {
 }
 
 export const StockControl = () => {
+  const { user, userData } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>('todos');
@@ -63,6 +66,35 @@ export const StockControl = () => {
       if (updatedProduct.hideWhenOutOfStock === undefined) updatedProduct.hideWhenOutOfStock = false;
       
       await setDoc(doc(db, 'products', docId), updatedProduct);
+
+      // Log stock update audit trail
+      if (user) {
+        let actionDesc = '';
+        if (updates.stock !== undefined) {
+          actionDesc = `Alterou o estoque do produto "${product.name}" de ${product.stock || 0} para ${updates.stock} unidades.`;
+        } else if (updates.hideWhenOutOfStock !== undefined) {
+          actionDesc = `Alterou visibilidade automática de "${product.name}" para ${updates.hideWhenOutOfStock ? 'ocultar' : 'exibir'} se esgotado.`;
+        } else {
+          actionDesc = `Editou configurações do produto "${product.name}".`;
+        }
+
+        await logAuditAction({
+          userId: user.uid,
+          userEmail: user.email || '',
+          userName: userData?.name || user.displayName || 'Funcionário',
+          actionType: 'STOCK_UPDATE',
+          title: 'Atualização de Estoque',
+          description: actionDesc,
+          userRole: userData?.role || 'staff',
+          metadata: {
+            productId: product.id,
+            productName: product.name,
+            previousStock: product.stock || 0,
+            newStock: updates.stock,
+            updates
+          }
+        });
+      }
     } catch (err) {
       console.error("Erro ao salvar estoque no Firestore:", err);
     } finally {

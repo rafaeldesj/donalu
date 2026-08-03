@@ -170,7 +170,9 @@ export const UserManagement = () => {
           userName: userData?.name || user.displayName || 'Administrador',
           actionType: 'DELETE_USER',
           title: 'Exclusão de Usuário',
-          description: `O administrador excluiu a conta do usuário "${targetUser?.name || 'Desconhecido'}" (E-mail: "${targetUser?.email || ''}", Papel: "${targetUser?.role || ''}").`
+          description: `O administrador excluiu a conta do usuário "${targetUser?.name || 'Desconhecido'}" (E-mail: "${targetUser?.email || ''}", Papel: "${targetUser?.role || ''}").`,
+          userRole: userData?.role || 'admin',
+          metadata: { targetUserId: userId, targetUserName: targetUser?.name, targetUserEmail: targetUser?.email, targetUserRole: targetUser?.role }
         });
       }
       
@@ -215,7 +217,9 @@ export const UserManagement = () => {
           userName: userData?.name || user.displayName || 'Administrador',
           actionType: 'RESET_PASSWORD',
           title: 'Redefinição de Senha',
-          description: `O administrador definiu uma nova senha provisória para o usuário "${resetUser.name}" (E-mail: "${resetUser.email}").`
+          description: `O administrador definiu uma nova senha provisória para o usuário "${resetUser.name}" (E-mail: "${resetUser.email}").`,
+          userRole: userData?.role || 'admin',
+          metadata: { targetUserId: resetUser.uid, targetUserName: resetUser.name, targetUserEmail: resetUser.email }
         });
       }
 
@@ -285,7 +289,9 @@ export const UserManagement = () => {
             title: 'Edição de Usuário',
             description: isEmailChanged 
               ? `O administrador alterou o e-mail do usuário "${editUser.name}" de "${editUser.email}" para "${email.trim().toLowerCase()}" (Nível: "${role}").`
-              : `O administrador atualizou os dados do usuário "${name}" (E-mail: "${email.trim().toLowerCase()}", Papel: "${role}").`
+              : `O administrador atualizou os dados do usuário "${name}" (E-mail: "${email.trim().toLowerCase()}", Papel: "${role}").`,
+            userRole: userData?.role || 'admin',
+            metadata: { targetUserId: editUser.uid, previousData: editUser, newData: payload, role }
           });
         }
       } else {
@@ -311,7 +317,9 @@ export const UserManagement = () => {
             userName: userData?.name || user.displayName || 'Administrador',
             actionType: 'CREATE_USER',
             title: 'Pré-cadastro de Usuário',
-            description: `O administrador pré-cadastrou o usuário "${name}" (E-mail: "${email.trim().toLowerCase()}", Papel: "${role}").`
+            description: `O administrador pré-cadastrou o usuário "${name}" (E-mail: "${email.trim().toLowerCase()}", Papel: "${role}").`,
+            userRole: userData?.role || 'admin',
+            metadata: { targetUserId: docRef.id, name, email: email.trim().toLowerCase(), role }
           });
         }
       }

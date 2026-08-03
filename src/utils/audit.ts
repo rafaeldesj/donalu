@@ -1,13 +1,15 @@
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
-interface LogAuditParams {
+export interface LogAuditParams {
   userId: string;
   userEmail: string;
   userName: string;
   actionType: string;
   title: string;
   description: string;
+  userRole?: string;
+  metadata?: any;
 }
 
 export const logAuditAction = async (params: LogAuditParams) => {
@@ -15,6 +17,8 @@ export const logAuditAction = async (params: LogAuditParams) => {
     const logsRef = collection(db, 'audit_logs');
     await addDoc(logsRef, {
       ...params,
+      userRole: params.userRole || 'guest',
+      metadata: params.metadata || null,
       timestamp: serverTimestamp ? serverTimestamp() : new Date().toISOString()
     });
   } catch (error) {
