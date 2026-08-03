@@ -10,6 +10,7 @@ export interface LogAuditParams {
   description: string;
   userRole?: string;
   metadata?: any;
+  timestamp?: any;
 }
 
 export const logAuditAction = async (params: LogAuditParams) => {

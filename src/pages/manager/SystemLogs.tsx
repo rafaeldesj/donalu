@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useAuth } from '../../hooks/useAuth';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import { Search, Calendar, ShieldAlert, Clock, User, ListFilter, X, FileText, RefreshCw, ChevronRight } from 'lucide-react';
+import { Search, Clock, ListFilter, X, RefreshCw } from 'lucide-react';
 import type { LogAuditParams } from '../../utils/audit';
 
 export const SystemLogs = () => {
-  const { userData } = useAuth();
   
   const [logs, setLogs] = useState<LogAuditParams[]>([]);
   const [loading, setLoading] = useState(true);
