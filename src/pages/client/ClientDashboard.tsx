@@ -3869,7 +3869,7 @@ export const ClientDashboard = ({
               {paymentMethod === 'credito_mp' && (
                 <MercadoPagoCardForm
                   amount={finalTotal}
-                  publicKey={storeConfig?.mpPublicKey || import.meta.env.VITE_MP_PUBLIC_KEY || ''}
+                  publicKey={storeConfig?.mpPublicKey || import.meta.env.VITE_MP_PUBLIC_KEY || 'APP_USR-da72e390-0c33-4e4d-98e0-4d0fbbe22147'}
                   accessToken={storeConfig?.storeOwnerAccessToken || storeConfig?.devAccessToken || 'mock'}
                   payer={{
                     email: user?.email || 'cliente@email.com',
