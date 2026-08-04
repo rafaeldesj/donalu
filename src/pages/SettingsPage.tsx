@@ -38,6 +38,8 @@ interface StoreConfig {
   devAccessToken?: string;
   storeOwnerAccessToken?: string;
   storeOwnerEmail?: string;
+  storeOwnerId?: string;
+  mpPublicKey?: string;
   pointSmart2Id?: string;
   pointPro3Id?: string;
   pointAir2Id?: string;
@@ -2567,6 +2569,18 @@ export const SettingsPage = () => {
                       placeholder="Ex: APP_USR-..."
                       value={storeConfig.devAccessToken || ''}
                       onChange={(e) => setStoreConfig(prev => ({ ...prev, devAccessToken: e.target.value }))}
+                      disabled={!isDev}
+                      style={!isDev ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
+                    />
+                  </div>
+                  <div className="input-group">
+                    <label>Public Key (Dev)</label>
+                    <input
+                      type="text"
+                      className="pastel-edit-input"
+                      placeholder="Ex: APP_USR-..."
+                      value={storeConfig.mpPublicKey || ''}
+                      onChange={(e) => setStoreConfig(prev => ({ ...prev, mpPublicKey: e.target.value }))}
                       disabled={!isDev}
                       style={!isDev ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
                     />
