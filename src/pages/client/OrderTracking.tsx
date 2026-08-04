@@ -562,6 +562,7 @@ export const OrderTracking = () => {
   const [orders, setOrders] = useState<OrderDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [simulatingOrderId, setSimulatingOrderId] = useState<string | null>(null);
+  const [selectedPastOrder, setSelectedPastOrder] = useState<OrderDocument | null>(null);
 
   const [showTableScannerModal, setShowTableScannerModal] = useState(false);
   const [scannerError, setScannerError] = useState<string | null>(null);
@@ -1178,8 +1179,9 @@ export const OrderTracking = () => {
                 border: order.status === 'cancelled' ? '1px solid rgba(239, 68, 68, 0.15)' : '1px solid rgba(255, 255, 255, 0.03)',
                 borderRadius: '12px',
                 padding: '0.85rem 1rem',
-                textAlign: 'left'
-              }}>
+                textAlign: 'left',
+                cursor: 'pointer'
+              }} onClick={() => setSelectedPastOrder(order)}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', alignItems: 'center' }}>
                   <strong style={{ color: '#fff' }}>
                     {order.dailySeq ? (
@@ -1197,10 +1199,10 @@ export const OrderTracking = () => {
                     fontWeight: 700,
                     padding: '0.1rem 0.4rem',
                     borderRadius: '4px',
-                    backgroundColor: order.status === 'cancelled' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                    color: order.status === 'cancelled' ? '#f87171' : '#34d399'
+                    backgroundColor: order.refunded ? 'rgba(239, 68, 68, 0.15)' : (order.status === 'cancelled' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)'),
+                    color: order.refunded ? '#f87171' : (order.status === 'cancelled' ? '#f87171' : '#34d399')
                   }}>
-                    {order.status === 'cancelled' ? 'Cancelado' : 'Concluído'}
+                    {order.refunded ? 'Cancelado e Estornado' : (order.status === 'cancelled' ? 'Cancelado' : 'Concluído')}
                   </span>
                 </div>
                 {order.status === 'cancelled' && order.cancelReason && (
@@ -1353,6 +1355,136 @@ export const OrderTracking = () => {
               }}
             >
               Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Detalhes do Pedido do Histórico */}
+      {selectedPastOrder && (
+        <div
+          className="lightbox-overlay animate-fade-in"
+          style={{
+            zIndex: 4000,
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.5rem',
+            background: 'rgba(0,0,0,0.85)',
+            backdropFilter: 'blur(5px)'
+          }}
+          onClick={() => setSelectedPastOrder(null)}
+        >
+          <div
+            className="lightbox-content animate-slide-up"
+            style={{
+              background: 'var(--bg-card)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '400px',
+              padding: '1.5rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+              maxHeight: '90vh',
+              overflowY: 'auto'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.75rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                Pedido {selectedPastOrder.dailySeq || ''} <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>(#{selectedPastOrder.id?.slice(-4).toUpperCase()})</span>
+              </h3>
+              <button onClick={() => setSelectedPastOrder(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', padding: '0.25rem' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            {selectedPastOrder.status === 'cancelled' && selectedPastOrder.cancelReason && (
+              <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '0.75rem', borderRadius: '8px', color: '#f87171', fontSize: '0.85rem' }}>
+                <strong style={{ display: 'block', marginBottom: '0.25rem' }}>Motivo do Cancelamento:</strong>
+                {selectedPastOrder.cancelReason}
+              </div>
+            )}
+
+            {/* Resumo Detalhado */}
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid rgba(255, 255, 255, 0.05)',
+              borderRadius: '12px',
+              padding: '0.85rem 1rem',
+              textAlign: 'left'
+            }}>
+              <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em', fontWeight: 600, display: 'block', marginBottom: '0.6rem' }}>
+                📋 Itens do Pedido
+              </span>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', borderBottom: '1px solid rgba(255, 255, 255, 0.04)', paddingBottom: '0.6rem' }}>
+                {selectedPastOrder.items.map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                    <span>
+                      <strong style={{ color: 'var(--primary-gold)', marginRight: '0.4rem' }}>{item.quantity}x</strong>
+                      <span style={{ color: '#e5e7eb' }}>{item.name}</span>
+                    </span>
+                    <span style={{ color: 'var(--text-secondary)' }}>
+                      R$ {((item.price ?? 0) * item.quantity).toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', borderBottom: '1px solid rgba(255, 255, 255, 0.04)', padding: '0.6rem 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                {(selectedPastOrder.deliveryFee ?? 0) > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Taxa de Entrega:</span>
+                    <span>R$ {selectedPastOrder.deliveryFee?.toFixed(2).replace('.', ',')}</span>
+                  </div>
+                )}
+                {(selectedPastOrder.serviceFee ?? 0) > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Taxa de Serviço (10%):</span>
+                    <span>R$ {selectedPastOrder.serviceFee?.toFixed(2).replace('.', ',')}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', color: '#fff', fontWeight: 700, marginTop: '0.2rem' }}>
+                  <span>Total Pago:</span>
+                  <span style={{ color: 'var(--primary-gold)' }}>R$ {selectedPastOrder.total.toFixed(2).replace('.', ',')}</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.6rem', fontSize: '0.82rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>
+                  Pagamento: <strong style={{ color: '#fff', marginLeft: '0.25rem' }}>{getPaymentLabel(selectedPastOrder.paymentMethod)}</strong>
+                </span>
+                <span style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  padding: '0.15rem 0.5rem',
+                  borderRadius: '6px',
+                  backgroundColor: selectedPastOrder.refunded ? 'rgba(239, 68, 68, 0.15)' : (selectedPastOrder.status === 'cancelled' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)'),
+                  color: selectedPastOrder.refunded ? '#f87171' : (selectedPastOrder.status === 'cancelled' ? '#f87171' : '#34d399')
+                }}>
+                  {selectedPastOrder.refunded ? 'Cancelado e Estornado' : (selectedPastOrder.status === 'cancelled' ? 'Cancelado' : 'Concluído')}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setSelectedPastOrder(null)}
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '10px',
+                padding: '0.65rem',
+                color: 'var(--text-secondary)',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                textAlign: 'center'
+              }}
+            >
+              Fechar
             </button>
           </div>
         </div>
