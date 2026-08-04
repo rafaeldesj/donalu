@@ -145,6 +145,11 @@ const MainLayout = () => {
             }
           } else if (nowTime - orderTime < 30000 && order.status === 'building_cart') {
              // Play sound for initial cart creation
+             if (!buildingCartAudioRef.current) {
+                 buildingCartAudioRef.current = new Audio(buildingCartSound);
+                 buildingCartAudioRef.current.loop = false;
+                 buildingCartAudioRef.current.volume = 0.8;
+             }
              if (buildingCartAudioRef.current) {
                buildingCartAudioRef.current.play().catch(() => {});
              }
@@ -155,6 +160,11 @@ const MainLayout = () => {
           
           if (order.status === 'building_cart') {
             // Play sound for cart update
+            if (!buildingCartAudioRef.current) {
+                buildingCartAudioRef.current = new Audio(buildingCartSound);
+                buildingCartAudioRef.current.loop = false;
+                buildingCartAudioRef.current.volume = 0.8;
+            }
             if (buildingCartAudioRef.current) {
                // Reset audio to start so it can trigger repeatedly if items are added quickly
                buildingCartAudioRef.current.currentTime = 0;
