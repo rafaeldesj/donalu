@@ -355,7 +355,7 @@ const MainLayout = () => {
   const [buildingCartOrderId, setBuildingCartOrderId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isStaff || !user) return; // Only apply for authenticated clients
+    if (!user) return; // Apply for authenticated users (including staff testing/buying)
 
     const syncCartToFirestore = async () => {
       if (cart.length > 0) {
