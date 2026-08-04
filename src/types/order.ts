@@ -1,4 +1,4 @@
-export type OrderStatus = 'pending' | 'preparing' | 'prepared' | 'ready' | 'delivering' | 'completed' | 'cancelled' | 'aguardando_caixa' | 'pendente_pagamento' | 'awaiting_payment';
+export type OrderStatus = 'pending' | 'preparing' | 'prepared' | 'ready' | 'delivering' | 'completed' | 'cancelled' | 'aguardando_caixa' | 'pendente_pagamento' | 'awaiting_payment' | 'building_cart';
 
 export interface OrderItem {
   id: number;

@@ -5,10 +5,11 @@ import { AuthButton } from './components/common/AuthButton';
 import { ShieldCheck, ChefHat, CreditCard, Bell, ShoppingCart, Heart, FileText, Users, Navigation, CheckCircle, Clock, Map, Settings, Menu, ChevronDown, Grid, Boxes, MessageCircle } from 'lucide-react';
 import logoDonalu from './assets/logo_donalu.png';
 import logoDonaluMobile from './assets/logo_donalu_mobile.png';
-import { doc, onSnapshot, collection, query, orderBy } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, orderBy, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import entrouPedidoSound from './sounds/entrou-pedido.mp3';
 import pedidoProntoSound from './sounds/pedido-pronto.mp3';
 import olhaAMensagemSound from './sounds/olha-a-mensagem.mp3';
+import buildingCartSound from './sounds/clientemontandocarrinho.mp3';
 import { printOrder, getPrinterSettings } from './utils/printer';
 import type { OrderDocument } from './types/order';
 import { db } from './config/firebase';
@@ -55,6 +56,7 @@ const MainLayout = () => {
   const preparingTimeoutRef = useRef<any>(null);
   const watchdogIntervalRef = useRef<any>(null);
   const silentAudioCtxRef = useRef<AudioContext | null>(null);
+  const buildingCartAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const isPendingSoundPlayingRef = useRef(false);
   const isPreparingSoundPlayingRef = useRef(false);
@@ -140,6 +142,23 @@ const MainLayout = () => {
               }
             } catch (err) {
               console.error("Erro no auto-print:", err);
+            }
+          } else if (nowTime - orderTime < 30000 && order.status === 'building_cart') {
+             // Play sound for initial cart creation
+             if (buildingCartAudioRef.current) {
+               buildingCartAudioRef.current.play().catch(() => {});
+             }
+          }
+        } else if (change.type === 'modified') {
+          const order = change.doc.data() as any;
+          if (order.isTest && role !== 'developer') return;
+          
+          if (order.status === 'building_cart') {
+            // Play sound for cart update
+            if (buildingCartAudioRef.current) {
+               // Reset audio to start so it can trigger repeatedly if items are added quickly
+               buildingCartAudioRef.current.currentTime = 0;
+               buildingCartAudioRef.current.play().catch(() => {});
             }
           }
         }

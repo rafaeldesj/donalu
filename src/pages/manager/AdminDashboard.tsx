@@ -196,6 +196,7 @@ export const AdminDashboard = () => {
     const isBlue = ['ready', 'prepared'].includes(normalizedStatus);
     const isYellow = ['preparing', 'pending', 'aguardando_caixa', 'pendente_pagamento', 'awaiting_payment'].includes(normalizedStatus);
     const isRed = ['cancelled'].includes(normalizedStatus);
+    const isGray = ['building_cart'].includes(normalizedStatus);
 
     let bgColor = 'rgba(75, 85, 99, 0.2)';
     let color = 'var(--text-secondary)';
@@ -204,6 +205,7 @@ export const AdminDashboard = () => {
     else if (isBlue) { bgColor = '#0284c720'; color = '#3b82f6'; }
     else if (isYellow) { bgColor = '#d9770620'; color = 'var(--primary-gold)'; }
     else if (isRed) { bgColor = '#ef444420'; color = '#f87171'; }
+    else if (isGray) { bgColor = 'rgba(156, 163, 175, 0.15)'; color = '#9ca3af'; }
 
     let text = status.toUpperCase();
     if (refunded) {
@@ -222,6 +224,7 @@ export const AdminDashboard = () => {
         case 'aguardando_caixa': text = 'FECHANDO CONTA'; break;
         case 'pendente_pagamento': text = 'PGTO PENDENTE'; break;
         case 'awaiting_payment': text = 'AGUARDANDO PAGAMENTO'; break;
+        case 'building_cart': text = 'MONTANDO CARRINHO'; break;
       }
     }
 
