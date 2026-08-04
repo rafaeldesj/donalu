@@ -2070,6 +2070,24 @@ export const ClientDashboard = ({
     setPendingPixOrderId(null);
   };
 
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (pendingPixOrderId) {
+        // Tenta cancelar o pedido de forma síncrona/best-effort
+        const orderRef = doc(db, 'orders', pendingPixOrderId);
+        updateDoc(orderRef, {
+          status: 'cancelled',
+          cancelReason: 'Desistiu do pagamento',
+          cancelledAt: new Date().toISOString(),
+          cancelledBy: 'client'
+        }).catch(() => {});
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [pendingPixOrderId]);
+
   const handlePlaceOrder = async () => {
     setError(null);
     if (isClosedForUser) {
@@ -4447,7 +4465,7 @@ export const ClientDashboard = ({
           >
             <button
               type="button"
-              onClick={() => { setShowPixLightbox(false); setSubmitting(false); }}
+              onClick={handleCancelPix}
               style={{
                 position: 'absolute',
                 top: '1.25rem',
