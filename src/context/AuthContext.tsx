@@ -46,9 +46,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             } as any);
             setLoading(false);
 
-            // Estabelece sessão silenciosa no Firebase Auth no F5 se houver senha salva no Firestore
-            if (uData.email && uData.password) {
-              signInWithEmailAndPassword(auth, uData.email, uData.password).catch(authErr => {
+            const silentPass = uData.password || uData.tempPassword;
+            if (uData.email && silentPass) {
+              signInWithEmailAndPassword(auth, uData.email, silentPass).catch(authErr => {
                 console.warn("Falha ao reestabelecer Auth silencioso no F5:", authErr);
               });
             }

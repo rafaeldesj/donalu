@@ -1938,6 +1938,14 @@ export const ClientDashboard = ({
     }, 1500);
   };
 
+  const completeCheckoutAfterPixPaymentRef = useRef(completeCheckoutAfterPixPayment);
+  const completeCheckoutAfterPointPaymentRef = useRef(completeCheckoutAfterPointPayment);
+  
+  useEffect(() => {
+    completeCheckoutAfterPixPaymentRef.current = completeCheckoutAfterPixPayment;
+    completeCheckoutAfterPointPaymentRef.current = completeCheckoutAfterPointPayment;
+  });
+
   // Effect para checagem do pagamento na Maquininha Point
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -1994,7 +2002,7 @@ export const ClientDashboard = ({
               setShowCloseBillModal(false);
             } else {
               // NOVO PEDIDO DO CARRINHO
-              await completeCheckoutAfterPointPayment(selectedDeviceId, pointDeviceLabel);
+              await completeCheckoutAfterPointPaymentRef.current(selectedDeviceId, pointDeviceLabel);
             }
           } else if (data.success && (data.status === 'CANCELED' || data.status === 'ERROR')) {
             setPointPaymentStatus('rejected');
@@ -2008,7 +2016,7 @@ export const ClientDashboard = ({
       }, 2500);
     }
     return () => clearInterval(interval);
-  }, [showPointLightbox, pointPaymentId, pointPaymentStatus, storeConfig, cart, finalTotal, selectedDeviceId, pointDeviceLabel, pointActionCallback, tableOrders, user, pointType]);
+  }, [showPointLightbox, pointPaymentId, pointPaymentStatus, storeConfig, pointActionCallback, tableOrders, user, pointType, selectedDeviceId, pointDeviceLabel]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -2026,7 +2034,7 @@ export const ClientDashboard = ({
           if (data.success && data.status === 'approved') {
             setPixPaymentStatus('approved');
             clearInterval(interval);
-            await completeCheckoutAfterPixPayment();
+            await completeCheckoutAfterPixPaymentRef.current();
           } else if (data.success && data.status === 'rejected') {
             setPixPaymentStatus('rejected');
             clearInterval(interval);
@@ -2041,7 +2049,7 @@ export const ClientDashboard = ({
       }, 3000);
     }
     return () => clearInterval(interval);
-  }, [showPixLightbox, pixPaymentId, pixPaymentStatus, storeConfig, cart, cartTotal, finalTotal, deliveryFee, orderType, deliveryAddress]);
+  }, [showPixLightbox, pixPaymentId, pixPaymentStatus, storeConfig]);
 
   const handlePlaceOrder = async () => {
     setError(null);
