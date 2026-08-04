@@ -113,6 +113,7 @@ export default async function handler(req, res) {
     const host = req.headers.host || '';
     const notificationUrl = `${protocol}://${host}/api/pagamentos/webhook`;
 
+    const cleanCpf = (cpf || '').replace(/\D/g, '');
     const isLocalHost = host.includes('localhost') || host.includes('127.0.0.1') || host.startsWith('192.168.') || host.startsWith('10.') || host.startsWith('172.');
 
     const payload = {
@@ -128,10 +129,12 @@ export default async function handler(req, res) {
         email: email || 'cliente@email.com',
         first_name: firstName,
         last_name: lastName,
-        identification: {
-          type: 'CPF',
-          number: (cpf || '').replace(/\D/g, '') || '80288053702'
-        }
+        ...(cleanCpf ? {
+          identification: {
+            type: 'CPF',
+            number: cleanCpf
+          }
+        } : {})
       }
     };
 

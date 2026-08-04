@@ -266,6 +266,8 @@ export const createPixMiddleware = async (req, res) => {
       
       const isLocalHost = host.includes('localhost') || host.includes('127.0.0.1') || host.startsWith('192.168.') || host.startsWith('10.') || host.startsWith('172.');
       
+      const cleanCpf = (cpf || '').replace(/\D/g, '');
+      
       const payload = {
         transaction_amount: transactionAmount,
         description: 'Pedido Dona Lu Pastelaria',
@@ -279,10 +281,12 @@ export const createPixMiddleware = async (req, res) => {
           email: email || 'cliente@email.com',
           first_name: firstName,
           last_name: lastName,
-          identification: {
-            type: 'CPF',
-            number: (cpf || '').replace(/\D/g, '') || '80288053702'
-          }
+          ...(cleanCpf ? {
+            identification: {
+              type: 'CPF',
+              number: cleanCpf
+            }
+          } : {})
         }
       };
 
