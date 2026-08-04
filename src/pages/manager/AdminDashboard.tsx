@@ -206,7 +206,7 @@ export const AdminDashboard = () => {
 
     let text = status.toUpperCase();
     if (refunded) {
-      text = 'ESTORNADO';
+      text = 'CANCELADO E ESTORNADO';
     } else {
       switch (status) {
         case 'pending': text = 'PENDENTE'; break;
@@ -727,7 +727,7 @@ export const AdminDashboard = () => {
                           padding: '0.1rem 0.5rem'
                         }}>
                           {(() => {
-                            if (order.refunded) return 'ESTORNADO';
+                            if (order.refunded) return 'CANCELADO E ESTORNADO';
                             switch (order.status) {
                               case 'pending': return 'PENDENTE';
                               case 'preparing': return 'EM PREPARO';
