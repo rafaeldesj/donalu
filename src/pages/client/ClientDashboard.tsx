@@ -3551,7 +3551,7 @@ export const ClientDashboard = ({
                   if (orderType === 'dine_in_table') {
                     methods = [
                       ['pix', 'Pix 🟡'],
-                      ...(hasMpToken ? [['credito_mp', 'Crédito Mercado Pago 💳']] : [['credito', 'Crédito Online 💳']]),
+                      ...(hasMpToken ? [['credito_mp', 'Crédito / Débito MP 💳']] : [['credito', 'Crédito Online 💳']]),
                       ['google_pay', 'Google Pay 📱'],
                       ['debito_point', 'Débito Maquininha 💴'],
                       ['credito_point', 'Crédito Maquininha 💳'],
@@ -3562,7 +3562,7 @@ export const ClientDashboard = ({
                   } else {
                     methods = [
                       ['pix', 'Pix 🟡'],
-                      ...(hasMpToken ? [['credito_mp', 'Crédito Mercado Pago 💳']] : [['credito', 'Crédito Online 💳']]),
+                      ...(hasMpToken ? [['credito_mp', 'Crédito / Débito MP 💳']] : [['credito', 'Crédito Online 💳']]),
                       ['google_pay', 'Google Pay 📱'],
                       ['debito_point', 'Débito Maquininha 💴'],
                       ['credito_point', 'Crédito Maquininha 💳'],

@@ -19,6 +19,7 @@ export function MercadoPagoCardForm({
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvv, setCardCvv] = useState("");
   const [installments, setInstallments] = useState(1);
+  const [cardType, setCardType] = useState<"credit" | "debit">("credit");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const mpRef = useRef<any>(null);
@@ -63,10 +64,10 @@ export function MercadoPagoCardForm({
       const lastName = (payer.name || 'Cliente').split(' ').slice(1).join(' ') || 'Dona Lu';
 
       const firstDigit = cardNumber.charAt(0);
-      let paymentMethodId = "master";
-      if (firstDigit === "4") paymentMethodId = "visa";
+      let paymentMethodId = cardType === "credit" ? "master" : "debmaster";
+      if (firstDigit === "4") paymentMethodId = cardType === "credit" ? "visa" : "debvisa";
       else if (firstDigit === "3") paymentMethodId = "amex";
-      else if (firstDigit === "6") paymentMethodId = "elo";
+      else if (firstDigit === "6") paymentMethodId = cardType === "credit" ? "elo" : "debelo";
 
       const orderPayload = {
         transaction_amount: parseFloat(totalAmount),
@@ -124,7 +125,7 @@ export function MercadoPagoCardForm({
     <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 16, border: "1px solid rgba(255,255,255,0.1)", padding: "20px", marginTop: 12 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
         <CreditCard size={18} color="#009ee3" />
-        <span style={{ color: "#fff", fontWeight: 600, fontSize: 15 }}>Cartao de Credito</span>
+        <span style={{ color: "#fff", fontWeight: 600, fontSize: 15 }}>Cartão de Crédito ou Débito</span>
         <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 4, color: "#64748b", fontSize: 12 }}>
           <Lock size={12} /> Pagamento seguro
         </span>
@@ -134,6 +135,16 @@ export function MercadoPagoCardForm({
         <span style={{ color: "#009ee3", fontSize: 12 }}>Processado com seguranca pelo Mercado Pago</span>
       </div>
       <div className="mp-form">
+        <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, color: "#e2e8f0", fontSize: 14, cursor: "pointer" }}>
+            <input type="radio" name="cardType" checked={cardType === "credit"} onChange={() => setCardType("credit")} />
+            Crédito
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, color: "#e2e8f0", fontSize: 14, cursor: "pointer" }}>
+            <input type="radio" name="cardType" checked={cardType === "debit"} onChange={() => setCardType("debit")} />
+            Débito
+          </label>
+        </div>
         <div style={{ marginBottom: 12 }}>
           <label style={{ color: "#94a3b8", fontSize: 12, display: "block", marginBottom: 4 }}>Numero do Cartao</label>
           <input type="text" inputMode="numeric" placeholder="0000 0000 0000 0000" maxLength={19} value={cardNumber} onChange={e => setCardNumber(formatCardNumber(e.target.value))} style={{ ...inp, letterSpacing: 2, fontSize: 15 }} />
