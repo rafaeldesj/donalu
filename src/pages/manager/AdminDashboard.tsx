@@ -711,39 +711,7 @@ export const AdminDashboard = () => {
                       <td>{order.clientName}</td>
                       <td style={{ color: 'var(--primary-gold)', fontWeight: 600 }}>R$ {order.total.toFixed(2).replace('.', ',')}</td>
                       <td>
-                        <span className="auth-role-badge" style={{ 
-                          backgroundColor: 
-                            order.refunded ? '#ef444430' :
-                            order.status === 'completed' || order.status === 'delivering' ? '#05966920' : 
-                            order.status === 'ready' ? '#0284c720' : 
-                            order.status === 'preparing' || order.status === 'prepared' ? '#d9770620' : 
-                            order.status === 'cancelled' ? '#ef444420' : '#4b556320', 
-                          color: 
-                            order.refunded ? '#f87171' :
-                            order.status === 'completed' || order.status === 'delivering' ? '#10b981' : 
-                            order.status === 'ready' ? '#3b82f6' : 
-                            order.status === 'preparing' || order.status === 'prepared' ? 'var(--primary-gold)' : 
-                            order.status === 'cancelled' ? '#f87171' : 'var(--text-secondary)',
-                          fontSize: '0.7rem',
-                          padding: '0.1rem 0.5rem'
-                        }}>
-                          {(() => {
-                            if (order.refunded) return 'CANCELADO E ESTORNADO';
-                            switch (order.status) {
-                              case 'pending': return 'PENDENTE';
-                              case 'preparing': return 'EM PREPARO';
-                              case 'prepared': return 'PREPARADO';
-                              case 'ready': return 'PRONTO';
-                              case 'delivering': 
-                                return order.orderType === 'dine_in_table' ? 'ENTREGUE NA MESA' : 'EM ROTA';
-                              case 'completed': return 'FINALIZADO';
-                              case 'cancelled': return 'CANCELADO';
-                              case 'aguardando_caixa': return 'FECHANDO CONTA';
-                              case 'pendente_pagamento': return 'PGTO PENDENTE';
-                              default: return (order.status as string).toUpperCase();
-                            }
-                          })()}
-                        </span>
+                        {renderStatusBadge(order.status, order.refunded)}
                       </td>
                       <td style={{ fontSize: '0.85rem' }}>
                         {order.kitchenDurationSeconds !== undefined ? (
