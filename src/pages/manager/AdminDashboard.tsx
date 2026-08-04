@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { TrendingUp, Users, DollarSign, ShieldAlert, Cpu, Clock, X, ArrowLeft, AlertCircle } from 'lucide-react';
+import { TrendingUp, Users, DollarSign, ShieldAlert, Cpu, Clock, X, ArrowLeft, AlertCircle, Search, Filter } from 'lucide-react';
 import { collection, query, onSnapshot, orderBy, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import type { OrderDocument } from '../../types/order';
@@ -19,6 +19,46 @@ export const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
   const [refundLoading, setRefundLoading] = useState(false);
+
+  // Filtros de Tabela
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('dateDesc');
+  const [visibleCount, setVisibleCount] = useState(10);
+
+  const filteredAndSortedOrders = useMemo(() => {
+    let result = [...orders];
+
+    if (statusFilter !== 'all') {
+      result = result.filter(o => o.status.toLowerCase() === statusFilter.toLowerCase());
+    }
+
+    if (searchTerm.trim() !== '') {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(o => 
+        (o.id && o.id.toLowerCase().includes(term)) || 
+        (o.dailySeq && o.dailySeq.toString().includes(term)) ||
+        (o.clientName && o.clientName.toLowerCase().includes(term))
+      );
+    }
+
+    result.sort((a, b) => {
+      const timeA = new Date(a.createdAt || 0).getTime();
+      const timeB = new Date(b.createdAt || 0).getTime();
+      if (sortBy === 'dateDesc') {
+        return timeB - timeA;
+      } else if (sortBy === 'dateAsc') {
+        return timeA - timeB;
+      } else if (sortBy === 'totalDesc') {
+        return b.total - a.total;
+      } else if (sortBy === 'totalAsc') {
+        return a.total - b.total;
+      }
+      return 0;
+    });
+
+    return result;
+  }, [orders, statusFilter, searchTerm, sortBy]);
 
   const handleRefundPayment = async (order: OrderDocument) => {
     if (!window.confirm(`Tem certeza que deseja estornar o pagamento de R$ ${order.total.toFixed(2).replace('.', ',')} do Pedido ${order.dailySeq}?`)) {
@@ -677,7 +717,74 @@ export const AdminDashboard = () => {
       <div className="admin-sections-grid">
         {/* Tabela de Pedidos Recentes */}
         <div className="admin-card-box">
-          <h3>Últimos Pedidos</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.2rem' }}>
+            <h3 style={{ margin: 0 }}>Histórico de Pedidos</h3>
+            
+            {/* Filtros */}
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div className="input-group" style={{ margin: 0 }}>
+                <div className="input-wrapper" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                  <Search size={16} className="input-icon" />
+                  <input 
+                    type="text" 
+                    placeholder="Buscar (Nº, Cliente...)" 
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    style={{ padding: '0.5rem 0.5rem 0.5rem 2.5rem', fontSize: '0.85rem', width: '200px' }}
+                  />
+                </div>
+              </div>
+              
+              <div className="input-group" style={{ margin: 0 }}>
+                <div className="input-wrapper" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                  <Filter size={16} className="input-icon" />
+                  <select 
+                    value={statusFilter}
+                    onChange={e => setStatusFilter(e.target.value)}
+                    style={{ padding: '0.5rem 0.5rem 0.5rem 2.5rem', fontSize: '0.85rem', width: 'auto', background: 'transparent', color: '#fff', border: 'none', outline: 'none', cursor: 'pointer' }}
+                  >
+                    <option value="all" style={{ background: '#1e1b2e' }}>Todos os Status</option>
+                    <option value="completed" style={{ background: '#1e1b2e' }}>Finalizados</option>
+                    <option value="pending" style={{ background: '#1e1b2e' }}>Pendentes</option>
+                    <option value="preparing" style={{ background: '#1e1b2e' }}>Em Preparo</option>
+                    <option value="prepared" style={{ background: '#1e1b2e' }}>Preparados</option>
+                    <option value="ready" style={{ background: '#1e1b2e' }}>Prontos p/ Retirada</option>
+                    <option value="delivering" style={{ background: '#1e1b2e' }}>Em Rota</option>
+                    <option value="cancelled" style={{ background: '#1e1b2e' }}>Cancelados</option>
+                    <option value="building_cart" style={{ background: '#1e1b2e' }}>Montando Carrinho</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="input-group" style={{ margin: 0 }}>
+                <select 
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value)}
+                  style={{ padding: '0.5rem', fontSize: '0.85rem', width: 'auto', background: 'rgba(255,255,255,0.03)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', outline: 'none', cursor: 'pointer' }}
+                >
+                  <option value="dateDesc" style={{ background: '#1e1b2e' }}>Mais Recentes</option>
+                  <option value="dateAsc" style={{ background: '#1e1b2e' }}>Mais Antigos</option>
+                  <option value="totalDesc" style={{ background: '#1e1b2e' }}>Maior Valor</option>
+                  <option value="totalAsc" style={{ background: '#1e1b2e' }}>Menor Valor</option>
+                </select>
+              </div>
+
+              <div className="input-group" style={{ margin: 0 }}>
+                <select 
+                  value={visibleCount}
+                  onChange={e => setVisibleCount(Number(e.target.value))}
+                  style={{ padding: '0.5rem', fontSize: '0.85rem', width: 'auto', background: 'rgba(255,255,255,0.03)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', outline: 'none', cursor: 'pointer' }}
+                >
+                  <option value={5} style={{ background: '#1e1b2e' }}>Exibir: 5 itens</option>
+                  <option value={10} style={{ background: '#1e1b2e' }}>Exibir: 10 itens</option>
+                  <option value={20} style={{ background: '#1e1b2e' }}>Exibir: 20 itens</option>
+                  <option value={50} style={{ background: '#1e1b2e' }}>Exibir: 50 itens</option>
+                  <option value={999999} style={{ background: '#1e1b2e' }}>Exibir: Todos</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <div style={{ overflowX: 'auto' }}>
             <table className="admin-table">
               <thead>
@@ -690,12 +797,12 @@ export const AdminDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {orders.length === 0 ? (
+                {filteredAndSortedOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>Nenhum pedido efetuado ainda.</td>
+                    <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>Nenhum pedido encontrado.</td>
                   </tr>
                 ) : (
-                  orders.slice(0, 5).map((order) => (
+                  filteredAndSortedOrders.slice(0, visibleCount).map((order) => (
                     <tr 
                       key={order.id} 
                       className="interactive-row"
@@ -743,6 +850,18 @@ export const AdminDashboard = () => {
               </tbody>
             </table>
           </div>
+          
+          {visibleCount < filteredAndSortedOrders.length && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1.5rem' }}>
+              <button 
+                className="auth-btn auth-btn-login"
+                onClick={() => setVisibleCount(prev => prev + 10)}
+                style={{ width: 'auto', padding: '0.5rem 1.5rem', fontSize: '0.85rem' }}
+              >
+                Ver mais pedidos ({filteredAndSortedOrders.length - visibleCount} restantes)
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Informações Específicas do Nível de Permissão */}
