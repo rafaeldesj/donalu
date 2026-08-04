@@ -191,10 +191,11 @@ export const AdminDashboard = () => {
   };
 
   const renderStatusBadge = (status: string, refunded?: boolean) => {
-    const isGreen = ['completed', 'delivering'].includes(status);
-    const isBlue = ['ready', 'prepared'].includes(status);
-    const isYellow = ['preparing', 'pending', 'aguardando_caixa', 'pendente_pagamento', 'awaiting_payment'].includes(status);
-    const isRed = ['cancelled'].includes(status);
+    const normalizedStatus = status.toLowerCase();
+    const isGreen = ['completed', 'delivering'].includes(normalizedStatus);
+    const isBlue = ['ready', 'prepared'].includes(normalizedStatus);
+    const isYellow = ['preparing', 'pending', 'aguardando_caixa', 'pendente_pagamento', 'awaiting_payment'].includes(normalizedStatus);
+    const isRed = ['cancelled'].includes(normalizedStatus);
 
     let bgColor = 'rgba(75, 85, 99, 0.2)';
     let color = 'var(--text-secondary)';
@@ -208,7 +209,7 @@ export const AdminDashboard = () => {
     if (refunded) {
       text = 'CANCELADO E ESTORNADO';
     } else {
-      switch (status) {
+      switch (normalizedStatus) {
         case 'pending': text = 'PENDENTE'; break;
         case 'preparing': text = 'EM PREPARO'; break;
         case 'prepared': text = 'PREPARADO'; break;
@@ -218,7 +219,7 @@ export const AdminDashboard = () => {
         case 'cancelled': text = 'CANCELADO'; break;
         case 'aguardando_caixa': text = 'FECHANDO CONTA'; break;
         case 'pendente_pagamento': text = 'PGTO PENDENTE'; break;
-        case 'awaiting_payment': text = 'AGUARDANDO PGTO'; break;
+        case 'awaiting_payment': text = 'AGUARDANDO PAGAMENTO'; break;
       }
     }
 
