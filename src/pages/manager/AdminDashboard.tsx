@@ -190,7 +190,7 @@ export const AdminDashboard = () => {
     }
   };
 
-  const renderStatusBadge = (status: string) => {
+  const renderStatusBadge = (status: string, refunded?: boolean) => {
     const isGreen = ['completed', 'delivering'].includes(status);
     const isBlue = ['ready', 'prepared'].includes(status);
     const isYellow = ['preparing', 'pending', 'aguardando_caixa', 'pendente_pagamento', 'awaiting_payment'].includes(status);
@@ -198,23 +198,28 @@ export const AdminDashboard = () => {
 
     let bgColor = 'rgba(75, 85, 99, 0.2)';
     let color = 'var(--text-secondary)';
-    if (isGreen) { bgColor = '#05966920'; color = '#10b981'; }
+    if (refunded) { bgColor = '#ef444430'; color = '#f87171'; }
+    else if (isGreen) { bgColor = '#05966920'; color = '#10b981'; }
     else if (isBlue) { bgColor = '#0284c720'; color = '#3b82f6'; }
     else if (isYellow) { bgColor = '#d9770620'; color = 'var(--primary-gold)'; }
     else if (isRed) { bgColor = '#ef444420'; color = '#f87171'; }
 
     let text = status.toUpperCase();
-    switch (status) {
-      case 'pending': text = 'PENDENTE'; break;
-      case 'preparing': text = 'EM PREPARO'; break;
-      case 'prepared': text = 'PREPARADO'; break;
-      case 'ready': text = 'PRONTO'; break;
-      case 'delivering': text = 'EM ROTA'; break;
-      case 'completed': text = 'FINALIZADO'; break;
-      case 'cancelled': text = 'CANCELADO'; break;
-      case 'aguardando_caixa': text = 'FECHANDO CONTA'; break;
-      case 'pendente_pagamento': text = 'PGTO PENDENTE'; break;
-      case 'awaiting_payment': text = 'AGUARDANDO PGTO'; break;
+    if (refunded) {
+      text = 'ESTORNADO';
+    } else {
+      switch (status) {
+        case 'pending': text = 'PENDENTE'; break;
+        case 'preparing': text = 'EM PREPARO'; break;
+        case 'prepared': text = 'PREPARADO'; break;
+        case 'ready': text = 'PRONTO'; break;
+        case 'delivering': text = 'EM ROTA'; break;
+        case 'completed': text = 'FINALIZADO'; break;
+        case 'cancelled': text = 'CANCELADO'; break;
+        case 'aguardando_caixa': text = 'FECHANDO CONTA'; break;
+        case 'pendente_pagamento': text = 'PGTO PENDENTE'; break;
+        case 'awaiting_payment': text = 'AGUARDANDO PGTO'; break;
+      }
     }
 
     return (
@@ -338,7 +343,7 @@ export const AdminDashboard = () => {
                       ) : category === 'prep_time' ? (
                         <td><strong>{formatPrepTime(order.kitchenDurationSeconds || 0)}</strong></td>
                       ) : (
-                        <td>{renderStatusBadge(order.status)}</td>
+                        <td>{renderStatusBadge(order.status, order.refunded)}</td>
                       )}
                       <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{formatDateTime(order.createdAt)}</td>
                     </tr>
@@ -381,7 +386,7 @@ export const AdminDashboard = () => {
               </h3>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              {renderStatusBadge(order.status)}
+              {renderStatusBadge(order.status, order.refunded)}
               <button className="admin-modal-close-btn" onClick={() => setActiveModal(null)}>
                 <X size={18} />
               </button>
@@ -707,11 +712,13 @@ export const AdminDashboard = () => {
                       <td>
                         <span className="auth-role-badge" style={{ 
                           backgroundColor: 
+                            order.refunded ? '#ef444430' :
                             order.status === 'completed' || order.status === 'delivering' ? '#05966920' : 
                             order.status === 'ready' ? '#0284c720' : 
                             order.status === 'preparing' || order.status === 'prepared' ? '#d9770620' : 
                             order.status === 'cancelled' ? '#ef444420' : '#4b556320', 
                           color: 
+                            order.refunded ? '#f87171' :
                             order.status === 'completed' || order.status === 'delivering' ? '#10b981' : 
                             order.status === 'ready' ? '#3b82f6' : 
                             order.status === 'preparing' || order.status === 'prepared' ? 'var(--primary-gold)' : 
@@ -720,6 +727,7 @@ export const AdminDashboard = () => {
                           padding: '0.1rem 0.5rem'
                         }}>
                           {(() => {
+                            if (order.refunded) return 'ESTORNADO';
                             switch (order.status) {
                               case 'pending': return 'PENDENTE';
                               case 'preparing': return 'EM PREPARO';
