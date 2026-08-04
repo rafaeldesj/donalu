@@ -18,6 +18,7 @@ import pastelFrito from '../../assets/pastel_frito.png';
 import pastelRefri from '../../assets/pastel_refri.png';
 import pastelCombo from '../../assets/pastel_combo.png';
 import { API_BASE_URL } from '../../config/api';
+import { MercadoPagoCardForm } from '../../components/MercadoPagoCardForm';
 
 const DONA_LU_COORDS: [number, number] = [-22.9112951, -43.5602961];
 
@@ -194,8 +195,14 @@ export const ClientDashboard = ({
 }: ClientDashboardProps) => {
   const { user, userData, updatePhoneNumber } = useAuth();
 
-  const createOrderAndLog = async (orderData: any) => {
-    const docRef = await addDoc(collection(db, 'orders'), orderData);
+  const createOrderAndLog = async (orderData: any, customOrderId?: string) => {
+    let docRef;
+    if (customOrderId) {
+      docRef = doc(db, 'orders', customOrderId);
+      await setDoc(docRef, orderData);
+    } else {
+      docRef = await addDoc(collection(db, 'orders'), orderData);
+    }
     try {
       await logAuditAction({
         userId: user?.uid || 'guest',
@@ -253,7 +260,7 @@ export const ClientDashboard = ({
     return hasTable ? 'dine_in_table' : 'delivery';
   });
   const [tableNumber, setTableNumber] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credito' | 'debito' | 'dinheiro' | 'pagar_final' | 'google_pay' | 'debito_point' | 'credito_point' | 'cartao'>('pix');
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credito' | 'credito_mp' | 'debito' | 'dinheiro' | 'pagar_final' | 'google_pay' | 'debito_point' | 'credito_point' | 'cartao'>('pix');
   const [changeFor, setChangeFor] = useState('');
   const [noChangeNeeded, setNoChangeNeeded] = useState(false);
   const [showOrderSummary, setShowOrderSummary] = useState(false);
@@ -352,9 +359,10 @@ export const ClientDashboard = ({
     
     setPaymentMethod(current => {
       if (!isMethodVisible(current)) {
+        const hasMpToken = !!(storeConfig?.storeOwnerAccessToken && storeConfig.storeOwnerAccessToken !== 'mock');
         const allMethods = orderType === 'dine_in_table'
-          ? ['pix', 'credito', 'google_pay', 'debito_point', 'credito_point', 'pagar_final', 'dinheiro', 'cartao']
-          : ['pix', 'credito', 'google_pay', 'debito_point', 'credito_point', 'dinheiro', 'cartao'];
+          ? ['pix', hasMpToken ? 'credito_mp' : 'credito', 'google_pay', 'debito_point', 'credito_point', 'pagar_final', 'dinheiro', 'cartao']
+          : ['pix', hasMpToken ? 'credito_mp' : 'credito', 'google_pay', 'debito_point', 'credito_point', 'dinheiro', 'cartao'];
         const firstEnabled = allMethods.find(m => isMethodVisible(m)) as any;
         return firstEnabled || current;
       }
@@ -2012,12 +2020,17 @@ export const ClientDashboard = ({
         try {
           const res = await fetch(`${API_BASE_URL}/api/pagamentos/check-pix?paymentId=${pixPaymentId}&token=${token}`);
           const data = await res.json();
+          console.log('[DEBUG PIX POLL]', data);
           if (data.success && data.status === 'approved') {
             setPixPaymentStatus('approved');
             clearInterval(interval);
             await completeCheckoutAfterPixPayment();
           } else if (data.success && data.status === 'rejected') {
             setPixPaymentStatus('rejected');
+            clearInterval(interval);
+          } else if (data.success && data.status !== 'pending') {
+            console.log('[DEBUG PIX UNEXPECTED STATUS]', data.status);
+            setPixPaymentStatus('rejected'); // Fallback so we know it hit an unknown state
             clearInterval(interval);
           }
         } catch (err) {
@@ -2148,6 +2161,11 @@ export const ClientDashboard = ({
             token.startsWith('APP_USR-MOCK-') || token.includes('-MOCK-')) {
           token = 'mock';
         }
+
+        // Gera o ID do pedido e o token de verificação antecipadamente para vincular ao webhook do Mercado Pago
+        const generatedOrderRef = doc(collection(db, 'orders'));
+        const generatedOrderId = generatedOrderRef.id;
+        const secureToken = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
         
         const response = await fetch(`${API_BASE_URL}/api/pagamentos/create-pix`, {
           method: 'POST',
@@ -2158,7 +2176,9 @@ export const ClientDashboard = ({
             email: user?.email || 'cliente@email.com',
             name: user?.displayName || user?.email || 'Cliente',
             cpf: userData?.cpf || '80288053702',
-            devPercentage: isStoreOwnerConnected ? (storeConfig?.devPercentage || 0) : 0
+            devPercentage: isStoreOwnerConnected ? (storeConfig?.devPercentage || 0) : 0,
+            orderId: generatedOrderId,
+            paymentVerificationToken: secureToken
           })
         });
 
@@ -2229,6 +2249,7 @@ export const ClientDashboard = ({
             paymentMethod: 'pix',
             mercadoPagoPaymentId: result.paymentId,
             dailySeq: pixDailySeq,
+            paymentVerificationToken: secureToken,
             address: orderType === 'delivery' ? {
               street: deliveryAddress!.street,
               number: deliveryAddress!.number || '',
@@ -2241,7 +2262,7 @@ export const ClientDashboard = ({
             } : null,
           };
 
-          const pixOrderRef = await createOrderAndLog(pixOrderData);
+          const pixOrderRef = await createOrderAndLog(pixOrderData, generatedOrderId);
           setPendingPixOrderId(pixOrderRef.id);
           console.log('[PIX] Pedido registrado antecipadamente. ID:', pixOrderRef.id);
         } catch (saveErr) {
@@ -3478,11 +3499,12 @@ export const ClientDashboard = ({
                     if (isClient) return vis === 'client' || vis === 'both';
                     return vis === 'staff' || vis === 'both';
                   };
+                  const hasMpToken = !!(storeConfig?.storeOwnerAccessToken && storeConfig.storeOwnerAccessToken !== 'mock');
                   let methods = [];
                   if (orderType === 'dine_in_table') {
                     methods = [
                       ['pix', 'Pix 🟡'],
-                      ['credito', 'Crédito Online 💳'],
+                      ...(hasMpToken ? [['credito_mp', 'Crédito Mercado Pago 💳']] : [['credito', 'Crédito Online 💳']]),
                       ['google_pay', 'Google Pay 📱'],
                       ['debito_point', 'Débito Maquininha 💴'],
                       ['credito_point', 'Crédito Maquininha 💳'],
@@ -3493,7 +3515,7 @@ export const ClientDashboard = ({
                   } else {
                     methods = [
                       ['pix', 'Pix 🟡'],
-                      ['credito', 'Crédito Online 💳'],
+                      ...(hasMpToken ? [['credito_mp', 'Crédito Mercado Pago 💳']] : [['credito', 'Crédito Online 💳']]),
                       ['google_pay', 'Google Pay 📱'],
                       ['debito_point', 'Débito Maquininha 💴'],
                       ['credito_point', 'Crédito Maquininha 💳'],
@@ -3796,6 +3818,63 @@ export const ClientDashboard = ({
                   )}
                 </div>
               )}
+
+              {paymentMethod === 'credito_mp' && (
+                <MercadoPagoCardForm
+                  amount={finalTotal}
+                  publicKey={storeConfig?.mpPublicKey || import.meta.env.VITE_MP_PUBLIC_KEY || ''}
+                  accessToken={storeConfig?.storeOwnerAccessToken || storeConfig?.devAccessToken || 'mock'}
+                  payer={{
+                    email: user?.email || 'cliente@email.com',
+                    name: user?.displayName || user?.email || 'Cliente',
+                    cpf: userData?.cpf || ''
+                  }}
+                  items={cart.map(item => ({
+                    title: item.name,
+                    unit_price: item.price,
+                    quantity: item.quantity
+                  }))}
+                  onSuccess={async (orderId) => {
+                    try {
+                      const now = new Date();
+                      const businessStart = new Date(now);
+                      if (now.getHours() < 6) businessStart.setDate(now.getDate() - 1);
+                      businessStart.setHours(6, 0, 0, 0);
+                      const qDaily = query(collection(db, 'orders'), where('createdAt', '>=', businessStart.toISOString()));
+                      const dailySnap = await getDocs(qDaily);
+                      const dailySeq = dailySnap.size + 1;
+                      const orderData: any = {
+                        clientUid: user?.uid || '',
+                        clientName: user?.displayName || user?.email || 'Cliente',
+                        clientPhone: userData?.phoneNumber || '',
+                        items: cart.map(item => ({ id: item.id, name: item.name, price: item.price, quantity: item.quantity, category: item.category, size: item.size || null })),
+                        total: finalTotal,
+                        deliveryFee: orderType === 'delivery' ? deliveryFee : 0,
+                        status: 'pending',
+                        createdAt: now.toISOString(),
+                        orderType,
+                        tableNumber: orderType === 'dine_in_table' ? tableNumber : null,
+                        paymentMethod: 'credito_mp',
+                        mercadoPagoOrderId: orderId,
+                        dailySeq,
+                        address: orderType === 'delivery' && deliveryAddress ? {
+                          street: deliveryAddress.street,
+                          number: deliveryAddress.number || '',
+                          neighborhood: deliveryAddress.neighborhood || '',
+                          city: deliveryAddress.city || 'Rio de Janeiro',
+                          zipCode: deliveryAddress.zipCode || ''
+                        } : null
+                      };
+                      await addDoc(collection(db, 'orders'), orderData);
+                      setCart([]);
+                      alert('✅ Pagamento aprovado! Seu pedido foi registrado com sucesso.');
+                    } catch (err) {
+                      console.error('Erro ao registrar pedido MP:', err);
+                    }
+                  }}
+                  onError={(msg) => setError(msg)}
+                />
+              )}
             </div>
 
             {paymentMethod === 'dinheiro' && !noChangeNeeded && changeFor.trim() === '' && (
@@ -3804,25 +3883,27 @@ export const ClientDashboard = ({
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={
-                cart.length === 0 || 
-                (orderType === 'delivery' && !deliveryAddress) || 
-                isClosedForUser ||
-                (paymentMethod === 'dinheiro' && !noChangeNeeded && changeFor.trim() === '')
-              }
-              className="auth-btn auth-btn-login"
-              style={{ 
-                marginTop: '6px', 
-                padding: '0.7rem', 
-                fontSize: '0.95rem', 
-                fontWeight: 700,
-                ...((isClosedForUser || (paymentMethod === 'dinheiro' && !noChangeNeeded && changeFor.trim() === '')) ? { opacity: 0.5, cursor: 'not-allowed', background: '#4b5563' } : {})
-              }}
-            >
-              <span>🛒 Ver Resumo do Pedido</span>
-            </button>
+            {paymentMethod !== 'credito_mp' && (
+              <button
+                type="submit"
+                disabled={
+                  cart.length === 0 || 
+                  (orderType === 'delivery' && !deliveryAddress) || 
+                  isClosedForUser ||
+                  (paymentMethod === 'dinheiro' && !noChangeNeeded && changeFor.trim() === '')
+                }
+                className="auth-btn auth-btn-login"
+                style={{ 
+                  marginTop: '6px', 
+                  padding: '0.7rem', 
+                  fontSize: '0.95rem', 
+                  fontWeight: 700,
+                  ...((isClosedForUser || (paymentMethod === 'dinheiro' && !noChangeNeeded && changeFor.trim() === '')) ? { opacity: 0.5, cursor: 'not-allowed', background: '#4b5563' } : {})
+                }}
+              >
+                <span>🛒 Ver Resumo do Pedido</span>
+              </button>
+            )}
           </form>
 
           {orderType === 'dine_in_table' && tableNumber && (

@@ -76,7 +76,7 @@ export default async function handler(req, res) {
   try {
     // devPercentage: optional number (0-100) — the developer's commission percentage.
     // When provided and > 0, application_fee is added to the MP payload for split.
-    const { token, amount, email, name, cpf, devPercentage } = req.body;
+    const { token, amount, email, name, cpf, devPercentage, orderId, paymentVerificationToken } = req.body;
 
     const isMock = detectIsMock(token);
 
@@ -109,10 +109,21 @@ export default async function handler(req, res) {
     const lastName = name.split(' ').slice(1).join(' ') || 'Dona Lu';
     const transactionAmount = parseFloat(amount);
 
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    const host = req.headers.host || '';
+    const notificationUrl = `${protocol}://${host}/api/pagamentos/webhook`;
+
+    const isLocalHost = host.includes('localhost') || host.includes('127.0.0.1') || host.startsWith('192.168.') || host.startsWith('10.') || host.startsWith('172.');
+
     const payload = {
       transaction_amount: transactionAmount,
       description: 'Pedido Dona Lu Pastelaria',
       payment_method_id: 'pix',
+      external_reference: orderId || undefined,
+      notification_url: isLocalHost ? undefined : notificationUrl,
+      metadata: {
+        payment_verification_token: paymentVerificationToken || undefined
+      },
       payer: {
         email: email || 'cliente@email.com',
         first_name: firstName,

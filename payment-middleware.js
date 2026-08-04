@@ -218,7 +218,7 @@ export const createPixMiddleware = async (req, res) => {
   req.on('end', async () => {
     try {
       const data = JSON.parse(body);
-      const { token, amount, email, name, cpf, devPercentage } = data;
+      const { token, amount, email, name, cpf, devPercentage, orderId, paymentVerificationToken } = data;
       
       const isMock = detectIsMock(token);
       
@@ -258,11 +258,23 @@ export const createPixMiddleware = async (req, res) => {
       const firstName = name.split(' ')[0] || 'Cliente';
       const lastName = name.split(' ').slice(1).join(' ') || 'Dona Lu';
       const transactionAmount = parseFloat(amount);
+
+      // Constrói a URL do webhook dinamicamente com base no host do request
+      const protocol = req.headers['x-forwarded-proto'] || 'https';
+      const host = req.headers.host || '';
+      const notificationUrl = `${protocol}://${host}/api/pagamentos/webhook`;
+      
+      const isLocalHost = host.includes('localhost') || host.includes('127.0.0.1') || host.startsWith('192.168.') || host.startsWith('10.') || host.startsWith('172.');
       
       const payload = {
         transaction_amount: transactionAmount,
         description: 'Pedido Dona Lu Pastelaria',
         payment_method_id: 'pix',
+        external_reference: orderId || undefined,
+        notification_url: isLocalHost ? undefined : notificationUrl,
+        metadata: {
+          payment_verification_token: paymentVerificationToken || undefined
+        },
         payer: {
           email: email || 'cliente@email.com',
           first_name: firstName,
@@ -913,6 +925,159 @@ export const mpOAuthExchangeMiddleware = async (req, res) => {
       console.error('[MP OAuth Local] Erro interno:', err);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify({ success: false, message: 'Erro interno ao trocar código por token.' }));
+    }
+  });
+};
+export const processMPCardOrderMiddleware = async (req, res) => {
+  let body = '';
+  req.on('data', chunk => { body += chunk.toString(); });
+  req.on('end', async () => {
+    try {
+      const data = JSON.parse(body);
+      const { accessToken, orderPayload, deviceSessionId } = data;
+      const https = await import('https');
+      const options = {
+        hostname: 'api.mercadopago.com',
+        port: 443,
+        path: '/v1/payments',
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken.trim()}`,
+          'Content-Type': 'application/json',
+          'X-Idempotency-Key': 'DONALU_CARD_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7)
+        }
+      };
+      if (deviceSessionId) options.headers['X-Melidata-Session-Id'] = deviceSessionId;
+      const mpReq = https.request(options, (mpRes) => {
+        let responseBody = '';
+        mpRes.on('data', chunk => responseBody += chunk);
+        mpRes.on('end', () => {
+          console.log('[MP /v1/payments] Response:', responseBody);
+          res.writeHead(mpRes.statusCode, { 'Content-Type': 'application/json' });
+          res.end(responseBody);
+        });
+      });
+      mpReq.on('error', (e) => {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ message: e.message }));
+      });
+      console.log('[MP /v1/payments] Request Payload:', JSON.stringify(orderPayload, null, 2));
+      mpReq.write(JSON.stringify(orderPayload));
+      mpReq.end();
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ message: err.message }));
+    }
+  });
+};
+
+async function getMercadoPagoToken() {
+  try {
+    const url = 'https://firestore.googleapis.com/v1/projects/dona-lu-4242d/databases/(default)/documents/settings/store_config';
+    const res = await nativeRequest(url, 'GET', {});
+    if (res.ok && res.json && res.json.fields) {
+      const fields = res.json.fields;
+      const token = fields.storeOwnerAccessToken?.stringValue || fields.devAccessToken?.stringValue || 'mock';
+      if (token && token !== 'null' && token !== 'undefined') {
+        return token;
+      }
+    }
+  } catch (err) {
+    console.error('[Webhook] Erro ao obter token do Firestore:', err);
+  }
+  return 'mock';
+}
+
+export const webhookMiddleware = async (req, res) => {
+  let bodyStr = '';
+  req.on('data', chunk => { bodyStr += chunk.toString(); });
+  req.on('end', async () => {
+    try {
+      const urlObj = new URL(req.url, 'http://localhost');
+      const query = Object.fromEntries(urlObj.searchParams.entries());
+      const body = bodyStr ? JSON.parse(bodyStr) : {};
+
+      const resourceId = body.data?.id || query.id;
+      const topic = body.type || query.topic;
+
+      console.log(`[Local Webhook Mercado Pago] Recebido - ID: ${resourceId}, Tópico/Tipo: ${topic}`);
+
+      if (!resourceId) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: true, message: 'Notificação recebida, mas sem ID de recurso.' }));
+      }
+
+      if (topic === 'payment') {
+        const token = await getMercadoPagoToken();
+        
+        if (!token || token === 'mock') {
+          console.log('[Local Webhook] Rodando em modo MOCK ou sem credenciais de produção. Ignorando.');
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ success: true, message: 'Modo mock ativado.' }));
+        }
+
+        const mpUrl = `https://api.mercadopago.com/v1/payments/${resourceId}`;
+        const mpRes = await nativeRequest(mpUrl, 'GET', { 'Authorization': `Bearer ${token}` });
+
+        if (!mpRes.ok) {
+          console.error(`[Local Webhook] Erro ao obter detalhes do pagamento ${resourceId} no Mercado Pago:`, mpRes.json || mpRes.text);
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ success: false, message: 'Erro ao validar pagamento no Mercado Pago.' }));
+        }
+
+        const payment = mpRes.json;
+        const orderId = payment.external_reference;
+        const paymentVerificationToken = payment.metadata?.payment_verification_token;
+        const status = payment.status;
+
+        console.log(`[Local Webhook] Detalhes Pagamento - OrderID: ${orderId}, Status: ${status}, Token: ${paymentVerificationToken}`);
+
+        if (orderId && paymentVerificationToken && status === 'approved') {
+          const firestoreUrl = `https://firestore.googleapis.com/v1/projects/dona-lu-4242d/databases/(default)/documents/orders/${orderId}?updateMask.fieldPaths=status&updateMask.fieldPaths=paymentVerificationToken`;
+          
+          const updatePayload = {
+            fields: {
+              status: { stringValue: 'pending' },
+              paymentVerificationToken: { stringValue: paymentVerificationToken }
+            }
+          };
+
+          const firestoreRes = await nativeRequest(firestoreUrl, 'PATCH', {}, updatePayload);
+
+          if (!firestoreRes.ok) {
+            console.error(`[Local Webhook] Falha ao atualizar pedido ${orderId} no Firestore:`, firestoreRes.json || firestoreRes.text);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'Erro ao atualizar pedido no banco de dados.' }));
+          }
+
+          console.log(`[Local Webhook] Pedido ${orderId} atualizado com sucesso no Firestore para 'pending'!`);
+
+          try {
+            const auditUrl = 'https://firestore.googleapis.com/v1/projects/dona-lu-4242d/databases/(default)/documents/audit_logs';
+            const auditPayload = {
+              fields: {
+                actionType: { stringValue: 'PAYMENT_WEBHOOK' },
+                title: { stringValue: 'Pagamento Confirmado (Local Webhook)' },
+                description: { stringValue: `Pedido ${orderId} aprovado via webhook do Mercado Pago.` },
+                createdAt: { stringValue: new Date().toISOString() },
+                userId: { stringValue: 'system-webhook' },
+                userRole: { stringValue: 'system' }
+              }
+            };
+            await nativeRequest(auditUrl, 'POST', {}, auditPayload);
+          } catch (auditErr) {
+            console.error('[Local Webhook] Erro ao registrar log de auditoria:', auditErr);
+          }
+        }
+      }
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ success: true, message: 'Notificação processada.' }));
+
+    } catch (err) {
+      console.error('[Local Webhook Mercado Pago] Erro no handler:', err);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ success: false, message: 'Erro interno no processamento do webhook.' }));
     }
   });
 };
