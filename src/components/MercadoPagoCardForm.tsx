@@ -154,10 +154,8 @@ export function MercadoPagoCardForm({
         </div>
         <div style={{ marginBottom: 16 }}>
           <label style={{ color: "#94a3b8", fontSize: 12, display: "block", marginBottom: 4 }}>Parcelas</label>
-          <select value={installments} onChange={e => setInstallments(parseInt(e.target.value))} style={{ ...inp, background: "rgba(30,35,50,0.95)" }}>
-            <option value={1}>1x de R$ {amount.toFixed(2)} sem juros</option>
-            <option value={2}>2x de R$ {(amount/2).toFixed(2)} sem juros</option>
-            <option value={3}>3x de R$ {(amount/3).toFixed(2)} sem juros</option>
+          <select value={installments} onChange={e => setInstallments(parseInt(e.target.value))} style={{ ...inp, background: "rgba(30,35,50,0.95)", cursor: "not-allowed", opacity: 0.8 }} disabled>
+            <option value={1}>À vista (1x) - R$ {amount.toFixed(2)}</option>
           </select>
         </div>
         {error && (
