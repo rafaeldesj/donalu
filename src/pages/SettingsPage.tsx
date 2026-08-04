@@ -546,6 +546,7 @@ export const SettingsPage = () => {
         updateData.devPercentage = storeConfig.devPercentage ?? 1;
         updateData.devClientId = storeConfig.devClientId ?? '';
         updateData.devAccessToken = storeConfig.devAccessToken ?? '';
+        updateData.mpPublicKey = storeConfig.mpPublicKey ?? '';
       }
 
       await updateDoc(docRef, updateData);
