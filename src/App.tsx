@@ -341,6 +341,58 @@ const MainLayout = () => {
     };
   }, [orders, isStaff, role, staff]);
 
+  // Sync building_cart
+  const [buildingCartOrderId, setBuildingCartOrderId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isStaff || !user) return; // Only apply for authenticated clients
+
+    const syncCartToFirestore = async () => {
+      if (cart.length > 0) {
+        const total = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+        
+        if (!buildingCartOrderId) {
+          const newRef = doc(collection(db, 'orders'));
+          setBuildingCartOrderId(newRef.id);
+          try {
+            await setDoc(newRef, {
+              clientUid: user.uid,
+              clientName: userData?.name || 'Cliente',
+              items: cart,
+              total,
+              status: 'building_cart',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            });
+          } catch(e) {
+            console.error('Erro ao sincronizar montagem de carrinho', e);
+          }
+        } else {
+          const ref = doc(db, 'orders', buildingCartOrderId);
+          try {
+            await updateDoc(ref, {
+              items: cart,
+              total,
+              updatedAt: new Date().toISOString()
+            });
+          } catch(e) {
+             // Se o documento já não existir ou algo do tipo
+             setBuildingCartOrderId(null);
+          }
+        }
+      } else if (cart.length === 0 && buildingCartOrderId) {
+        const ref = doc(db, 'orders', buildingCartOrderId);
+        setBuildingCartOrderId(null);
+        try {
+          await deleteDoc(ref);
+        } catch(e) {}
+      }
+    };
+    
+    const timer = setTimeout(syncCartToFirestore, 600);
+    return () => clearTimeout(timer);
+  }, [cart, user, userData, buildingCartOrderId, isStaff]);
+
   // Support chat global status listener and audio notification
   const [supportChats, setSupportChats] = useState<any[]>([]);
 
