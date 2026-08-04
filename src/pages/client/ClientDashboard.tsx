@@ -2051,6 +2051,25 @@ export const ClientDashboard = ({
     return () => clearInterval(interval);
   }, [showPixLightbox, pixPaymentId, pixPaymentStatus, storeConfig]);
 
+  const handleCancelPix = async () => {
+    try {
+      if (pendingPixOrderId) {
+        const orderRef = doc(db, 'orders', pendingPixOrderId);
+        await updateDoc(orderRef, {
+          status: 'cancelled',
+          cancelReason: 'Desistiu do pagamento',
+          cancelledAt: new Date().toISOString(),
+          cancelledBy: 'client'
+        });
+      }
+    } catch (err) {
+      console.error('Erro ao cancelar pedido PIX:', err);
+    }
+    setShowPixLightbox(false);
+    setSubmitting(false);
+    setPendingPixOrderId(null);
+  };
+
   const handlePlaceOrder = async () => {
     setError(null);
     if (isClosedForUser) {
@@ -4590,7 +4609,7 @@ export const ClientDashboard = ({
 
             <button
               type="button"
-              onClick={() => { setShowPixLightbox(false); setSubmitting(false); }}
+              onClick={handleCancelPix}
               style={{
                 background: 'none',
                 border: 'none',

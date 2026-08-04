@@ -190,7 +190,7 @@ export const AdminDashboard = () => {
     }
   };
 
-  const renderStatusBadge = (status: string, refunded?: boolean) => {
+  const renderStatusBadge = (status: string, refunded?: boolean, cancelReason?: string) => {
     const normalizedStatus = status.toLowerCase();
     const isGreen = ['completed', 'delivering'].includes(normalizedStatus);
     const isBlue = ['ready', 'prepared'].includes(normalizedStatus);
@@ -208,6 +208,8 @@ export const AdminDashboard = () => {
     let text = status.toUpperCase();
     if (refunded) {
       text = 'CANCELADO E ESTORNADO';
+    } else if (normalizedStatus === 'cancelled' && cancelReason === 'Desistiu do pagamento') {
+      text = 'DESISTIU DO PAGAMENTO';
     } else {
       switch (normalizedStatus) {
         case 'pending': text = 'PENDENTE'; break;
@@ -344,7 +346,7 @@ export const AdminDashboard = () => {
                       ) : category === 'prep_time' ? (
                         <td><strong>{formatPrepTime(order.kitchenDurationSeconds || 0)}</strong></td>
                       ) : (
-                        <td>{renderStatusBadge(order.status, order.refunded)}</td>
+                        <td>{renderStatusBadge(order.status, order.refunded, order.cancelReason)}</td>
                       )}
                       <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{formatDateTime(order.createdAt)}</td>
                     </tr>
@@ -387,7 +389,7 @@ export const AdminDashboard = () => {
               </h3>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              {renderStatusBadge(order.status, order.refunded)}
+              {renderStatusBadge(order.status, order.refunded, order.cancelReason)}
               <button className="admin-modal-close-btn" onClick={() => setActiveModal(null)}>
                 <X size={18} />
               </button>
@@ -711,7 +713,7 @@ export const AdminDashboard = () => {
                       <td>{order.clientName}</td>
                       <td style={{ color: 'var(--primary-gold)', fontWeight: 600 }}>R$ {order.total.toFixed(2).replace('.', ',')}</td>
                       <td>
-                        {renderStatusBadge(order.status, order.refunded)}
+                        {renderStatusBadge(order.status, order.refunded, order.cancelReason)}
                       </td>
                       <td style={{ fontSize: '0.85rem' }}>
                         {order.kitchenDurationSeconds !== undefined ? (
