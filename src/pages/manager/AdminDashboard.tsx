@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { TrendingUp, Users, DollarSign, ShieldAlert, Cpu, Clock, X, ArrowLeft, AlertCircle } from 'lucide-react';
-import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import type { OrderDocument } from '../../types/order';
+import { logAuditAction } from '../../utils/audit';
+import { API_BASE_URL } from '../../config/api';
 
 type ActiveModal = 
   | { type: 'category'; category: 'billing' | 'sales' | 'prep_queue' | 'prep_time' }
@@ -11,11 +13,81 @@ type ActiveModal =
   | null;
 
 export const AdminDashboard = () => {
-  const { userData } = useAuth();
+  const { user, userData } = useAuth();
   
   const [orders, setOrders] = useState<OrderDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
+  const [refundLoading, setRefundLoading] = useState(false);
+
+  const handleRefundPayment = async (order: OrderDocument) => {
+    if (!window.confirm(`Tem certeza que deseja estornar o pagamento de R$ ${order.total.toFixed(2).replace('.', ',')} do Pedido ${order.dailySeq}?`)) {
+      return;
+    }
+    setRefundLoading(true);
+    try {
+      const storeConfigRef = doc(db, 'settings', 'store_config');
+      const storeConfigSnap = await getDoc(storeConfigRef);
+      const storeConfigData = storeConfigSnap.exists() ? storeConfigSnap.data() : null;
+      const token = storeConfigData?.storeOwnerAccessToken || storeConfigData?.devAccessToken || 'mock';
+
+      const response = await fetch(`${API_BASE_URL}/api/pagamentos/refund-payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentId: order.mercadoPagoPaymentId,
+          token: token
+        })
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Erro ao processar estorno no Mercado Pago.');
+      }
+
+      const orderDocRef = doc(db, 'orders', order.id!);
+      await updateDoc(orderDocRef, {
+        refunded: true,
+        refundedAt: new Date().toISOString(),
+        refundedBy: userData?.name || 'Sistema',
+        updatedAt: new Date().toISOString()
+      });
+
+      await logAuditAction({
+        userId: user?.uid || 'guest',
+        userEmail: user?.email || 'anonimo@donalu.web.app',
+        userName: userData?.name || 'Administrador',
+        actionType: 'PAYMENT_REFUND',
+        title: 'Pagamento Estornado',
+        description: `Estornou o pagamento de R$ ${order.total.toFixed(2).replace('.', ',')} do Pedido ${order.dailySeq || ''} (ID: "${order.id}").`,
+        userRole: userData?.role || 'admin',
+        metadata: { orderId: order.id, dailySeq: order.dailySeq, total: order.total, paymentId: order.mercadoPagoPaymentId }
+      });
+
+      alert('Pagamento estornado com sucesso no Mercado Pago!');
+      
+      setActiveModal(prev => {
+        if (prev?.type === 'order' && prev.order.id === order.id) {
+          return {
+            ...prev,
+            order: {
+              ...prev.order,
+              refunded: true,
+              refundedAt: new Date().toISOString(),
+              refundedBy: userData?.name || 'Sistema'
+            }
+          };
+        }
+        return prev;
+      });
+
+    } catch (err: any) {
+      console.error('Erro ao estornar pagamento:', err);
+      alert('Erro ao estornar pagamento: ' + err.message);
+    } finally {
+      setRefundLoading(false);
+    }
+  };
 
   // Escuta todos os pedidos para calcular métricas reais
   useEffect(() => {
@@ -375,6 +447,41 @@ export const AdminDashboard = () => {
                     <div className="detail-item" style={{ gridColumn: 'span 2' }}>
                       <span className="detail-label">Troco para</span>
                       <span className="detail-val">R$ {order.changeFor.toFixed(2).replace('.', ',')} (Troco de R$ {(order.changeFor - order.total).toFixed(2).replace('.', ',')})</span>
+                    </div>
+                  )}
+                  {order.refunded && (
+                    <div className="detail-item" style={{ gridColumn: 'span 2', marginTop: '0.5rem', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '0.5rem 0.75rem', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: '#f87171', fontWeight: 600, fontSize: '0.85rem' }}>❌ Pagamento Estornado</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Por: {order.refundedBy} em {new Date(order.refundedAt || '').toLocaleDateString('pt-BR')}</span>
+                    </div>
+                  )}
+                  {!order.refunded && order.status === 'cancelled' && order.mercadoPagoPaymentId && (
+                    <div style={{ gridColumn: 'span 2', marginTop: '0.75rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleRefundPayment(order)}
+                        disabled={refundLoading}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(239, 68, 68, 0.1)',
+                          border: '1px solid rgba(239, 68, 68, 0.3)',
+                          borderRadius: '10px',
+                          padding: '0.5rem',
+                          color: '#f87171',
+                          fontWeight: 600,
+                          fontSize: '0.85rem',
+                          cursor: refundLoading ? 'not-allowed' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem',
+                          transition: 'background 0.2s'
+                        }}
+                        onMouseEnter={(e) => { if (!refundLoading) e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'; }}
+                        onMouseLeave={(e) => { if (!refundLoading) e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; }}
+                      >
+                        {refundLoading ? 'Estornando...' : 'Estornar Pagamento no Mercado Pago'}
+                      </button>
                     </div>
                   )}
                 </div>

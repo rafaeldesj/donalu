@@ -56,4 +56,8 @@ export interface OrderDocument {
   dispatchedAt?: string;
   deliveredAt?: string;
   routeOrder?: number | null;
+  refunded?: boolean;
+  refundedAt?: string;
+  refundedBy?: string;
+  mercadoPagoPaymentId?: string;
 }
