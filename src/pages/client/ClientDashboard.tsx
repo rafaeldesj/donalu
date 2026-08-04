@@ -1827,8 +1827,10 @@ export const ClientDashboard = ({
         const orderSnap = await getDoc(orderDocRef);
         if (orderSnap.exists()) {
           const currentStatus = orderSnap.data().status;
+          const secureToken = orderSnap.data().paymentVerificationToken;
           const updates: any = {
             mercadoPagoPaymentId: pixPaymentId,
+            paymentVerificationToken: secureToken,
             updatedAt: new Date().toISOString()
           };
           if (currentStatus === 'awaiting_payment' || currentStatus === 'pending') {
@@ -2073,13 +2075,13 @@ export const ClientDashboard = ({
           dailySeq = dailySnap.size + 1;
         } else {
           // Clientes normais contam apenas os próprios pedidos de hoje como fallback de sequência
-          const qUserDaily = query(
+          const qDaily = query(
             collection(db, 'orders'),
-            where('clientUid', '==', user?.uid),
             where('createdAt', '>=', businessStart.toISOString())
           );
-          const userDailySnap = await getDocs(qUserDaily);
-          dailySeq = userDailySnap.size + 1;
+          const dailySnap = await getDocs(qDaily);
+          const userDailyOrders = dailySnap.docs.filter(d => d.data().clientUid === user?.uid);
+          dailySeq = userDailyOrders.length + 1;
         }
       } catch (errSeq) {
         console.warn("Erro ao calcular sequência de hoje (fallback ativo):", errSeq);

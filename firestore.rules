@@ -50,7 +50,6 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
     
-    // Regras para a coleção de pedidos (orders)
     match /orders/{orderId} {
       // Ler pedidos: se for o cliente que fez o pedido, ou se for staff/admin
       allow read: if request.auth != null && (
