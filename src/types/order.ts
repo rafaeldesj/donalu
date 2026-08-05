@@ -60,4 +60,5 @@ export interface OrderDocument {
   refundedAt?: string;
   refundedBy?: string;
   mercadoPagoPaymentId?: string;
+  mercadoPagoOrderId?: string;
 }
