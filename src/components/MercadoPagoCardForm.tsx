@@ -104,7 +104,7 @@ export function MercadoPagoCardForm({
         const detail = result.transactions?.payments?.[0]?.status_detail || result.status_detail || "Motivo desconhecido";
         throw new Error(`Pagamento recusado (${detail}). Tente outro cartao.`);
       }
-      onSuccess(result.id);
+      onSuccess(result.orderId || result.id);
     } catch (err: any) {
       const msg = err?.message || "Erro ao processar pagamento.";
       setError(msg);
