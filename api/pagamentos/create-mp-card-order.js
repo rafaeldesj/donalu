@@ -1,4 +1,4 @@
-﻿import https from 'https';
+import https from 'https';
 
 function nativeRequest(url, method, headers, data) {
   return new Promise((resolve, reject) => {
@@ -73,29 +73,11 @@ export default async function handler(req, res) {
     const firstName = (name || 'Cliente').split(' ')[0];
     const lastName = (name || 'Cliente').split(' ').slice(1).join(' ') || 'Dona Lu';
 
-    const orderPayload = {
-      type: 'online',
-      external_reference: 'DONALU_CARTAO_' + Date.now(),
-      total_amount: totalAmount,
-      items: items && items.length > 0
-        ? items.map(item => ({
-            title: item.title || item.name || 'Produto',
-            unit_price: parseFloat(item.unit_price || item.price || 0).toFixed(2),
-            quantity: parseInt(item.quantity || 1),
-            category_id: 'food'
-          }))
-        : [{ title: 'Pedido Dona Lu Pastelaria', unit_price: totalAmount, quantity: 1, category_id: 'food' }],
-      transactions: {
-        payments: [{
-          amount: totalAmount,
-          payment_method: {
-            type: 'credit_card',
-            token: cardToken,
-            installments: parseInt(installments || 1),
-            statement_descriptor: 'DONA LU PASTELARIA'
-          }
-        }]
-      },
+    const paymentPayload = {
+      transaction_amount: parseFloat(totalAmount),
+      token: cardToken,
+      description: 'Pedido Dona Lu Pastelaria',
+      installments: parseInt(installments || 1),
       payer: {
         email: email || 'cliente@email.com',
         first_name: firstName,
@@ -117,12 +99,12 @@ export default async function handler(req, res) {
       mpHeaders['X-Melidata-Session-Id'] = deviceSessionId;
     }
 
-    const orderRes = await nativeRequest('https://api.mercadopago.com/v1/orders', 'POST', mpHeaders, orderPayload);
+    const orderRes = await nativeRequest('https://api.mercadopago.com/v1/payments', 'POST', mpHeaders, paymentPayload);
 
     if (!orderRes.ok) {
       console.error('[MP Card Order] Erro:', orderRes.json || orderRes.text);
       const errMsg = orderRes.json?.errors?.[0]?.message || orderRes.json?.message || 'Erro ao processar pagamento.';
-      return res.status(400).json({ success: false, message: errMsg });
+      return res.status(400).json({ success: false, message: errMsg, details: orderRes.json });
     }
 
     const order = orderRes.json;
