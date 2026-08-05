@@ -75,7 +75,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: 'paymentId é obrigatório.' });
     }
 
-    const isMock = detectIsMock(token) || paymentId.startsWith('PAY_MOCK_');
+    const isMock = detectIsMock(token) || String(paymentId).startsWith('PAY_MOCK_');
 
     if (isMock) {
       return res.status(200).json({ success: true, message: 'Pagamento estornado com sucesso (MOCK).' });
