@@ -91,9 +91,15 @@ export function MercadoPagoCardForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          accessToken: accessToken,
-          orderPayload,
-          deviceSessionId
+          token: accessToken,
+          cardToken: tokenResp.id,
+          amount: amount,
+          email: payer.email,
+          name: payer.name,
+          cpf: payer.cpf,
+          installments: installments,
+          deviceSessionId: deviceSessionId,
+          items: items
         })
       });
       const result = await resp.json();
