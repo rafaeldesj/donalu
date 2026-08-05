@@ -3887,9 +3887,15 @@ export const ClientDashboard = ({
                       const businessStart = new Date(now);
                       if (now.getHours() < 6) businessStart.setDate(now.getDate() - 1);
                       businessStart.setHours(6, 0, 0, 0);
-                      const qDaily = query(collection(db, 'orders'), where('createdAt', '>=', businessStart.toISOString()));
-                      const dailySnap = await getDocs(qDaily);
-                      const dailySeq = dailySnap.size + 1;
+                      let dailySeq = 1;
+                        try {
+                          const qDaily = query(collection(db, 'orders'), where('createdAt', '>=', businessStart.toISOString()), where('clientUid', '==', user?.uid || ''));
+                          const dailySnap = await getDocs(qDaily);
+                          dailySeq = dailySnap.size + 1;
+                        } catch (errSeq) {
+                          console.warn('Erro dailySeq:', errSeq);
+                          dailySeq = Math.floor(Math.random() * 900) + 100;
+                        }
                       const orderData: any = {
                         clientUid: user?.uid || '',
                         clientName: user?.displayName || user?.email || 'Cliente',
