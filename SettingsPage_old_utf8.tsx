@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { doc, getDoc, setDoc, updateDoc, collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { User, Store, Shield, CreditCard, Save, Trash2, Clock, MapPin, AlertCircle, History, FileText, KeyRound, Plus, Camera, QrCode, Wallet, Printer, Settings, ClipboardList, ChefHat, X } from 'lucide-react';
+import { User, Store, Shield, CreditCard, Save, Trash2, Clock, MapPin, AlertCircle, History, FileText, KeyRound, Plus, Camera, QrCode, Wallet, Printer } from 'lucide-react';
 import { logAuditAction } from '../utils/audit';
 import { SecurityCameraSettings } from '../components/SecurityCameraSettings';
 import { TableQrCodeGenerator } from '../components/TableQrCodeGenerator';
@@ -62,7 +62,7 @@ export const SettingsPage = () => {
   const { user, userData, updatePhoneNumber } = useAuth();
   
   // Tabs state: 'profile' (all) | 'store' (admin) | 'loyalty' (admin) | 'advanced' (dev) | 'audit_logs' (admin) | 'commissions' | 'security' | 'payments' | 'printer'
-  const [activeTab, setActiveTab] = useState<'profile' | 'store' | 'loyalty' | 'advanced' | 'audit_logs' | 'commissions' | 'security' | 'mesas' | 'point_guide' | 'payments' | 'printer' | 'elgin_i8'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'store' | 'loyalty' | 'advanced' | 'audit_logs' | 'commissions' | 'security' | 'mesas' | 'point_guide' | 'payments' | 'printer'>('profile');
   const [selectedOrderTypeFilter, setSelectedOrderTypeFilter] = useState<'dine_in_table' | 'dine_in' | 'pickup' | 'delivery' | 'pdv'>('delivery');
 
   // Printer config states
@@ -100,7 +100,7 @@ export const SettingsPage = () => {
       setPrintSuccess(true);
       setTimeout(() => setPrintSuccess(false), 3000);
     } catch (err: any) {
-      setPrintError(err.message || 'Erro ao conectar à impressora Bluetooth.');
+      setPrintError(err.message || 'Erro ao conectar ├á impressora Bluetooth.');
     } finally {
       setIsPairing(false);
     }
@@ -120,7 +120,7 @@ export const SettingsPage = () => {
       setPrintSuccess(true);
       setTimeout(() => setPrintSuccess(false), 3000);
     } catch (err: any) {
-      setPrintError(err.message || 'Erro ao conectar à impressora USB/Serial.');
+      setPrintError(err.message || 'Erro ao conectar ├á impressora USB/Serial.');
     } finally {
       setIsSerialPairing(false);
     }
@@ -134,7 +134,7 @@ export const SettingsPage = () => {
   const handleSavePrinterSettings = (newSettings: PrinterSettings) => {
     setPrinterSettingsState(newSettings);
     savePrinterSettings(newSettings);
-    showFeedback('success', 'Configurações de impressão salvas com sucesso!');
+    showFeedback('success', 'Configura├º├Áes de impress├úo salvas com sucesso!');
   };
 
   const handleTestPrint = async () => {
@@ -145,7 +145,7 @@ export const SettingsPage = () => {
       setPrintSuccess(true);
       setTimeout(() => setPrintSuccess(false), 3000);
     } catch (err: any) {
-      setPrintError(err.message || 'Erro ao realizar impressão de teste.');
+      setPrintError(err.message || 'Erro ao realizar impress├úo de teste.');
     }
   };
   
@@ -173,7 +173,7 @@ export const SettingsPage = () => {
     stampsNeeded: 10,
     openingTime: '18:00',
     closingTime: '23:30',
-    storeAddress: 'Rua Jícara, 239 - Campo Grande - RJ',
+    storeAddress: 'Rua J├¡cara, 239 - Campo Grande - RJ',
     phoneContact: '(21) 3439-5241',
     deliveryBaseKm: 3.0,
     deliveryBaseFee: 5.00,
@@ -209,7 +209,7 @@ export const SettingsPage = () => {
   const handleFetchDevices = async () => {
     const token = storeConfig?.storeOwnerAccessToken;
     if (!token) {
-      setDeviceError('Configure primeiro o Access Token do estabelecimento na aba "Avançado".');
+      setDeviceError('Configure primeiro o Access Token do estabelecimento na aba "Avan├ºado".');
       return;
     }
     setLoadingDevices(true);
@@ -224,7 +224,7 @@ export const SettingsPage = () => {
       }
       setPointDevices(data.devices || []);
       if ((data.devices || []).length === 0) {
-        setDeviceError('Nenhuma maquininha encontrada nesta conta. Verifique se as maquininhas estão cadastradas no painel do Mercado Pago.');
+        setDeviceError('Nenhuma maquininha encontrada nesta conta. Verifique se as maquininhas est├úo cadastradas no painel do Mercado Pago.');
       }
       // Pre-fill deviceModelMap based on existing pointXxxId config
       const existingMap: Record<string, string> = {};
@@ -265,9 +265,9 @@ export const SettingsPage = () => {
       }
       // Update local state
       setPointDevices(prev => prev.map(d => d.id === deviceId ? { ...d, operating_mode: mode } : d));
-      showFeedback('success', `✅ ${data.message}`);
+      showFeedback('success', `Ô£à ${data.message}`);
     } catch (err: any) {
-      showFeedback('error', `❌ ${err.message}`);
+      showFeedback('error', `ÔØî ${err.message}`);
     } finally {
       setSettingMode(prev => ({ ...prev, [deviceId]: false }));
     }
@@ -305,11 +305,11 @@ export const SettingsPage = () => {
         userName: userData?.name || user.displayName || 'Administrador',
         actionType: 'UPDATE_POINT_DEVICES',
         title: 'Maquininhas Point Configuradas',
-        description: `IDs das maquininhas atualizados — Smart2: "${slotToId.smart2}", Pro3: "${slotToId.pro3}", Air2: "${slotToId.air2}", MiniNFC2: "${slotToId.mininfc2}"`
+        description: `IDs das maquininhas atualizados ÔÇö Smart2: "${slotToId.smart2}", Pro3: "${slotToId.pro3}", Air2: "${slotToId.air2}", MiniNFC2: "${slotToId.mininfc2}"`
       });
-      showFeedback('success', '✅ IDs das maquininhas salvos com sucesso!');
+      showFeedback('success', 'Ô£à IDs das maquininhas salvos com sucesso!');
     } catch (err) {
-      showFeedback('error', 'Erro ao salvar configuração das maquininhas.');
+      showFeedback('error', 'Erro ao salvar configura├º├úo das maquininhas.');
     } finally {
       setSavingDeviceSelection(false);
     }
@@ -356,7 +356,7 @@ export const SettingsPage = () => {
             stampsNeeded: 10,
             openingTime: '18:00',
             closingTime: '23:30',
-            storeAddress: 'Rua Jícara, 239 - Campo Grande - RJ',
+            storeAddress: 'Rua J├¡cara, 239 - Campo Grande - RJ',
             phoneContact: '(21) 3439-5241',
             deliveryBaseKm: 3.0,
             deliveryBaseFee: 5.00,
@@ -372,7 +372,7 @@ export const SettingsPage = () => {
             pointAir2Id: '',
             pointMiniNfc2Id: '',
             maxIngredientsLimit: 5,
-            availableIngredients: ['Palmito', 'Alho poró', 'Tomate', 'Cebola', 'Alho torrado', 'Ovo', 'Azeitona verde', 'Azeitona Preta', 'Milho', 'Ervilha', 'Orégano', 'Calabresa', 'Bacon'],
+            availableIngredients: ['Palmito', 'Alho por├│', 'Tomate', 'Cebola', 'Alho torrado', 'Ovo', 'Azeitona verde', 'Azeitona Preta', 'Milho', 'Ervilha', 'Or├®gano', 'Calabresa', 'Bacon'],
             paymentMethodsThemes: {
               pix: 'dark',
               credito: 'dark',
@@ -390,7 +390,7 @@ export const SettingsPage = () => {
           setStoreConfig(defaults);
         }
       } catch (err) {
-        console.error('Erro ao buscar configurações da loja:', err);
+        console.error('Erro ao buscar configura├º├Áes da loja:', err);
       } finally {
         setLoadingStore(false);
       }
@@ -478,10 +478,10 @@ export const SettingsPage = () => {
     const pendingCode = sessionStorage.getItem('mp_oauth_pending_code');
     if (!pendingCode || !isAdmin || !storeConfig) return;
 
-    // Guard: if devClientId is not loaded yet, bail — the effect will re-run when it loads
+    // Guard: if devClientId is not loaded yet, bail ÔÇö the effect will re-run when it loads
     const clientId = storeConfig.devClientId || '';
     if (!clientId) {
-      console.warn('[MP OAuth] devClientId ainda não carregado, aguardando...');
+      console.warn('[MP OAuth] devClientId ainda n├úo carregado, aguardando...');
       return;
     }
 
@@ -502,7 +502,7 @@ export const SettingsPage = () => {
         });
         const result = await response.json();
         if (!response.ok || !result.success) {
-          throw new Error(result.message || 'Falha ao trocar código OAuth.');
+          throw new Error(result.message || 'Falha ao trocar c├│digo OAuth.');
         }
         // Save the real access_token to Firestore immediately
         const docRef = doc(db, 'settings', 'store_config');
@@ -515,12 +515,12 @@ export const SettingsPage = () => {
           storeOwnerAccessToken: result.accessToken,
           storeOwnerEmail: result.email || prev?.storeOwnerEmail || ''
         }));
-        showFeedback('success', `✅ Conta do estabelecimento (${result.email || result.nickname || 'ID ' + result.userId}) conectada com sucesso via Mercado Pago!`);
+        showFeedback('success', `Ô£à Conta do estabelecimento (${result.email || result.nickname || 'ID ' + result.userId}) conectada com sucesso via Mercado Pago!`);
       } catch (err: any) {
-        console.error('[MP OAuth] Erro na troca de código:', err);
+        console.error('[MP OAuth] Erro na troca de c├│digo:', err);
         // Restore the code so user can retry without going through OAuth again
         sessionStorage.setItem('mp_oauth_pending_code', pendingCode);
-        showFeedback('error', `❌ Erro ao conectar conta MP: ${err.message}`);
+        showFeedback('error', `ÔØî Erro ao conectar conta MP: ${err.message}`);
       } finally {
         setExchangingOAuth(false);
       }
@@ -555,18 +555,18 @@ export const SettingsPage = () => {
       await logAuditAction({
         userId: user.uid,
         userEmail: user.email || '',
-        userName: userData?.name || user.displayName || (isDev ? 'Developer' : 'Proprietário'),
+        userName: userData?.name || user.displayName || (isDev ? 'Developer' : 'Propriet├írio'),
         actionType: 'UPDATE_DEV_MP_CONFIG',
-        title: 'Configuração do Mercado Pago Split',
+        title: 'Configura├º├úo do Mercado Pago Split',
         description: isDev 
-          ? `O desenvolvedor atualizou as configurações de Split do Mercado Pago. Porcentagem Dev: ${storeConfig.devPercentage}%, Porcentagem Estabelecimento: ${100 - (storeConfig.devPercentage ?? 1)}%`
-          : `O proprietário conectou/desconectou a conta do estabelecimento no Mercado Pago: ${storeConfig.storeOwnerEmail || 'Sem conta conectada'}`
+          ? `O desenvolvedor atualizou as configura├º├Áes de Split do Mercado Pago. Porcentagem Dev: ${storeConfig.devPercentage}%, Porcentagem Estabelecimento: ${100 - (storeConfig.devPercentage ?? 1)}%`
+          : `O propriet├írio conectou/desconectou a conta do estabelecimento no Mercado Pago: ${storeConfig.storeOwnerEmail || 'Sem conta conectada'}`
       });
 
-      showFeedback('success', 'Configurações do Mercado Pago salvas com sucesso!');
+      showFeedback('success', 'Configura├º├Áes do Mercado Pago salvas com sucesso!');
     } catch (err) {
       console.error(err);
-      showFeedback('error', 'Erro ao salvar configurações do Mercado Pago.');
+      showFeedback('error', 'Erro ao salvar configura├º├Áes do Mercado Pago.');
     } finally {
       setSubmittingDevMP(false);
     }
@@ -612,7 +612,7 @@ export const SettingsPage = () => {
   const handleLoginEstablishment = () => {
     const devClientId = storeConfig.devClientId || '';
     if (!devClientId) {
-      showFeedback('error', 'Configure o Client ID da aplicação Mercado Pago (campo "Client ID") antes de conectar.');
+      showFeedback('error', 'Configure o Client ID da aplica├º├úo Mercado Pago (campo "Client ID") antes de conectar.');
       return;
     }
     const redirectUri = encodeURIComponent(window.location.origin + '/');
@@ -654,16 +654,16 @@ export const SettingsPage = () => {
       await logAuditAction({
         userId: user.uid,
         userEmail: user.email || '',
-        userName: userData?.name || user.displayName || 'Usuário',
+        userName: userData?.name || user.displayName || 'Usu├írio',
         actionType: 'UPDATE_PROFILE',
-        title: 'Atualização de Perfil',
-        description: `O usuário atualizou suas informações pessoais e endereço de entrega.`
+        title: 'Atualiza├º├úo de Perfil',
+        description: `O usu├írio atualizou suas informa├º├Áes pessoais e endere├ºo de entrega.`
       });
 
-      showFeedback('success', 'Perfil e endereço atualizados com sucesso!');
+      showFeedback('success', 'Perfil e endere├ºo atualizados com sucesso!');
     } catch (err: any) {
       console.error(err);
-      showFeedback('error', 'Erro ao salvar alterações no perfil.');
+      showFeedback('error', 'Erro ao salvar altera├º├Áes no perfil.');
     } finally {
       setSubmittingProfile(false);
     }
@@ -716,14 +716,14 @@ export const SettingsPage = () => {
         userEmail: user.email || '',
         userName: userData?.name || user.displayName || 'Administrador',
         actionType: 'UPDATE_STORE_CONFIG',
-        title: 'Configurações de Funcionamento',
-        description: `O administrador atualizou as configurações de funcionamento da loja (Status: ${storeConfig.isOpen ? 'Aberta' : 'Fechada'}, Taxa de entrega: R$ ${storeConfig.deliveryFee.toFixed(2)}, Carimbos fidelidade: ${storeConfig.stampsNeeded}).`
+        title: 'Configura├º├Áes de Funcionamento',
+        description: `O administrador atualizou as configura├º├Áes de funcionamento da loja (Status: ${storeConfig.isOpen ? 'Aberta' : 'Fechada'}, Taxa de entrega: R$ ${storeConfig.deliveryFee.toFixed(2)}, Carimbos fidelidade: ${storeConfig.stampsNeeded}).`
       });
 
-      showFeedback('success', 'Configurações de funcionamento salvas com sucesso!');
+      showFeedback('success', 'Configura├º├Áes de funcionamento salvas com sucesso!');
     } catch (err) {
       console.error(err);
-      showFeedback('error', 'Erro ao salvar configurações de funcionamento.');
+      showFeedback('error', 'Erro ao salvar configura├º├Áes de funcionamento.');
     } finally {
       setSubmittingStore(false);
     }
@@ -732,7 +732,7 @@ export const SettingsPage = () => {
   // Remove saved PagBank payment card from user account
   const handleRemoveCard = async () => {
     if (!user) return;
-    if (!confirm('Deseja realmente remover o cartão de crédito salvo da sua conta? Você terá que digitá-lo novamente no próximo pagamento.')) return;
+    if (!confirm('Deseja realmente remover o cart├úo de cr├®dito salvo da sua conta? Voc├¬ ter├í que digit├í-lo novamente no pr├│ximo pagamento.')) return;
 
     try {
       const userDocRef = doc(db, 'users', user.uid);
@@ -747,16 +747,16 @@ export const SettingsPage = () => {
       await logAuditAction({
         userId: user.uid,
         userEmail: user.email || '',
-        userName: userData?.name || user.displayName || 'Usuário',
+        userName: userData?.name || user.displayName || 'Usu├írio',
         actionType: 'REMOVE_PAYMENT_CARD',
-        title: 'Remoção de Cartão Salvo',
-        description: `O usuário removeu seu cartão de crédito salvo para pagamentos recorrentes.`
+        title: 'Remo├º├úo de Cart├úo Salvo',
+        description: `O usu├írio removeu seu cart├úo de cr├®dito salvo para pagamentos recorrentes.`
       });
 
-      showFeedback('success', 'Cartão de crédito salvo removido com sucesso!');
+      showFeedback('success', 'Cart├úo de cr├®dito salvo removido com sucesso!');
     } catch (err) {
-      console.error('Erro ao remover cartão de crédito:', err);
-      showFeedback('error', 'Erro ao remover cartão de crédito salvo.');
+      console.error('Erro ao remover cart├úo de cr├®dito:', err);
+      showFeedback('error', 'Erro ao remover cart├úo de cr├®dito salvo.');
     }
   };
 
@@ -863,8 +863,8 @@ export const SettingsPage = () => {
   return (
     <div className="dashboard-layout animate-fade-in" style={{ paddingBottom: '3rem' }}>
       <div className="dashboard-header">
-        <h2>Configurações do Sistema ⚙️</h2>
-        <p>Gerencie seus dados de perfil, endereços de entrega e configurações operacionais da pastelaria.</p>
+        <h2>Configura├º├Áes do Sistema ÔÜÖ´©Å</h2>
+        <p>Gerencie seus dados de perfil, endere├ºos de entrega e configura├º├Áes operacionais da pastelaria.</p>
       </div>
 
       {message && (
@@ -886,7 +886,7 @@ export const SettingsPage = () => {
 
       <div className="settings-grid">
         
-        {/* Sidebar de Configurações */}
+        {/* Sidebar de Configura├º├Áes */}
         <aside className="settings-sidebar">
           <button
             type="button"
@@ -931,33 +931,8 @@ export const SettingsPage = () => {
                 textAlign: 'left'
               }}
             >
-              <Printer size={18} />
-              Impressora Bluetooth
-            </button>
-          )}
-
-          {(isAdmin || role === 'staff') && (
-            <button
-              type="button"
-              onClick={() => setActiveTab('elgin_i8')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.85rem 1rem',
-                borderRadius: '12px',
-                border: activeTab === 'elgin_i8' ? '1px solid var(--primary-gold)' : '1px solid rgba(255,255,255,0.05)',
-                background: activeTab === 'elgin_i8' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(255,255,255,0.02)',
-                color: activeTab === 'elgin_i8' ? 'var(--primary-gold)' : 'var(--text-secondary)',
-                cursor: 'pointer',
-                fontWeight: 600,
-                fontSize: '0.9rem',
-                transition: 'all 0.2s',
-                textAlign: 'left'
-              }}
-            >
-              <Printer size={18} />
-              Impressora Bematech Elgin i8
+              <Printer size={16} style={{ color: 'var(--primary-gold)' }} />
+              <span>Impressora Bluetooth</span>
             </button>
           )}
 
@@ -1056,7 +1031,7 @@ export const SettingsPage = () => {
                 }}
               >
                 <Camera size={16} style={{ color: '#10b981' }} />
-                <span>Segurança</span>
+                <span>Seguran├ºa</span>
               </button>
 
               <button
@@ -1079,7 +1054,7 @@ export const SettingsPage = () => {
                 }}
               >
                 <Shield size={16} style={{ color: '#a855f7' }} />
-                <span>Avançado (Dev)</span>
+                <span>Avan├ºado (Dev)</span>
               </button>
             </>
           )}
@@ -1130,7 +1105,7 @@ export const SettingsPage = () => {
               }}
             >
               <CreditCard size={16} style={{ color: '#10b981' }} />
-              <span>Fechamento de Comissão</span>
+              <span>Fechamento de Comiss├úo</span>
             </button>
           )}
 
@@ -1155,7 +1130,7 @@ export const SettingsPage = () => {
               }}
             >
               <CreditCard size={16} style={{ color: '#3b82f6' }} />
-              <span>📟 Guia Maquininha</span>
+              <span>­ƒôƒ Guia Maquininha</span>
             </button>
           )}
 
@@ -1185,7 +1160,7 @@ export const SettingsPage = () => {
           )}
         </aside>
 
-        {/* Formulários de Configurações */}
+        {/* Formul├írios de Configura├º├Áes */}
         <main className="loyalty-card" style={{ padding: '2rem', textAlign: 'left' }}>
           
           {/* Aba Mesas & QR Codes */}
@@ -1201,21 +1176,21 @@ export const SettingsPage = () => {
                 <h3 style={{ fontSize: '1.25rem', margin: 0, fontWeight: 700 }}>Gerenciar Formas de Pagamento</h3>
               </div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.4' }}>
-                Ative ou desative as formas de pagamento disponíveis para os clientes no cardápio digital, checkout e no fechamento de conta. Métodos desativados serão ocultados das opções de escolha do cliente.
+                Ative ou desative as formas de pagamento dispon├¡veis para os clientes no card├ípio digital, checkout e no fechamento de conta. M├®todos desativados ser├úo ocultados das op├º├Áes de escolha do cliente.
               </p>
 
-              {/* Seletor de Opção de Retirada */}
+              {/* Seletor de Op├º├úo de Retirada */}
               <div style={{ marginBottom: '1.5rem' }}>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>
-                  Configurar Formas de Pagamento para a Opção:
+                  Configurar Formas de Pagamento para a Op├º├úo:
                 </span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                   {[
-                    { id: 'pdv', label: 'PDV (Presencial) 🏪' },
-                    { id: 'dine_in_table', label: 'Comer na Mesa 🍽️' },
-                    { id: 'dine_in', label: 'Comer aí (Preparar) 🏢' },
-                    { id: 'pickup', label: 'Retirar na Loja 🛍️' },
-                    { id: 'delivery', label: 'Entrega em Casa 🛵' }
+                    { id: 'pdv', label: 'PDV (Presencial) ­ƒÅ¬' },
+                    { id: 'dine_in_table', label: 'Comer na Mesa ­ƒì¢´©Å' },
+                    { id: 'dine_in', label: 'Comer a├¡ (Preparar) ­ƒÅó' },
+                    { id: 'pickup', label: 'Retirar na Loja ­ƒøì´©Å' },
+                    { id: 'delivery', label: 'Entrega em Casa ­ƒøÁ' }
                   ].map((tab) => {
                     const isTabSelected = selectedOrderTypeFilter === tab.id;
                     return (
@@ -1245,14 +1220,14 @@ export const SettingsPage = () => {
               <form onSubmit={handleSavePaymentsConfig}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
                    {[
-                    { id: 'pix', name: 'Pix', desc: 'Pagamento instantâneo via QR Code gerado no Mercado Pago.', label: 'Pix 🟡' },
-                    { id: 'credito_mp', name: 'Crédito / Débito MP', desc: 'Pagamento via cartão de crédito ou débito online no checkout.', label: 'Crédito / Débito MP 💳' },
-                    { id: 'google_pay', name: 'Google Pay', desc: 'Carteira digital rápida integrada.', label: 'Google Pay 📱' },
-                    { id: 'debito_point', name: 'Débito Maquininha', desc: 'Débito presencial via maquininha Point.', label: 'Débito Maquininha 💴' },
-                    { id: 'credito_point', name: 'Crédito Maquininha', desc: 'Crédito presencial via maquininha Point.', label: 'Crédito Maquininha 💳' },
-                    { id: 'dinheiro', name: 'Dinheiro', desc: 'Pagamento em dinheiro vivo.', label: 'Dinheiro 💵' },
-                    { id: 'cartao', name: 'Cartões ou Pix', desc: 'Pagamento presencial via cartão ou Pix com baixa manual pelo operador.', label: 'Cartões ou Pix 💳' },
-                    { id: 'pagar_final', name: 'Pagar no Final', desc: 'Permitir que o cliente pague ao final do atendimento na mesa.', label: 'Pagar no Final 🍽️' }
+                    { id: 'pix', name: 'Pix', desc: 'Pagamento instant├óneo via QR Code gerado no Mercado Pago.', label: 'Pix ­ƒƒí' },
+                    { id: 'credito_mp', name: 'Cr├®dito / D├®bito MP', desc: 'Pagamento via cart├úo de cr├®dito ou d├®bito online no checkout.', label: 'Cr├®dito / D├®bito MP ­ƒÆ│' },
+                    { id: 'google_pay', name: 'Google Pay', desc: 'Carteira digital r├ípida integrada.', label: 'Google Pay ­ƒô▒' },
+                    { id: 'debito_point', name: 'D├®bito Maquininha', desc: 'D├®bito presencial via maquininha Point.', label: 'D├®bito Maquininha ­ƒÆ┤' },
+                    { id: 'credito_point', name: 'Cr├®dito Maquininha', desc: 'Cr├®dito presencial via maquininha Point.', label: 'Cr├®dito Maquininha ­ƒÆ│' },
+                    { id: 'dinheiro', name: 'Dinheiro', desc: 'Pagamento em dinheiro vivo.', label: 'Dinheiro ­ƒÆÁ' },
+                    { id: 'cartao', name: 'Cart├Áes ou Pix', desc: 'Pagamento presencial via cart├úo ou Pix com baixa manual pelo operador.', label: 'Cart├Áes ou Pix ­ƒÆ│' },
+                    { id: 'pagar_final', name: 'Pagar no Final', desc: 'Permitir que o cliente pague ao final do atendimento na mesa.', label: 'Pagar no Final ­ƒì¢´©Å' }
                   ].map((method) => {
                     const map = storeConfig?.disabledPaymentMethodsByOrderType || {};
                     const disabledListForType = map[selectedOrderTypeFilter] || [];
@@ -1337,7 +1312,7 @@ export const SettingsPage = () => {
                             </div>
                           </div>
 
-                          {/* Visibility Checkboxes: Clientes / Funcionários */}
+                          {/* Visibility Checkboxes: Clientes / Funcion├írios */}
                           {(() => {
                             const visMap = storeConfig?.paymentMethodsVisibilityByOrderType?.[selectedOrderTypeFilter] || storeConfig?.paymentMethodsVisibility || {};
                             const vis = visMap[method.id] || 'both';
@@ -1374,7 +1349,7 @@ export const SettingsPage = () => {
                                 borderRadius: '10px',
                                 padding: '0.4rem 0.75rem'
                               }}>
-                                <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}>Visível para:</span>
+                                <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}>Vis├¡vel para:</span>
                                 <label
                                   title="Exibir para clientes"
                                   style={{
@@ -1392,10 +1367,10 @@ export const SettingsPage = () => {
                                     onChange={(e) => setVis(e.target.checked, showStaff)}
                                     style={{ accentColor: '#34d399', width: '15px', height: '15px', cursor: 'pointer' }}
                                   />
-                                  👤 Clientes
+                                  ­ƒæñ Clientes
                                 </label>
                                 <label
-                                  title="Exibir para funcionários"
+                                  title="Exibir para funcion├írios"
                                   style={{
                                     display: 'flex', alignItems: 'center', gap: '0.3rem',
                                     cursor: 'pointer', userSelect: 'none', fontSize: '0.8rem',
@@ -1411,7 +1386,7 @@ export const SettingsPage = () => {
                                     onChange={(e) => setVis(showClient, e.target.checked)}
                                     style={{ accentColor: '#60a5fa', width: '15px', height: '15px', cursor: 'pointer' }}
                                   />
-                                  🧑‍💼 Funcionários
+                                  ­ƒºæÔÇì­ƒÆ╝ Funcion├írios
                                 </label>
                               </div>
                             );
@@ -1459,7 +1434,7 @@ export const SettingsPage = () => {
                   })}
                 </div>
 
-                {/* Opção de Exigir Aprovação do Caixa para pagamentos físicos */}
+                {/* Op├º├úo de Exigir Aprova├º├úo do Caixa para pagamentos f├¡sicos */}
                 <div style={{
                   background: 'rgba(255, 255, 255, 0.02)',
                   border: '1px solid rgba(255, 255, 255, 0.05)',
@@ -1496,11 +1471,11 @@ export const SettingsPage = () => {
                         userSelect: 'none' 
                       }}
                     >
-                      Exigir aprovação do Caixa para pagamentos físicos
+                      Exigir aprova├º├úo do Caixa para pagamentos f├¡sicos
                     </label>
                   </div>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginLeft: '1.75rem' }}>
-                    Se ativado, pedidos em dinheiro ou com pagamento presencial via maquininha deverão ser autorizados manualmente pelo operador do Caixa antes de serem enviados para a cozinha. Se desativado, os pedidos irão diretamente para a produção.
+                    Se ativado, pedidos em dinheiro ou com pagamento presencial via maquininha dever├úo ser autorizados manualmente pelo operador do Caixa antes de serem enviados para a cozinha. Se desativado, os pedidos ir├úo diretamente para a produ├º├úo.
                   </span>
                 </div>
 
@@ -1525,7 +1500,7 @@ export const SettingsPage = () => {
                   }}
                 >
                   <Save size={16} />
-                  {submittingPayments ? 'Salvando...' : 'Salvar Alterações'}
+                  {submittingPayments ? 'Salvando...' : 'Salvar Altera├º├Áes'}
                 </button>
               </form>
             </div>
@@ -1535,14 +1510,14 @@ export const SettingsPage = () => {
           {activeTab === 'point_guide' && isAdmin && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
 
-              {/* ── SEÇÃO: CONFIGURAÇÃO AUTOMÁTICA ── */}
+              {/* ÔöÇÔöÇ SE├ç├âO: CONFIGURA├ç├âO AUTOM├üTICA ÔöÇÔöÇ */}
               <div style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(99,102,241,0.06) 100%)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: '16px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                     <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)', borderRadius: '8px', padding: '0.3rem 0.5rem', fontSize: '0.9rem' }}>⚡</span>
-                      Configuração Automática
+                      <span style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)', borderRadius: '8px', padding: '0.3rem 0.5rem', fontSize: '0.9rem' }}>ÔÜí</span>
+                      Configura├º├úo Autom├ítica
                     </h4>
                     <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                       Busque as maquininhas diretamente da sua conta Mercado Pago, gerencie o modo PDV e salve tudo sem precisar copiar IDs manualmente.
@@ -1568,7 +1543,7 @@ export const SettingsPage = () => {
                         Buscando...
                       </>
                     ) : (
-                      <>🔍 Buscar Maquininhas</>
+                      <>­ƒöì Buscar Maquininhas</>
                     )}
                   </button>
                 </div>
@@ -1576,9 +1551,9 @@ export const SettingsPage = () => {
                 {/* Token missing warning */}
                 {!storeConfig?.storeOwnerAccessToken && (
                   <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '10px', padding: '0.75rem 1rem', display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
-                    <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>⚠️</span>
+                    <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>ÔÜá´©Å</span>
                     <div style={{ fontSize: '0.83rem', color: '#fcd34d', lineHeight: 1.5 }}>
-                      <strong>Token não configurado.</strong> Para usar a Configuração Automática, vá na aba <strong>Avançado</strong> e conecte a conta do estabelecimento via Mercado Pago OAuth.
+                      <strong>Token n├úo configurado.</strong> Para usar a Configura├º├úo Autom├ítica, v├í na aba <strong>Avan├ºado</strong> e conecte a conta do estabelecimento via Mercado Pago OAuth.
                     </div>
                   </div>
                 )}
@@ -1586,7 +1561,7 @@ export const SettingsPage = () => {
                 {/* Error message */}
                 {deviceError && (
                   <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '10px', padding: '0.75rem 1rem', display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
-                    <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>❌</span>
+                    <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>ÔØî</span>
                     <span style={{ fontSize: '0.83rem', color: '#fca5a5', lineHeight: 1.5 }}>{deviceError}</span>
                   </div>
                 )}
@@ -1596,7 +1571,7 @@ export const SettingsPage = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
                       <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#93c5fd' }}>
-                        📱 {pointDevices.length} maquininha{pointDevices.length !== 1 ? 's' : ''} encontrada{pointDevices.length !== 1 ? 's' : ''}
+                        ­ƒô▒ {pointDevices.length} maquininha{pointDevices.length !== 1 ? 's' : ''} encontrada{pointDevices.length !== 1 ? 's' : ''}
                       </span>
                       <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
                         Selecione o modelo e gerencie o modo PDV de cada dispositivo
@@ -1608,10 +1583,10 @@ export const SettingsPage = () => {
                       const isChangingMode = !!settingMode[device.id];
                       const assignedSlot = deviceModelMap[device.id] || '';
                       const modelOptions = [
-                        { value: 'smart2', label: '📟 Point Smart 2' },
-                        { value: 'pro3', label: '📟 Point Pro 3' },
-                        { value: 'air2', label: '📡 Point Air 2' },
-                        { value: 'mininfc2', label: '📱 Point Mini NFC 2' },
+                        { value: 'smart2', label: '­ƒôƒ Point Smart 2' },
+                        { value: 'pro3', label: '­ƒôƒ Point Pro 3' },
+                        { value: 'air2', label: '­ƒôí Point Air 2' },
+                        { value: 'mininfc2', label: '­ƒô▒ Point Mini NFC 2' },
                       ];
                       // Short model name for display
                       const modelDisplay = device.model?.replace(/_/g, ' ') || 'Desconhecido';
@@ -1634,7 +1609,7 @@ export const SettingsPage = () => {
                                 color: isPDV ? '#34d399' : 'var(--text-secondary)',
                                 borderRadius: '20px', padding: '0.15rem 0.6rem', fontSize: '0.72rem', fontWeight: 700
                               }}>
-                                {isPDV ? '✓ PDV' : '○ Autônomo'}
+                                {isPDV ? 'Ô£ô PDV' : 'Ôùï Aut├┤nomo'}
                               </span>
                             </div>
                             {device.serial_number && (
@@ -1644,7 +1619,7 @@ export const SettingsPage = () => {
                             )}
                             {device.external_store_id && (
                               <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                Loja: {device.external_store_id} {device.external_pos_id ? `· Caixa: ${device.external_pos_id}` : ''}
+                                Loja: {device.external_store_id} {device.external_pos_id ? `┬À Caixa: ${device.external_pos_id}` : ''}
                               </span>
                             )}
                             <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.25)', fontFamily: 'monospace', wordBreak: 'break-all' }}>
@@ -1654,7 +1629,7 @@ export const SettingsPage = () => {
 
                           {/* Assign model */}
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', minWidth: '180px' }}>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Este dispositivo é:</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Este dispositivo ├®:</span>
                             <select
                               value={assignedSlot}
                               onChange={(e) => setDeviceModelMap(prev => ({ ...prev, [device.id]: e.target.value }))}
@@ -1664,7 +1639,7 @@ export const SettingsPage = () => {
                                 cursor: 'pointer', outline: 'none'
                               }}
                             >
-                              <option value="" style={{ background: '#1a1f2e' }}>— Não configurar —</option>
+                              <option value="" style={{ background: '#1a1f2e' }}>ÔÇö N├úo configurar ÔÇö</option>
                               {modelOptions.map(opt => (
                                 <option key={opt.value} value={opt.value} style={{ background: '#1a1f2e' }}>{opt.label}</option>
                               ))}
@@ -1678,7 +1653,7 @@ export const SettingsPage = () => {
                               type="button"
                               onClick={() => handleSetDeviceMode(device.id, isPDV ? 'STANDALONE' : 'PDV')}
                               disabled={isChangingMode}
-                              title={isPDV ? 'Clique para desativar o Modo PDV (voltar ao modo autônomo)' : 'Clique para ativar o Modo PDV (integração com o sistema)'}
+                              title={isPDV ? 'Clique para desativar o Modo PDV (voltar ao modo aut├┤nomo)' : 'Clique para ativar o Modo PDV (integra├º├úo com o sistema)'}
                               style={{
                                 position: 'relative', width: '52px', height: '28px', borderRadius: '14px', border: 'none',
                                 background: isChangingMode ? 'rgba(255,255,255,0.1)' : (isPDV ? '#10b981' : 'rgba(255,255,255,0.1)'),
@@ -1705,7 +1680,7 @@ export const SettingsPage = () => {
                     {/* Save selection button */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                       <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                        💾 Ao salvar, os IDs são automaticamente preenchidos nos campos abaixo.
+                        ­ƒÆ¥ Ao salvar, os IDs s├úo automaticamente preenchidos nos campos abaixo.
                       </p>
                       <button
                         type="button"
@@ -1726,20 +1701,20 @@ export const SettingsPage = () => {
                             <div className="spinner" style={{ width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#fff', flexShrink: 0 }} />
                             Salvando...
                           </>
-                        ) : '✅ Salvar Configuração'}
+                        ) : 'Ô£à Salvar Configura├º├úo'}
                       </button>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Formulário de Configuração de IDs */}
+              {/* Formul├írio de Configura├º├úo de IDs */}
               <form onSubmit={handleSaveStoreConfig} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '12px', padding: '1.5rem', marginBottom: '1rem' }}>
                 <h4 style={{ margin: 0, color: 'var(--primary-gold)', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  ⚙️ Configurar IDs das Maquininhas Point
+                  ÔÜÖ´©Å Configurar IDs das Maquininhas Point
                 </h4>
                 <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                  Insira o <strong>ID do Caixa (external_id)</strong> obtido no Passo 5 para cada maquininha correspondente. Se deixar em branco, o modelo não ficará integrado.
+                  Insira o <strong>ID do Caixa (external_id)</strong> obtido no Passo 5 para cada maquininha correspondente. Se deixar em branco, o modelo n├úo ficar├í integrado.
                 </p>
                 
                 <div className="responsive-grid-2">
@@ -1797,16 +1772,16 @@ export const SettingsPage = () => {
                 </div>
               </form>
 
-              {/* ── GUIA PRÁTICO — O QUE FAZER AGORA ── */}
+              {/* ÔöÇÔöÇ GUIA PR├üTICO ÔÇö O QUE FAZER AGORA ÔöÇÔöÇ */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-                {/* Cabeçalho */}
+                {/* Cabe├ºalho */}
                 <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '1rem' }}>
                   <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '1.1rem' }}>
-                    📋 O que fazer agora — Passo a Passo
+                    ­ƒôï O que fazer agora ÔÇö Passo a Passo
                   </h3>
                   <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                    As maquininhas já foram encontradas automaticamente acima. Siga este guia para concluir a configuração sem precisar de ajuda externa.
+                    As maquininhas j├í foram encontradas automaticamente acima. Siga este guia para concluir a configura├º├úo sem precisar de ajuda externa.
                   </p>
                 </div>
 
@@ -1814,27 +1789,27 @@ export const SettingsPage = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '14px', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.06)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <span style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)', color: '#fff', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem', flexShrink: 0 }}>A</span>
-                    <h4 style={{ margin: 0, fontSize: '1rem' }}>Identifique qual maquininha é qual</h4>
+                    <h4 style={{ margin: 0, fontSize: '1rem' }}>Identifique qual maquininha ├® qual</h4>
                   </div>
                   <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                    As maquininhas apareceram como <strong style={{ color: '#fff' }}>"Unknown"</strong> porque a API do MP não retornou o modelo. Veja como descobrir qual ID corresponde a qual aparelho físico:
+                    As maquininhas apareceram como <strong style={{ color: '#fff' }}>"Unknown"</strong> porque a API do MP n├úo retornou o modelo. Veja como descobrir qual ID corresponde a qual aparelho f├¡sico:
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {/* Método 1 */}
+                    {/* M├®todo 1 */}
                     <div style={{ background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '10px', padding: '0.85rem 1rem' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#60a5fa', display: 'block', marginBottom: '0.4rem' }}>📊 MÉTODO 1 — Pelo painel do Mercado Pago (mais preciso)</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#60a5fa', display: 'block', marginBottom: '0.4rem' }}>­ƒôè M├ëTODO 1 ÔÇö Pelo painel do Mercado Pago (mais preciso)</span>
                       <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                         <strong style={{ color: '#fff' }}>1.</strong> Abra: <a href="https://www.mercadopago.com.br/stores-and-pos" target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', textDecoration: 'underline' }}>mercadopago.com.br/stores-and-pos</a><br />
-                        <strong style={{ color: '#fff' }}>2.</strong> Clique em <strong style={{ color: '#fff' }}>Caixas</strong> — cada caixa cadastrado mostra o <strong style={{ color: '#fff' }}>nome que você deu</strong> + o ID numérico.<br />
-                        <strong style={{ color: '#fff' }}>3.</strong> Compare os IDs de lá com os IDs exibidos nos cards acima (ex: <code style={{ background: 'rgba(255,255,255,0.08)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>119579640</code>).
+                        <strong style={{ color: '#fff' }}>2.</strong> Clique em <strong style={{ color: '#fff' }}>Caixas</strong> ÔÇö cada caixa cadastrado mostra o <strong style={{ color: '#fff' }}>nome que voc├¬ deu</strong> + o ID num├®rico.<br />
+                        <strong style={{ color: '#fff' }}>3.</strong> Compare os IDs de l├í com os IDs exibidos nos cards acima (ex: <code style={{ background: 'rgba(255,255,255,0.08)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>119579640</code>).
                       </p>
                     </div>
-                    {/* Método 2 */}
+                    {/* M├®todo 2 */}
                     <div style={{ background: 'rgba(168,85,247,0.07)', border: '1px solid rgba(168,85,247,0.2)', borderRadius: '10px', padding: '0.85rem 1rem' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#c084fc', display: 'block', marginBottom: '0.4rem' }}>🔌 MÉTODO 2 — Teste prático (mais rápido)</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#c084fc', display: 'block', marginBottom: '0.4rem' }}>­ƒöî M├ëTODO 2 ÔÇö Teste pr├ítico (mais r├ípido)</span>
                       <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                         <strong style={{ color: '#fff' }}>1.</strong> Nos cards acima, ative o <strong style={{ color: '#fff' }}>toggle PDV</strong> em UMA maquininha de cada vez.<br />
-                        <strong style={{ color: '#fff' }}>2.</strong> Olhe qual aparelho físico muda a tela para <em>"Aguardando integração"</em> — esse é o correspondente.<br />
+                        <strong style={{ color: '#fff' }}>2.</strong> Olhe qual aparelho f├¡sico muda a tela para <em>"Aguardando integra├º├úo"</em> ÔÇö esse ├® o correspondente.<br />
                         <strong style={{ color: '#fff' }}>3.</strong> Anote e repita para as demais.
                       </p>
                     </div>
@@ -1848,17 +1823,17 @@ export const SettingsPage = () => {
                     <h4 style={{ margin: 0, fontSize: '1rem' }}>Associe cada dispositivo ao modelo correto</h4>
                   </div>
                   <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                    Nos cards do <strong style={{ color: '#fff' }}>⚡ Configuração Automática</strong> acima, use o dropdown <strong style={{ color: '#fff' }}>"Este dispositivo é:"</strong> para cada maquininha:
+                    Nos cards do <strong style={{ color: '#fff' }}>ÔÜí Configura├º├úo Autom├ítica</strong> acima, use o dropdown <strong style={{ color: '#fff' }}>"Este dispositivo ├®:"</strong> para cada maquininha:
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                     {[
-                      { model: 'Point Smart 2', desc: 'tela própria, botões físicos, design compacto' },
+                      { model: 'Point Smart 2', desc: 'tela pr├│pria, bot├Áes f├¡sicos, design compacto' },
                       { model: 'Point Pro 3', desc: 'tela grande colorida, mais moderno' },
                       { model: 'Point Air 2', desc: '4G + WiFi + NFC, funciona sem celular' },
                       { model: 'Point Mini NFC 2', desc: 'pequenininho, conecta via Bluetooth ao celular' },
                     ].map(item => (
                       <div key={item.model} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '0.55rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 700, fontSize: '0.88rem', color: '#fff', minWidth: '140px' }}>📟 {item.model}</span>
+                        <span style={{ fontWeight: 700, fontSize: '0.88rem', color: '#fff', minWidth: '140px' }}>­ƒôƒ {item.model}</span>
                         <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{item.desc}</span>
                       </div>
                     ))}
@@ -1872,35 +1847,35 @@ export const SettingsPage = () => {
                     <h4 style={{ margin: 0, fontSize: '1rem' }}>Ative o Modo PDV (integrado) nas maquininhas</h4>
                   </div>
                   <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                    Você pode fazer isso de <strong style={{ color: '#fff' }}>duas formas</strong> — pelo sistema aqui (mais fácil) <strong style={{ color: '#fff' }}>OU</strong> diretamente na maquininha:
+                    Voc├¬ pode fazer isso de <strong style={{ color: '#fff' }}>duas formas</strong> ÔÇö pelo sistema aqui (mais f├ícil) <strong style={{ color: '#fff' }}>OU</strong> diretamente na maquininha:
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <div style={{ background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '10px', padding: '0.85rem 1rem' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#34d399', display: 'block', marginBottom: '0.4rem' }}>✅ OPÇÃO 1 — Pelo sistema (recomendado)</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#34d399', display: 'block', marginBottom: '0.4rem' }}>Ô£à OP├ç├âO 1 ÔÇö Pelo sistema (recomendado)</span>
                       <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                         Nos cards acima, clique no <strong style={{ color: '#fff' }}>toggle "Modo PDV"</strong> para ativar (verde = integrado).<br />
-                        Quando ficar verde, a maquininha muda automaticamente e exibe <em>"Aguardando integração"</em>.
+                        Quando ficar verde, a maquininha muda automaticamente e exibe <em>"Aguardando integra├º├úo"</em>.
                       </p>
                     </div>
                     <div style={{ background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '10px', padding: '0.85rem 1rem' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#60a5fa', display: 'block', marginBottom: '0.4rem' }}>📟 OPÇÃO 2 — Direto na maquininha (Smart 2 / Pro 3 / Air 2)</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#60a5fa', display: 'block', marginBottom: '0.4rem' }}>­ƒôƒ OP├ç├âO 2 ÔÇö Direto na maquininha (Smart 2 / Pro 3 / Air 2)</span>
                       <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                        <strong style={{ color: '#fff' }}>1.</strong> Na tela inicial, toque nos <strong style={{ color: '#fff' }}>3 pontinhos (⋮)</strong> no canto superior direito.<br />
-                        <strong style={{ color: '#fff' }}>2.</strong> Procure: <strong style={{ color: '#fff' }}>"Modo PDV"</strong>, <strong style={{ color: '#fff' }}>"Modo integrado"</strong> ou <strong style={{ color: '#fff' }}>"Integração com sistema"</strong>.<br />
-                        <strong style={{ color: '#fff' }}>3.</strong> Ative o toggle — a tela vai mostrar <em>"Aguardando integração"</em>.
+                        <strong style={{ color: '#fff' }}>1.</strong> Na tela inicial, toque nos <strong style={{ color: '#fff' }}>3 pontinhos (Ôï«)</strong> no canto superior direito.<br />
+                        <strong style={{ color: '#fff' }}>2.</strong> Procure: <strong style={{ color: '#fff' }}>"Modo PDV"</strong>, <strong style={{ color: '#fff' }}>"Modo integrado"</strong> ou <strong style={{ color: '#fff' }}>"Integra├º├úo com sistema"</strong>.<br />
+                        <strong style={{ color: '#fff' }}>3.</strong> Ative o toggle ÔÇö a tela vai mostrar <em>"Aguardando integra├º├úo"</em>.
                       </p>
                     </div>
                     <div style={{ background: 'rgba(168,85,247,0.07)', border: '1px solid rgba(168,85,247,0.2)', borderRadius: '10px', padding: '0.85rem 1rem' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#c084fc', display: 'block', marginBottom: '0.4rem' }}>📱 OPÇÃO 2 — Point Mini NFC 2 (via app no celular)</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#c084fc', display: 'block', marginBottom: '0.4rem' }}>­ƒô▒ OP├ç├âO 2 ÔÇö Point Mini NFC 2 (via app no celular)</span>
                       <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                        <strong style={{ color: '#fff' }}>1.</strong> Abra o app <strong style={{ color: '#fff' }}>Mercado Pago</strong> no celular já pareado com o Mini NFC 2.<br />
-                        <strong style={{ color: '#fff' }}>2.</strong> Vá em <strong style={{ color: '#fff' }}>Cobrar → Minha maquininha → Configurações → Modo de uso</strong>.<br />
+                        <strong style={{ color: '#fff' }}>1.</strong> Abra o app <strong style={{ color: '#fff' }}>Mercado Pago</strong> no celular j├í pareado com o Mini NFC 2.<br />
+                        <strong style={{ color: '#fff' }}>2.</strong> V├í em <strong style={{ color: '#fff' }}>Cobrar ÔåÆ Minha maquininha ÔåÆ Configura├º├Áes ÔåÆ Modo de uso</strong>.<br />
                         <strong style={{ color: '#fff' }}>3.</strong> Selecione <strong style={{ color: '#fff' }}>"PDV (Integrado)"</strong> e confirme.
                       </p>
                     </div>
                   </div>
                   <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.6rem 1rem', fontSize: '0.82rem', color: '#fca5a5' }}>
-                    ⚠️ <strong>Atenção:</strong> Com o Modo PDV ativo, a maquininha <strong>não funciona mais de forma independente</strong>. Para usar manualmente (sem o sistema), desative o Modo PDV — ela volta ao normal.
+                    ÔÜá´©Å <strong>Aten├º├úo:</strong> Com o Modo PDV ativo, a maquininha <strong>n├úo funciona mais de forma independente</strong>. Para usar manualmente (sem o sistema), desative o Modo PDV ÔÇö ela volta ao normal.
                   </div>
                 </div>
 
@@ -1912,14 +1887,14 @@ export const SettingsPage = () => {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
                     <p style={{ margin: 0 }}>
-                      <strong style={{ color: '#fff' }}>1.</strong> No card de cada maquininha acima, selecione o modelo no dropdown e garanta que o toggle PDV está <strong style={{ color: '#34d399' }}>verde ✓</strong>.<br />
-                      <strong style={{ color: '#fff' }}>2.</strong> Clique no botão <strong style={{ color: '#10b981' }}>✅ Salvar Configuração</strong> — os IDs são gravados automaticamente.<br />
-                      <strong style={{ color: '#fff' }}>3.</strong> Teste: abra o cardápio digital, faça um pedido e escolha <strong style={{ color: '#fff' }}>"Débito Maquininha"</strong>.<br />
-                      <strong style={{ color: '#fff' }}>4.</strong> A maquininha deve vibrar/acender e exibir o valor para passar o cartão. ✅
+                      <strong style={{ color: '#fff' }}>1.</strong> No card de cada maquininha acima, selecione o modelo no dropdown e garanta que o toggle PDV est├í <strong style={{ color: '#34d399' }}>verde Ô£ô</strong>.<br />
+                      <strong style={{ color: '#fff' }}>2.</strong> Clique no bot├úo <strong style={{ color: '#10b981' }}>Ô£à Salvar Configura├º├úo</strong> ÔÇö os IDs s├úo gravados automaticamente.<br />
+                      <strong style={{ color: '#fff' }}>3.</strong> Teste: abra o card├ípio digital, fa├ºa um pedido e escolha <strong style={{ color: '#fff' }}>"D├®bito Maquininha"</strong>.<br />
+                      <strong style={{ color: '#fff' }}>4.</strong> A maquininha deve vibrar/acender e exibir o valor para passar o cart├úo. Ô£à
                     </p>
                   </div>
                   <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: '8px', padding: '0.75rem 1rem', fontSize: '0.85rem', color: '#34d399', lineHeight: 1.6 }}>
-                    🎉 <strong>Pronto!</strong> A integração está completa. O débito e o crédito via maquininha passarão a funcionar automaticamente quando o cliente selecionar essa opção no cardápio digital.
+                    ­ƒÄë <strong>Pronto!</strong> A integra├º├úo est├í completa. O d├®bito e o cr├®dito via maquininha passar├úo a funcionar automaticamente quando o cliente selecionar essa op├º├úo no card├ípio digital.
                   </div>
                 </div>
 
@@ -1930,7 +1905,7 @@ export const SettingsPage = () => {
           {/* Aba 1: Meu Perfil */}
           {activeTab === 'profile' && (
             <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem', margin: 0 }}>Meu Perfil e Endereço</h3>
+              <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem', margin: 0 }}>Meu Perfil e Endere├ºo</h3>
               
               <div className="responsive-grid-2">
                 <div className="input-group">
@@ -1981,7 +1956,7 @@ export const SettingsPage = () => {
                 </div>
               </div>
 
-              <h4 style={{ margin: '0.5rem 0 0 0', color: 'var(--primary-gold)' }}>Endereço de Entrega Principal</h4>
+              <h4 style={{ margin: '0.5rem 0 0 0', color: 'var(--primary-gold)' }}>Endere├ºo de Entrega Principal</h4>
               
               <div className="responsive-grid-street-number">
                 <div className="input-group">
@@ -1989,14 +1964,14 @@ export const SettingsPage = () => {
                   <input
                     type="text"
                     className="pastel-edit-input"
-                    placeholder="Av. Cesário de Melo"
+                    placeholder="Av. Ces├írio de Melo"
                     value={street}
                     onChange={(e) => setStreet(e.target.value)}
                     required
                   />
                 </div>
                 <div className="input-group">
-                  <label>Número</label>
+                  <label>N├║mero</label>
                   <input
                     type="text"
                     className="pastel-edit-input"
@@ -2047,7 +2022,7 @@ export const SettingsPage = () => {
                   />
                 </div>
                 <div className="input-group">
-                  <label>Complemento / Ponto de Referência</label>
+                  <label>Complemento / Ponto de Refer├¬ncia</label>
                   <input
                     type="text"
                     className="pastel-edit-input"
@@ -2058,10 +2033,10 @@ export const SettingsPage = () => {
                 </div>
               </div>
 
-              {/* Seção Cartão Salvo */}
+              {/* Se├º├úo Cart├úo Salvo */}
               <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1.5rem' }}>
                 <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary-gold)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <CreditCard size={18} /> Cartão de Crédito no Cofre (PagBank)
+                  <CreditCard size={18} /> Cart├úo de Cr├®dito no Cofre (PagBank)
                 </h4>
                 {userData?.pagbank_card_token ? (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
@@ -2075,11 +2050,11 @@ export const SettingsPage = () => {
                       className="btn-small"
                       style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}
                     >
-                      <Trash2 size={14} /> Excluir Cartão
+                      <Trash2 size={14} /> Excluir Cart├úo
                     </button>
                   </div>
                 ) : (
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>Nenhum cartão cadastrado no cofre atualmente. Você poderá salvar um cartão durante o checkout de novos pedidos.</p>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>Nenhum cart├úo cadastrado no cofre atualmente. Voc├¬ poder├í salvar um cart├úo durante o checkout de novos pedidos.</p>
                 )}
               </div>
 
@@ -2090,7 +2065,7 @@ export const SettingsPage = () => {
                 style={{ alignSelf: 'flex-end', display: 'flex', alignItems: 'center', gap: '0.5rem', width: 'auto', padding: '0.6rem 2rem' }}
               >
                 <Save size={16} />
-                <span>{submittingProfile ? 'Salvando...' : 'Salvar Alterações'}</span>
+                <span>{submittingProfile ? 'Salvando...' : 'Salvar Altera├º├Áes'}</span>
               </button>
             </form>
           )}
@@ -2103,7 +2078,7 @@ export const SettingsPage = () => {
               {loadingStore ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)' }}>
                   <div className="spinner" style={{ width: '18px', height: '18px' }} />
-                  <span>Carregando parâmetros operacionais...</span>
+                  <span>Carregando par├ómetros operacionais...</span>
                 </div>
               ) : (
                 <>
@@ -2113,8 +2088,8 @@ export const SettingsPage = () => {
                       <strong style={{ fontSize: '1rem', color: '#fff' }}>Status da Loja (Novos Pedidos)</strong>
                       <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                         {storeConfig.isOpen 
-                          ? '🟢 Loja aberta e recebendo pedidos normalmente.' 
-                          : '🔴 Loja fechada. Clientes não conseguirão fechar o carrinho.'}
+                          ? '­ƒƒó Loja aberta e recebendo pedidos normalmente.' 
+                          : '­ƒö┤ Loja fechada. Clientes n├úo conseguir├úo fechar o carrinho.'}
                       </p>
                     </div>
                     <button
@@ -2148,10 +2123,10 @@ export const SettingsPage = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <strong style={{ fontSize: '1.05rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          ⚠️ Fechamento Excepcional (Hoje)
+                          ÔÜá´©Å Fechamento Excepcional (Hoje)
                         </strong>
                         <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                          Ative esta opção caso precise fechar a pastelaria hoje excepcionalmente (ex: feriado, folga).
+                          Ative esta op├º├úo caso precise fechar a pastelaria hoje excepcionalmente (ex: feriado, folga).
                         </p>
                       </div>
                       <label style={{ position: 'relative', display: 'inline-block', width: '50px', height: '26px', cursor: 'pointer' }}>
@@ -2188,11 +2163,11 @@ export const SettingsPage = () => {
                     {storeConfig.isTemporarilyClosed && (
                       <div className="input-group animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', transition: 'all 0.3s' }}>
                         <label style={{ fontSize: '0.85rem', color: 'var(--primary-gold)', fontWeight: 600 }}>
-                          Escreva a mensagem que os clientes visualizarão:
+                          Escreva a mensagem que os clientes visualizar├úo:
                         </label>
                         <textarea
                           className="pastel-edit-input"
-                          placeholder="Ex: Hoje não estamos funcionando devido a um treinamento interno da equipe. Retornaremos amanhã a partir das 18h!"
+                          placeholder="Ex: Hoje n├úo estamos funcionando devido a um treinamento interno da equipe. Retornaremos amanh├ú a partir das 18h!"
                           value={storeConfig.temporaryCloseReason || ''}
                           onChange={(e) => setStoreConfig(prev => ({ ...prev, temporaryCloseReason: e.target.value }))}
                           style={{
@@ -2212,11 +2187,11 @@ export const SettingsPage = () => {
                     )}
                   </div>
 
-                  {/* Horários */}
+                  {/* Hor├írios */}
                   <div className="responsive-grid-2">
                     <div className="input-group">
                       <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <Clock size={14} /> Horário de Abertura
+                        <Clock size={14} /> Hor├írio de Abertura
                       </label>
                       <input
                         type="text"
@@ -2229,7 +2204,7 @@ export const SettingsPage = () => {
                     </div>
                     <div className="input-group">
                       <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <Clock size={14} /> Horário de Fechamento
+                        <Clock size={14} /> Hor├írio de Fechamento
                       </label>
                       <input
                         type="text"
@@ -2244,7 +2219,7 @@ export const SettingsPage = () => {
 
                   {/* Dias de Funcionamento */}
                   <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <strong style={{ fontSize: '1rem', color: '#fff' }}>📅 Dias de Funcionamento</strong>
+                    <strong style={{ fontSize: '1rem', color: '#fff' }}>­ƒôà Dias de Funcionamento</strong>
                     <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                       Selecione os dias da semana em que a pastelaria abre para receber pedidos.
                     </p>
@@ -2256,7 +2231,7 @@ export const SettingsPage = () => {
                         { label: 'Qua', index: 3 },
                         { label: 'Qui', index: 4 },
                         { label: 'Sex', index: 5 },
-                        { label: 'Sáb', index: 6 }
+                        { label: 'S├íb', index: 6 }
                       ].map((day) => {
                         const currentOpenDays = storeConfig.openDays || [0, 1, 2, 3, 4, 5, 6];
                         const isChecked = currentOpenDays.includes(day.index) || currentOpenDays.includes(day.index.toString());
@@ -2288,9 +2263,9 @@ export const SettingsPage = () => {
 
                   {/* Esquema de Taxa de Entrega */}
                   <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <strong style={{ fontSize: '1rem', color: '#fff' }}>🛵 Esquema de Taxa de Entrega</strong>
+                    <strong style={{ fontSize: '1rem', color: '#fff' }}>­ƒøÁ Esquema de Taxa de Entrega</strong>
                     <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                      Configure a taxa de entrega baseada na distância calculada por geolocalização.
+                      Configure a taxa de entrega baseada na dist├óncia calculada por geolocaliza├º├úo.
                     </p>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
                       <div className="input-group">
@@ -2305,7 +2280,7 @@ export const SettingsPage = () => {
                         />
                       </div>
                       <div className="input-group">
-                        <label>Distância Base (Km)</label>
+                        <label>Dist├óncia Base (Km)</label>
                         <input
                           type="number"
                           step="0.1"
@@ -2329,10 +2304,10 @@ export const SettingsPage = () => {
                     </div>
                   </div>
 
-                  {/* Endereço e Contato */}
+                  {/* Endere├ºo e Contato */}
                   <div className="input-group">
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <MapPin size={14} /> Endereço Físico Exibido
+                      <MapPin size={14} /> Endere├ºo F├¡sico Exibido
                     </label>
                     <input
                       type="text"
@@ -2354,13 +2329,13 @@ export const SettingsPage = () => {
                     />
                   </div>
 
-                  {/* Seção de Ingredientes Adicionais */}
+                  {/* Se├º├úo de Ingredientes Adicionais */}
                   <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1.5rem', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--primary-gold)' }}>⚙️ Gestão de Ingredientes Adicionais</h3>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--primary-gold)' }}>ÔÜÖ´©Å Gest├úo de Ingredientes Adicionais</h3>
                     
                     <div className="responsive-grid-2">
                       <div className="input-group">
-                        <label>Quantidade Máxima Permitida por Pastel</label>
+                        <label>Quantidade M├íxima Permitida por Pastel</label>
                         <input
                           type="number"
                           className="pastel-edit-input"
@@ -2385,7 +2360,7 @@ export const SettingsPage = () => {
                                 e.preventDefault();
                                 const val = e.currentTarget.value.trim();
                                 if (val) {
-                                  const currentList = storeConfig.availableIngredients || ['Palmito', 'Alho poró', 'Tomate', 'Cebola', 'Alho torrado', 'Ovo', 'Azeitona verde', 'Azeitona Preta', 'Milho', 'Ervilha', 'Orégano', 'Calabresa', 'Bacon'];
+                                  const currentList = storeConfig.availableIngredients || ['Palmito', 'Alho por├│', 'Tomate', 'Cebola', 'Alho torrado', 'Ovo', 'Azeitona verde', 'Azeitona Preta', 'Milho', 'Ervilha', 'Or├®gano', 'Calabresa', 'Bacon'];
                                   if (!currentList.includes(val)) {
                                     setStoreConfig(prev => ({
                                       ...prev,
@@ -2403,7 +2378,7 @@ export const SettingsPage = () => {
                               const input = document.getElementById('new-ingredient-input') as HTMLInputElement;
                               const val = input?.value.trim();
                               if (val) {
-                                const currentList = storeConfig.availableIngredients || ['Palmito', 'Alho poró', 'Tomate', 'Cebola', 'Alho torrado', 'Ovo', 'Azeitona verde', 'Azeitona Preta', 'Milho', 'Ervilha', 'Orégano', 'Calabresa', 'Bacon'];
+                                const currentList = storeConfig.availableIngredients || ['Palmito', 'Alho por├│', 'Tomate', 'Cebola', 'Alho torrado', 'Ovo', 'Azeitona verde', 'Azeitona Preta', 'Milho', 'Ervilha', 'Or├®gano', 'Calabresa', 'Bacon'];
                                 if (!currentList.includes(val)) {
                                   setStoreConfig(prev => ({
                                     ...prev,
@@ -2430,7 +2405,7 @@ export const SettingsPage = () => {
                     </div>
 
                     <div className="input-group">
-                      <label>Ingredientes Cadastrados ({ (storeConfig.availableIngredients || ['Palmito', 'Alho poró', 'Tomate', 'Cebola', 'Alho torrado', 'Ovo', 'Azeitona verde', 'Azeitona Preta', 'Milho', 'Ervilha', 'Orégano', 'Calabresa', 'Bacon']).length })</label>
+                      <label>Ingredientes Cadastrados ({ (storeConfig.availableIngredients || ['Palmito', 'Alho por├│', 'Tomate', 'Cebola', 'Alho torrado', 'Ovo', 'Azeitona verde', 'Azeitona Preta', 'Milho', 'Ervilha', 'Or├®gano', 'Calabresa', 'Bacon']).length })</label>
                       <div style={{
                         display: 'flex',
                         flexWrap: 'wrap',
@@ -2441,7 +2416,7 @@ export const SettingsPage = () => {
                         padding: '0.75rem',
                         minHeight: '60px'
                       }}>
-                        {(storeConfig.availableIngredients || ['Palmito', 'Alho poró', 'Tomate', 'Cebola', 'Alho torrado', 'Ovo', 'Azeitona verde', 'Azeitona Preta', 'Milho', 'Ervilha', 'Orégano', 'Calabresa', 'Bacon']).map((ing, index) => (
+                        {(storeConfig.availableIngredients || ['Palmito', 'Alho por├│', 'Tomate', 'Cebola', 'Alho torrado', 'Ovo', 'Azeitona verde', 'Azeitona Preta', 'Milho', 'Ervilha', 'Or├®gano', 'Calabresa', 'Bacon']).map((ing, index) => (
                           <div
                             key={ing + "-" + index}
                             style={{
@@ -2461,7 +2436,7 @@ export const SettingsPage = () => {
                             <button
                               type="button"
                               onClick={() => {
-                                const currentList = storeConfig.availableIngredients || ['Palmito', 'Alho poró', 'Tomate', 'Cebola', 'Alho torrado', 'Ovo', 'Azeitona verde', 'Azeitona Preta', 'Milho', 'Ervilha', 'Orégano', 'Calabresa', 'Bacon'];
+                                const currentList = storeConfig.availableIngredients || ['Palmito', 'Alho por├│', 'Tomate', 'Cebola', 'Alho torrado', 'Ovo', 'Azeitona verde', 'Azeitona Preta', 'Milho', 'Ervilha', 'Or├®gano', 'Calabresa', 'Bacon'];
                                 setStoreConfig(prev => ({
                                   ...prev,
                                   availableIngredients: currentList.filter(i => i !== ing)
@@ -2478,7 +2453,7 @@ export const SettingsPage = () => {
                                 alignItems: 'center'
                               }}
                             >
-                              ✕
+                              Ô£ò
                             </button>
                           </div>
                         ))}
@@ -2493,7 +2468,7 @@ export const SettingsPage = () => {
                     style={{ alignSelf: 'flex-end', display: 'flex', alignItems: 'center', gap: '0.5rem', width: 'auto', padding: '0.6rem 2rem' }}
                   >
                     <Save size={16} />
-                    <span>{submittingStore ? 'Gravando...' : 'Gravar Configurações'}</span>
+                    <span>{submittingStore ? 'Gravando...' : 'Gravar Configura├º├Áes'}</span>
                   </button>
                 </>
               )}
@@ -2503,10 +2478,10 @@ export const SettingsPage = () => {
           {/* Aba 3: Fidelidade */}
           {activeTab === 'loyalty' && isAdmin && (
             <form onSubmit={handleSaveStoreConfig} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem', margin: 0 }}>Regras do Cartão Fidelidade</h3>
+              <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem', margin: 0 }}>Regras do Cart├úo Fidelidade</h3>
 
               <div className="input-group" style={{ maxWidth: '300px' }}>
-                <label>Carimbos necessários para pastel grátis</label>
+                <label>Carimbos necess├írios para pastel gr├ítis</label>
                 <input
                   type="number"
                   className="pastel-edit-input"
@@ -2516,7 +2491,7 @@ export const SettingsPage = () => {
                   max="20"
                   required
                 />
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Por padrão, o cliente acumula 1 carimbo por pedido concluído e resgata ao completar esta meta.</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Por padr├úo, o cliente acumula 1 carimbo por pedido conclu├¡do e resgata ao completar esta meta.</span>
               </div>
 
               <button
@@ -2531,24 +2506,24 @@ export const SettingsPage = () => {
             </form>
           )}
 
-          {/* Aba 4: Avançado Dev */}
+          {/* Aba 4: Avan├ºado Dev */}
           {activeTab === 'advanced' && (isDev || role === 'owner') && (
             <form onSubmit={handleSaveDevMPConfig} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div>
-                <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem', margin: 0, color: '#a855f7' }}>Split de Pagamentos & Mercado Pago 💳</h3>
+                <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem', margin: 0, color: '#a855f7' }}>Split de Pagamentos & Mercado Pago ­ƒÆ│</h3>
                 <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                  Configure as regras de repasse (split) de vendas automatizadas entre a conta de manutenção do desenvolvedor e a conta do estabelecimento.
+                  Configure as regras de repasse (split) de vendas automatizadas entre a conta de manuten├º├úo do desenvolvedor e a conta do estabelecimento.
                 </p>
               </div>
 
               {/* 1. Escolha da porcentagem do Split */}
               <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '12px', padding: '1.25rem' }}>
                 <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem', color: 'var(--primary-gold)' }}>
-                  Opções de Divisão (Split)
+                  Op├º├Áes de Divis├úo (Split)
                 </label>
                 <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                   {[
-                    { pct: 1, label: '1% Dev / 99% Loja (Padrão)' },
+                    { pct: 1, label: '1% Dev / 99% Loja (Padr├úo)' },
                     { pct: 5, label: '5% Dev / 95% Loja' },
                     { pct: 10, label: '10% Dev / 90% Loja' },
                     { pct: 0, label: 'Sem Split (100% Loja)' }
@@ -2581,7 +2556,7 @@ export const SettingsPage = () => {
                 </div>
               </div>
 
-              {/* 2. Configuração do Desenvolvedor */}
+              {/* 2. Configura├º├úo do Desenvolvedor */}
               <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '12px', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', color: '#a855f7' }}>
                   Conta do Desenvolvedor (Recebe {storeConfig.devPercentage ?? 1}%)
@@ -2600,7 +2575,7 @@ export const SettingsPage = () => {
                     />
                   </div>
                   <div className="input-group">
-                    <label>Access Token de Produção (Dev)</label>
+                    <label>Access Token de Produ├º├úo (Dev)</label>
                     <input
                       type="password"
                       className="pastel-edit-input"
@@ -2626,7 +2601,7 @@ export const SettingsPage = () => {
                 </div>
               </div>
 
-              {/* 3. Conexão do Estabelecimento */}
+              {/* 3. Conex├úo do Estabelecimento */}
               <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '12px', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', color: '#38bdf8' }}>
                   Conta do Estabelecimento (Recebe {100 - (storeConfig.devPercentage ?? 1)}%)
@@ -2640,7 +2615,7 @@ export const SettingsPage = () => {
                 ) : storeConfig.storeOwnerEmail && storeConfig.storeOwnerAccessToken && !storeConfig.storeOwnerAccessToken.includes('MOCK') ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.15)', borderRadius: '8px', padding: '0.75rem 1rem' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                      <span style={{ color: '#34d399', fontSize: '0.85rem', fontWeight: 600 }}>✓ Conectado via Mercado Pago</span>
+                      <span style={{ color: '#34d399', fontSize: '0.85rem', fontWeight: 600 }}>Ô£ô Conectado via Mercado Pago</span>
                       <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>E-mail: {storeConfig.storeOwnerEmail}</span>
                     </div>
                     <button
@@ -2687,7 +2662,7 @@ export const SettingsPage = () => {
                       <span>Conectar com Mercado Pago ({100 - (storeConfig.devPercentage ?? 1)}%)</span>
                     </button>
                     <p style={{ margin: 0, fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1.5 }}>
-                      ⚠️ Requer a variável de ambiente <strong style={{ color: 'rgba(255,255,255,0.55)' }}>MP_APP_SECRET</strong> configurada no Vercel com o Client Secret da sua aplicação MP.
+                      ÔÜá´©Å Requer a vari├ível de ambiente <strong style={{ color: 'rgba(255,255,255,0.55)' }}>MP_APP_SECRET</strong> configurada no Vercel com o Client Secret da sua aplica├º├úo MP.
                     </p>
                   </div>
                 )}
@@ -2697,7 +2672,7 @@ export const SettingsPage = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <AlertCircle size={14} style={{ color: 'var(--primary-gold)' }} />
-                  <span>Configurações salvas diretamente no banco de dados.</span>
+                  <span>Configura├º├Áes salvas diretamente no banco de dados.</span>
                 </div>
                 <button
                   type="submit"
@@ -2706,7 +2681,7 @@ export const SettingsPage = () => {
                   style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: 'auto', padding: '0.6rem 2rem', margin: 0 }}
                 >
                   <Save size={16} />
-                  <span>{submittingDevMP ? 'Salvando...' : 'Salvar Configurações do Split'}</span>
+                  <span>{submittingDevMP ? 'Salvando...' : 'Salvar Configura├º├Áes do Split'}</span>
                 </button>
               </div>
             </form>
@@ -2715,9 +2690,9 @@ export const SettingsPage = () => {
           {activeTab === 'audit_logs' && isAdmin && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div>
-                <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem', margin: 0 }}>Histórico Visível (Timeline)</h3>
+                <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem', margin: 0 }}>Hist├│rico Vis├¡vel (Timeline)</h3>
                 <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                  Sempre que um administrador realizar uma ação crítica no banco de dados (ex: deletar), isso ficará guardado aqui em formato fácil de ler.
+                  Sempre que um administrador realizar uma a├º├úo cr├¡tica no banco de dados (ex: deletar), isso ficar├í guardado aqui em formato f├ícil de ler.
                 </p>
               </div>
 
@@ -2733,10 +2708,10 @@ export const SettingsPage = () => {
                 <div style={{ position: 'relative', borderLeft: '2px solid rgba(255, 255, 255, 0.05)', paddingLeft: '0.5rem', margin: '0.5rem 0 0 0.5rem' }}>
                   {auditLogs.map((log) => (
                     <div key={log.id} style={{ position: 'relative', paddingLeft: '2rem', marginBottom: '1.75rem' }}>
-                      {/* Círculo do timeline com o ícone */}
+                      {/* C├¡rculo do timeline com o ├¡cone */}
                       <div style={{
                         position: 'absolute',
-                        left: '-33px', // centraliza perfeitamente o círculo de 24px sobre a borda esquerda de 2px
+                        left: '-33px', // centraliza perfeitamente o c├¡rculo de 24px sobre a borda esquerda de 2px
                         top: '4px',
                         width: '24px',
                         height: '24px',
@@ -2782,7 +2757,7 @@ export const SettingsPage = () => {
                         </div>
 
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', opacity: 0.8 }}>
-                          Resp: <span style={{ color: 'var(--primary-gold)' }}>{log.userEmail}</span> • Tipo: <code style={{ color: '#a855f7' }}>{log.actionType}</code>
+                          Resp: <span style={{ color: 'var(--primary-gold)' }}>{log.userEmail}</span> ÔÇó Tipo: <code style={{ color: '#a855f7' }}>{log.actionType}</code>
                         </div>
                       </div>
                     </div>
@@ -2792,7 +2767,7 @@ export const SettingsPage = () => {
             </div>
           )}
 
-          {/* Aba 6: Fechamento de Comissões */}
+          {/* Aba 6: Fechamento de Comiss├Áes */}
           {activeTab === 'commissions' && isAdmin && (() => {
             const weeklyPeriod = getWeeklyPeriod();
             const monthlyPeriod = getMonthlyPeriod();
@@ -2809,8 +2784,8 @@ export const SettingsPage = () => {
 
             const displayPaymentMethod = (method: string) => {
               switch (method) {
-                case 'dinheiro': return '💵 Dinheiro';
-                case 'pix': return '📱 Pix Manual';
+                case 'dinheiro': return '­ƒÆÁ Dinheiro';
+                case 'pix': return '­ƒô▒ Pix Manual';
                 case 'debito': return 'Debito (Maquininha)';
                 case 'credito': return 'Credito (Maquininha)';
                 default: return method;
@@ -2820,21 +2795,21 @@ export const SettingsPage = () => {
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <div>
-                  <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem', margin: 0, color: 'var(--primary-gold)' }}>Fechamento de Comissões (Faturamento Dev) 💼</h3>
+                  <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem', margin: 0, color: 'var(--primary-gold)' }}>Fechamento de Comiss├Áes (Faturamento Dev) ­ƒÆ╝</h3>
                   <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                    Visualize e gerencie os valores a pagar referentes à taxa de comissão de <strong>{pct}%</strong> sobre as vendas realizadas por fora do split online.
+                    Visualize e gerencie os valores a pagar referentes ├á taxa de comiss├úo de <strong>{pct}%</strong> sobre as vendas realizadas por fora do split online.
                   </p>
                 </div>
 
-                {/* Filtros de Métodos de Pagamento Offline */}
+                {/* Filtros de M├®todos de Pagamento Offline */}
                 <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '12px', padding: '1.25rem' }}>
                   <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
-                    Métodos de Pagamento Sujeitos a Comissão
+                    M├®todos de Pagamento Sujeitos a Comiss├úo
                   </label>
                   <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
                       <input type="checkbox" checked={billDinheiro} onChange={(e) => setBillDinheiro(e.target.checked)} />
-                      <span>Dinheiro em Espécie</span>
+                      <span>Dinheiro em Esp├®cie</span>
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
                       <input type="checkbox" checked={billPix} onChange={(e) => setBillPix(e.target.checked)} />
@@ -2842,11 +2817,11 @@ export const SettingsPage = () => {
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
                       <input type="checkbox" checked={billDebito} onChange={(e) => setBillDebito(e.target.checked)} />
-                      <span>Cartão de Débito (Maquininha)</span>
+                      <span>Cart├úo de D├®bito (Maquininha)</span>
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
                       <input type="checkbox" checked={billCredito} onChange={(e) => setBillCredito(e.target.checked)} />
-                      <span>Cartão de Crédito (Maquininha/Não integrado)</span>
+                      <span>Cart├úo de Cr├®dito (Maquininha/N├úo integrado)</span>
                     </label>
                   </div>
                 </div>
@@ -2861,7 +2836,7 @@ export const SettingsPage = () => {
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>Toda Segunda-feira</span>
                     </div>
                     <div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Período Atual:</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Per├¡odo Atual:</div>
                       <div style={{ fontSize: '0.85rem', color: '#fff', fontWeight: 600 }}>
                         {weeklyPeriod.start.toLocaleDateString('pt-BR')} a {weeklyPeriod.end.toLocaleDateString('pt-BR')}
                       </div>
@@ -2878,7 +2853,7 @@ export const SettingsPage = () => {
                     </div>
                     <button
                       type="button"
-                      onClick={() => alert(`Relatório semanal gerado! Total da comissão a pagar para o desenvolvedor: R$ ${weeklyCommissions.toFixed(2)}.`)}
+                      onClick={() => alert(`Relat├│rio semanal gerado! Total da comiss├úo a pagar para o desenvolvedor: R$ ${weeklyCommissions.toFixed(2)}.`)}
                       style={{ marginTop: '0.5rem', padding: '0.65rem', border: 'none', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s', textAlign: 'center' }}
                       onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(16, 185, 129, 0.2)'}
                       onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)'}
@@ -2894,7 +2869,7 @@ export const SettingsPage = () => {
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.6rem', borderRadius: '20px' }}>Todo dia 10</span>
                     </div>
                     <div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Período Atual:</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Per├¡odo Atual:</div>
                       <div style={{ fontSize: '0.85rem', color: '#fff', fontWeight: 600 }}>
                         {monthlyPeriod.start.toLocaleDateString('pt-BR')} a {monthlyPeriod.end.toLocaleDateString('pt-BR')}
                       </div>
@@ -2911,21 +2886,21 @@ export const SettingsPage = () => {
                     </div>
                     <button
                       type="button"
-                      onClick={() => alert(`Relatório mensal gerado! Total da comissão a pagar para o desenvolvedor: R$ ${monthlyCommissions.toFixed(2)}.`)}
+                      onClick={() => alert(`Relat├│rio mensal gerado! Total da comiss├úo a pagar para o desenvolvedor: R$ ${monthlyCommissions.toFixed(2)}.`)}
                       style={{ marginTop: '0.5rem', padding: '0.65rem', border: 'none', borderRadius: '8px', background: 'rgba(168, 85, 247, 0.1)', color: '#c084fc', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s', textAlign: 'center' }}
                       onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(168, 85, 247, 0.2)'}
                       onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(168, 85, 247, 0.1)'}
                     >
-                      Fechar Mês & Cobrar
+                      Fechar M├¬s & Cobrar
                     </button>
                   </div>
 
                 </div>
 
-                {/* Tabela de Pedidos do Período Atual */}
+                {/* Tabela de Pedidos do Per├¡odo Atual */}
                 <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '12px', padding: '1.25rem', overflow: 'hidden' }}>
                   <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>
-                    Detalhamento dos Pedidos no Período
+                    Detalhamento dos Pedidos no Per├¡odo
                   </label>
                   
                   {loadingOrders ? (
@@ -2934,7 +2909,7 @@ export const SettingsPage = () => {
                     </div>
                   ) : [...weeklyOrders, ...monthlyOrders].length === 0 ? (
                     <p style={{ margin: '1rem 0', color: 'var(--text-secondary)', fontSize: '0.85rem', textAlign: 'center' }}>
-                      Nenhum pedido offline concluído no período atual.
+                      Nenhum pedido offline conclu├¡do no per├¡odo atual.
                     </p>
                   ) : (
                     <div style={{ overflowX: 'auto' }}>
@@ -2946,7 +2921,7 @@ export const SettingsPage = () => {
                             <th style={{ padding: '0.75rem 0.5rem', color: 'var(--text-secondary)' }}>Cliente</th>
                             <th style={{ padding: '0.75rem 0.5rem', color: 'var(--text-secondary)' }}>Pagamento</th>
                             <th style={{ padding: '0.75rem 0.5rem', color: 'var(--text-secondary)', textAlign: 'right' }}>Total</th>
-                            <th style={{ padding: '0.75rem 0.5rem', color: 'var(--text-secondary)', textAlign: 'right' }}>Comissão ({pct}%)</th>
+                            <th style={{ padding: '0.75rem 0.5rem', color: 'var(--text-secondary)', textAlign: 'right' }}>Comiss├úo ({pct}%)</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -2972,7 +2947,7 @@ export const SettingsPage = () => {
             );
           })()}
 
-          {/* Aba 7: Segurança e Câmeras IP */}
+          {/* Aba 7: Seguran├ºa e C├ómeras IP */}
           {activeTab === 'security' && (isDev || role === 'owner') && (
             <SecurityCameraSettings />
           )}
@@ -2983,58 +2958,58 @@ export const SettingsPage = () => {
               <div>
                 <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem', margin: 0, color: 'var(--primary-gold)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Printer size={22} style={{ color: 'var(--primary-gold)' }} />
-                  Configuração da Impressora Térmica Bluetooth Bluetooth 🖨️
+                  Configura├º├úo da Impressora T├®rmica Bluetooth ­ƒû¿´©Å
                 </h3>
                 <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: '1.4' }}>
-                  Configure e teste a sua impressora térmica local para a impressão dos pedidos. Você pode imprimir o cupom e grampeá-lo na embalagem do cliente para rápida identificação na cozinha e na entrega.
+                  Configure e teste a sua impressora t├®rmica local para a impress├úo dos pedidos. Voc├¬ pode imprimir o cupom e grampe├í-lo na embalagem do cliente para r├ípida identifica├º├úo na cozinha e na entrega.
                 </p>
               </div>
 
               {printError && (
                 <div style={{ background: 'rgba(239, 68, 68, 0.1)', borderLeft: '4px solid #ef4444', color: '#f87171', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.85rem' }}>
-                  ⚠️ {printError}
+                  ÔÜá´©Å {printError}
                 </div>
               )}
 
               {printSuccess && (
                 <div style={{ background: 'rgba(16, 185, 129, 0.1)', borderLeft: '4px solid #10b981', color: '#34d399', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.85rem' }}>
-                  ✅ Ação executada com sucesso na impressora!
+                  Ô£à A├º├úo executada com sucesso na impressora!
                 </div>
               )}
 
               <div className="responsive-grid-2" style={{ gap: '1.5rem' }}>
                 
-                {/* Métodos de Impressão e Tamanho */}
+                {/* M├®todos de Impress├úo e Tamanho */}
                 <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                  <h4 style={{ margin: 0, color: '#fff', fontSize: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>Preferências de Impressão</h4>
+                  <h4 style={{ margin: 0, color: '#fff', fontSize: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>Prefer├¬ncias de Impress├úo</h4>
                   
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', fontWeight: 600 }}>MÉTODO DE IMPRESSÃO</label>
+                    <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', fontWeight: 600 }}>M├ëTODO DE IMPRESS├âO</label>
                     <select
                       value={printerSettings.method}
                       onChange={(e) => handleSavePrinterSettings({ ...printerSettings, method: e.target.value as 'browser' | 'bluetooth' | 'serial' })}
                       style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '10px', background: '#0b0f19', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}
                     >
-                      <option value="browser">Navegador (Padrão do Sistema) - Recomendado p/ Cabo USB</option>
+                      <option value="browser">Navegador (Padr├úo do Sistema) - Recomendado p/ Cabo USB</option>
                       <option value="bluetooth">Bluetooth Direto (Web Bluetooth BLE API)</option>
                       <option value="serial">Cabo USB Direto (Web Serial API) - Chrome/Edge</option>
                     </select>
                     <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.3' }}>
-                      {printerSettings.method === 'browser' && 'Utiliza o gerenciador de impressão do próprio sistema (Windows/Android/iOS). Altamente compatível com qualquer impressora pareada por Bluetooth clássico ou conectada por cabo USB.'}
-                      {printerSettings.method === 'bluetooth' && 'Envia dados binários brutos (ESC/POS) diretamente à impressora via Bluetooth BLE do navegador. Não abre telas do sistema.'}
-                      {printerSettings.method === 'serial' && 'Envia dados binários brutos (ESC/POS) diretamente à impressora USB conectada por cabo serial virtual COM. Não abre telas do sistema.'}
+                      {printerSettings.method === 'browser' && 'Utiliza o gerenciador de impress├úo do pr├│prio sistema (Windows/Android/iOS). Altamente compat├¡vel com qualquer impressora pareada por Bluetooth cl├íssico ou conectada por cabo USB.'}
+                      {printerSettings.method === 'bluetooth' && 'Envia dados bin├írios brutos (ESC/POS) diretamente ├á impressora via Bluetooth BLE do navegador. N├úo abre telas do sistema.'}
+                      {printerSettings.method === 'serial' && 'Envia dados bin├írios brutos (ESC/POS) diretamente ├á impressora USB conectada por cabo serial virtual COM. N├úo abre telas do sistema.'}
                     </p>
                   </div>
 
                   {printerSettings.method === 'serial' && (
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', fontWeight: 600 }}>TAXA DE TRANSMISSÃO (BAUD RATE)</label>
+                      <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', fontWeight: 600 }}>TAXA DE TRANSMISS├âO (BAUD RATE)</label>
                       <select
                         value={printerSettings.baudRate || 9600}
                         onChange={(e) => handleSavePrinterSettings({ ...printerSettings, baudRate: parseInt(e.target.value) })}
                         style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '10px', background: '#0b0f19', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}
                       >
-                        <option value={9600}>9600 bps (Padrão)</option>
+                        <option value={9600}>9600 bps (Padr├úo)</option>
                         <option value={19200}>19200 bps</option>
                         <option value={38400}>38400 bps</option>
                         <option value={57600}>57600 bps</option>
@@ -3051,13 +3026,13 @@ export const SettingsPage = () => {
                         onChange={(e) => handleSavePrinterSettings({ ...printerSettings, paperSize: e.target.value as '58mm' | '80mm' })}
                         style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '10px', background: '#0b0f19', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}
                       >
-                        <option value="58mm">58mm (Padrão Pequena)</option>
+                        <option value="58mm">58mm (Padr├úo Pequena)</option>
                         <option value="80mm">80mm (Grande/Larga)</option>
                       </select>
                     </div>
 
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', fontWeight: 600 }}>Nº DE CÓPIAS</label>
+                      <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', fontWeight: 600 }}>N┬║ DE C├ôPIAS</label>
                       <input
                         type="number"
                         min={1}
@@ -3070,9 +3045,9 @@ export const SettingsPage = () => {
                   </div>
                 </div>
 
-                {/* Status de Conexão de Hardware */}
+                {/* Status de Conex├úo de Hardware */}
                 <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                  <h4 style={{ margin: 0, color: '#fff', fontSize: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>Conexão de Hardware</h4>
+                  <h4 style={{ margin: 0, color: '#fff', fontSize: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>Conex├úo de Hardware</h4>
                   
                   {printerSettings.method === 'bluetooth' && (
                     <>
@@ -3141,15 +3116,15 @@ export const SettingsPage = () => {
                   {printerSettings.method === 'browser' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                       <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                        Como você está usando o método **Navegador (Padrão do Sistema)**, a conexão direta não é necessária. O sistema utilizará o driver e as impressoras instaladas no seu sistema operacional (perfeito para cabos USB comuns).
+                        Como voc├¬ est├í usando o m├®todo **Navegador (Padr├úo do Sistema)**, a conex├úo direta n├úo ├® necess├íria. O sistema utilizar├í o driver e as impressoras instaladas no seu sistema operacional (perfeito para cabos USB comuns).
                       </p>
                       
                       <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px dashed rgba(245, 158, 11, 0.25)', borderRadius: '10px', padding: '1rem', marginTop: '0.5rem' }}>
                         <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-gold)', display: 'block', marginBottom: '0.3rem' }}>
-                          ⚡ DICA: IMPRESSÃO DIRETA/SILENCIOSA
+                          ÔÜí DICA: IMPRESS├âO DIRETA/SILENCIOSA
                         </span>
                         <span style={{ fontSize: '0.78rem', color: '#cbd5e1', display: 'block', lineHeight: '1.3', marginBottom: '0.6rem' }}>
-                          Para imprimir direto sem abrir a janela de confirmação de impressão do navegador, adicione o parâmetro abaixo no final do campo <strong>Destino</strong> nas propriedades do atalho do Chrome:
+                          Para imprimir direto sem abrir a janela de confirma├º├úo de impress├úo do navegador, adicione o par├ómetro abaixo no final do campo <strong>Destino</strong> nas propriedades do atalho do Chrome:
                         </span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#0b0f19', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '0.5rem 0.75rem', justifyContent: 'space-between' }}>
                           <code style={{ fontSize: '0.85rem', color: '#10b981', fontFamily: 'monospace', fontWeight: 600 }}>--kiosk-printing</code>
@@ -3157,7 +3132,7 @@ export const SettingsPage = () => {
                             type="button"
                             onClick={() => {
                               navigator.clipboard.writeText('--kiosk-printing');
-                              alert('Parâmetro copiado para a área de transferência!');
+                              alert('Par├ómetro copiado para a ├írea de transfer├¬ncia!');
                             }}
                             style={{ padding: '0.3rem 0.6rem', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', transition: 'background 0.2s' }}
                             onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
@@ -3177,16 +3152,16 @@ export const SettingsPage = () => {
                       style={{ padding: '0.75rem', background: 'rgba(245, 158, 11, 0.1)', color: 'var(--primary-gold)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '10px', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
                     >
                       <Printer size={16} />
-                      Imprimir Cupom de Teste 🖨️
+                      Imprimir Cupom de Teste ­ƒû¿´©Å
                     </button>
                   </div>
                 </div>
 
               </div>
 
-              {/* Automações de Impressão */}
+              {/* Automa├º├Áes de Impress├úo */}
               <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                <h4 style={{ margin: 0, color: '#fff', fontSize: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>Impressão Automática (Automação de Pedidos)</h4>
+                <h4 style={{ margin: 0, color: '#fff', fontSize: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>Impress├úo Autom├ítica (Automa├º├úo de Pedidos)</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.25rem' }}>
                   
                   <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer', background: 'rgba(0,0,0,0.1)', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.02)' }}>
@@ -3198,7 +3173,7 @@ export const SettingsPage = () => {
                     />
                     <div>
                       <strong style={{ display: 'block', fontSize: '0.9rem', color: '#fff' }}>Ao receber novo pedido</strong>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Imprime o cupom automaticamente assim que o cliente enviar o pedido no caixa ou cardápio.</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Imprime o cupom automaticamente assim que o cliente enviar o pedido no caixa ou card├ípio.</span>
                     </div>
                   </label>
 
@@ -3210,8 +3185,8 @@ export const SettingsPage = () => {
                       style={{ marginTop: '0.2rem', accentColor: 'var(--primary-gold)' }}
                     />
                     <div>
-                      <strong style={{ display: 'block', fontSize: '0.9rem', color: '#fff' }}>Ao começar preparo</strong>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Imprime o cupom automaticamente na cozinha quando o cozinheiro clicar em 'Começar Preparo'.</span>
+                      <strong style={{ display: 'block', fontSize: '0.9rem', color: '#fff' }}>Ao come├ºar preparo</strong>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Imprime o cupom automaticamente na cozinha quando o cozinheiro clicar em 'Come├ºar Preparo'.</span>
                     </div>
                   </label>
 
@@ -3224,180 +3199,13 @@ export const SettingsPage = () => {
                     />
                     <div>
                       <strong style={{ display: 'block', fontSize: '0.9rem', color: '#fff' }}>Ao concluir preparo</strong>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Imprime o cupom automaticamente assim que o pedido for enviado para o balcão.</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Imprime o cupom automaticamente assim que o pedido for enviado para o balc├úo.</span>
                     </div>
                   </label>
 
                 </div>
               </div>
 
-            </div>
-          )}
-
-        
-          {/* Aba 9: Impressora Bematech Elgin i8 */}
-          {activeTab === 'elgin_i8' && (isAdmin || role === 'staff') && (
-            <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', height: '100%' }}>
-              <div>
-                <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem', margin: 0, color: 'var(--primary-gold)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Printer size={22} style={{ color: 'var(--primary-gold)' }} />
-                  Impressora Bematech Elgin i8 (Térmica Não Fiscal)
-                </h3>
-                <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: '1.4' }}>
-                  A Elgin i8 é uma impressora térmica robusta com tripla interface e alta velocidade (250mm/s). Utilize esta seção para configurar os parâmetros específicos de comunicação e corte para emissão de comandas, NFC-e e recibos.
-                </p>
-              </div>
-
-              {printError && (
-                <div style={{ background: 'rgba(239, 68, 68, 0.1)', borderLeft: '4px solid #ef4444', color: '#f87171', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.85rem' }}>
-                  ⚠️ {printError}
-                </div>
-              )}
-
-              {printSuccess && (
-                <div style={{ background: 'rgba(16, 185, 129, 0.1)', borderLeft: '4px solid #10b981', color: '#34d399', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.85rem' }}>
-                  ✅ Ação executada com sucesso na Elgin i8!
-                </div>
-              )}
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <h4 style={{ margin: '0 0 1rem 0', color: '#fff', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Settings size={18} style={{ color: 'var(--text-secondary)' }} />
-                    Tripla Interface de Comunicação
-                  </h4>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', color: '#cbd5e1', fontSize: '0.85rem' }}>Modo de Conexão (Elgin i8)</label>
-                      <select
-                        value={printerSettings.method}
-                        onChange={(e) => handleSavePrinterSettings({ ...printerSettings, method: e.target.value })}
-                        style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}
-                      >
-                        <option value="browser">USB / Spooler do Windows (Padrão)</option>
-                        <option value="ethernet">Rede Local (Ethernet / IP Direto)</option>
-                        <option value="serial">Cabo Serial / COM Direta</option>
-                      </select>
-                    </div>
-
-                    {printerSettings.method === 'ethernet' && (
-                      <div className="fade-in">
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#cbd5e1', fontSize: '0.85rem' }}>Endereço IP da Elgin i8</label>
-                        <input
-                          type="text"
-                          placeholder="Ex: 192.168.1.100"
-                          style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.9rem' }}
-                        />
-                      </div>
-                    )}
-                    
-                    {printerSettings.method === 'serial' && (
-                      <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                          <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: isSerialConn ? '#10b981' : '#ef4444', display: 'inline-block' }}></span>
-                          <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#fff' }}>
-                            {isSerialConn ? 'Serial COM Conectada: ' + serialDeviceName : 'Porta Serial Fechada'}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.75rem' }}>
-                          {!isSerialConn ? (
-                            <button
-                              type="button"
-                              onClick={handleConnectSerial}
-                              disabled={isSerialPairing}
-                              className="primary-button"
-                              style={{ flex: 1, padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                            >
-                              {isSerialPairing ? <span className="spinner" style={{ width: '14px', height: '14px', border: '2px solid #0b0f19', borderTopColor: 'transparent' }} /> : <Printer size={16} />}
-                              Abrir Porta COM
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={handleDisconnectSerial}
-                              style={{ flex: 1, padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'transparent', border: '1px solid #ef4444', color: '#ef4444', borderRadius: '12px', fontWeight: 600 }}
-                            >
-                              <X size={16} />
-                              Desconectar
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <h4 style={{ margin: '0 0 1rem 0', color: '#fff', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <ClipboardList size={18} style={{ color: 'var(--text-secondary)' }} />
-                    Hardware & Impressão (80mm)
-                  </h4>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', color: '#cbd5e1', fontSize: '0.85rem' }}>Guilhotina Integrada</label>
-                      <select
-                        style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}
-                      >
-                        <option value="auto">Corte Automático (Padrão de Fábrica)</option>
-                        <option value="manual">Corte Manual</option>
-                      </select>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '1rem' }}>
-                      <div style={{ flex: 1 }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#cbd5e1', fontSize: '0.85rem' }}>Largura do Papel</label>
-                        <input
-                          type="text"
-                          readOnly
-                          value="80mm (Bobina Padrão)"
-                          style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', color: '#94a3b8', fontSize: '0.9rem', cursor: 'not-allowed' }}
-                        />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#cbd5e1', fontSize: '0.85rem' }}>Velocidade Max.</label>
-                        <input
-                          type="text"
-                          readOnly
-                          value="250 mm/s"
-                          style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', color: '#94a3b8', fontSize: '0.9rem', cursor: 'not-allowed' }}
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px dashed rgba(245, 158, 11, 0.25)', borderRadius: '10px', padding: '1rem', marginTop: '0.5rem' }}>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-gold)', display: 'block', marginBottom: '0.3rem' }}>
-                          💡 IMPRESSÃO DIRETA WINDOWS (MODO USB)
-                        </span>
-                        <span style={{ fontSize: '0.78rem', color: '#cbd5e1', display: 'block', lineHeight: '1.3', marginBottom: '0.6rem' }}>
-                          Para emitir cupons diretamente via USB sem pop-up no Windows, use o modo silencioso do Chrome adicionando ao atalho:
-                        </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#0b0f19', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '0.5rem 0.75rem', justifyContent: 'space-between' }}>
-                          <code style={{ fontSize: '0.85rem', color: '#10b981', fontFamily: 'monospace', fontWeight: 600 }}>--kiosk-printing</code>
-                          <button
-                            type="button"
-                            onClick={() => navigator.clipboard.writeText('--kiosk-printing')}
-                            style={{ padding: '0.3rem 0.6rem', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}
-                          >
-                            Copiar
-                          </button>
-                        </div>
-                    </div>
-                  </div>
-
-                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem', marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                    <button
-                      type="button"
-                      onClick={handleTestPrint}
-                      style={{ padding: '0.75rem', background: 'rgba(245, 158, 11, 0.1)', color: 'var(--primary-gold)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '10px', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                    >
-                      <Printer size={16} />
-                      Emitir Cupom Elgin i8 (80mm) 🖨️
-                    </button>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
 

@@ -1,7 +1,7 @@
 import type { OrderDocument } from '../types/order';
 
 export interface PrinterSettings {
-  method: 'browser' | 'bluetooth' | 'serial';
+  method: 'browser' | 'bluetooth' | 'serial' | 'ethernet';
   paperSize: '58mm' | '80mm';
   autoPrintOnNew: boolean;
   autoPrintOnAccept: boolean;

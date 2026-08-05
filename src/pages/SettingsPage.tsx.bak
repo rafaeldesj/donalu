@@ -2983,7 +2983,7 @@ export const SettingsPage = () => {
               <div>
                 <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem', margin: 0, color: 'var(--primary-gold)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Printer size={22} style={{ color: 'var(--primary-gold)' }} />
-                  Configuração da Impressora Térmica Bluetooth Bluetooth 🖨️
+                  Configuração da Impressora Térmica Bluetooth 🖨️
                 </h3>
                 <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: '1.4' }}>
                   Configure e teste a sua impressora térmica local para a impressão dos pedidos. Você pode imprimir o cupom e grampeá-lo na embalagem do cliente para rápida identificação na cozinha e na entrega.
@@ -3004,20 +3004,28 @@ export const SettingsPage = () => {
 
               <div className="responsive-grid-2" style={{ gap: '1.5rem' }}>
                 
-                {/* Métodos de Impressão e Tamanho */}
-                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                  <h4 style={{ margin: 0, color: '#fff', fontSize: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>Preferências de Impressão</h4>
-                  
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', fontWeight: 600 }}>MÉTODO DE IMPRESSÃO</label>
+                {/* Method Selection */}
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', gridColumn: '1 / -1' }}>
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                      Método de Comunicação
+                    </label>
                     <select
                       value={printerSettings.method}
-                      onChange={(e) => handleSavePrinterSettings({ ...printerSettings, method: e.target.value as 'browser' | 'bluetooth' | 'serial' })}
-                      style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '10px', background: '#0b0f19', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}
+                      onChange={(e) => setPrinterSettings(prev => ({ ...prev, method: e.target.value as any }))}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem',
+                        background: 'rgba(0,0,0,0.2)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '12px',
+                        color: '#fff',
+                        fontSize: '0.95rem'
+                      }}
                     >
-                      <option value="browser">Navegador (Padrão do Sistema) - Recomendado p/ Cabo USB</option>
-                      <option value="bluetooth">Bluetooth Direto (Web Bluetooth BLE API)</option>
-                      <option value="serial">Cabo USB Direto (Web Serial API) - Chrome/Edge</option>
+                      <option value="browser">Navegador (Padrão do Sistema Windows/Android)</option>
+                      <option value="bluetooth">Bluetooth Direto (Web Bluetooth API - Sem Telas)</option>
+                      <option value="serial">Cabo USB (Web Serial API - Sem Telas)</option>
                     </select>
                     <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.3' }}>
                       {printerSettings.method === 'browser' && 'Utiliza o gerenciador de impressão do próprio sistema (Windows/Android/iOS). Altamente compatível com qualquer impressora pareada por Bluetooth clássico ou conectada por cabo USB.'}
@@ -3028,55 +3036,41 @@ export const SettingsPage = () => {
 
                   {printerSettings.method === 'serial' && (
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', fontWeight: 600 }}>TAXA DE TRANSMISSÃO (BAUD RATE)</label>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                        Baud Rate (Velocidade Serial USB)
+                      </label>
                       <select
-                        value={printerSettings.baudRate || 9600}
-                        onChange={(e) => handleSavePrinterSettings({ ...printerSettings, baudRate: parseInt(e.target.value) })}
-                        style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '10px', background: '#0b0f19', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}
+                        value={printerSettings.baudRate}
+                        onChange={(e) => setPrinterSettings(prev => ({ ...prev, baudRate: parseInt(e.target.value) }))}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem 1rem',
+                          background: 'rgba(0,0,0,0.2)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '12px',
+                          color: '#fff',
+                          fontSize: '0.95rem'
+                        }}
                       >
-                        <option value={9600}>9600 bps (Padrão)</option>
-                        <option value={19200}>19200 bps</option>
-                        <option value={38400}>38400 bps</option>
-                        <option value={57600}>57600 bps</option>
-                        <option value={115200}>115200 bps</option>
+                        <option value="9600">9600 (Padrão Impressoras 58mm/80mm USB)</option>
+                        <option value="19200">19200</option>
+                        <option value="38400">38400</option>
+                        <option value="57600">57600</option>
+                        <option value="115200">115200</option>
                       </select>
                     </div>
                   )}
-
-                  <div className="responsive-grid-2">
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', fontWeight: 600 }}>TAMANHO DA BOBINA</label>
-                      <select
-                        value={printerSettings.paperSize}
-                        onChange={(e) => handleSavePrinterSettings({ ...printerSettings, paperSize: e.target.value as '58mm' | '80mm' })}
-                        style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '10px', background: '#0b0f19', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}
-                      >
-                        <option value="58mm">58mm (Padrão Pequena)</option>
-                        <option value="80mm">80mm (Grande/Larga)</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', fontWeight: 600 }}>Nº DE CÓPIAS</label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={5}
-                        value={printerSettings.copies}
-                        onChange={(e) => handleSavePrinterSettings({ ...printerSettings, copies: Math.max(1, parseInt(e.target.value) || 1) })}
-                        style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '10px', background: '#0b0f19', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.9rem' }}
-                      />
-                    </div>
-                  </div>
                 </div>
 
-                {/* Status de Conexão de Hardware */}
-                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                  <h4 style={{ margin: 0, color: '#fff', fontSize: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>Conexão de Hardware</h4>
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <h4 style={{ margin: '0 0 1rem 0', color: '#fff', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Settings size={18} style={{ color: 'var(--text-secondary)' }} />
+                    Conexão
+                  </h4>
                   
                   {printerSettings.method === 'bluetooth' && (
-                    <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(0,0,0,0.15)', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
                         <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: isBtConnected ? '#10b981' : '#ef4444', display: 'inline-block' }}></span>
                         <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#fff' }}>
                           {isBtConnected ? `Conectado: ${btDeviceName}` : 'Impressora Bluetooth Desconectada'}
@@ -3086,9 +3080,10 @@ export const SettingsPage = () => {
                         {!isBtConnected ? (
                           <button
                             type="button"
-                            disabled={isPairing}
                             onClick={handleConnectBt}
-                            style={{ flex: 1, padding: '0.75rem', background: 'var(--primary-gold)', color: '#0b0f19', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                            disabled={isPairing}
+                            className="primary-button"
+                            style={{ flex: 1, padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
                           >
                             {isPairing ? <span className="spinner" style={{ width: '14px', height: '14px', border: '2px solid #0b0f19', borderTopColor: 'transparent' }} /> : <Printer size={16} />}
                             Parear / Conectar Impressora
@@ -3097,18 +3092,19 @@ export const SettingsPage = () => {
                           <button
                             type="button"
                             onClick={handleDisconnectBt}
-                            style={{ flex: 1, padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '10px', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}
+                            style={{ flex: 1, padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'transparent', border: '1px solid #ef4444', color: '#ef4444', borderRadius: '12px', fontWeight: 600 }}
                           >
-                            Desconectar Bluetooth
+                            <X size={16} />
+                            Desconectar
                           </button>
                         )}
                       </div>
-                    </>
+                    </div>
                   )}
 
                   {printerSettings.method === 'serial' && (
-                    <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(0,0,0,0.15)', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
                         <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: isSerialConn ? '#10b981' : '#ef4444', display: 'inline-block' }}></span>
                         <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#fff' }}>
                           {isSerialConn ? `Conectado via USB: ${serialDeviceName}` : 'Impressora USB/Cabo Desconectada'}
@@ -3118,9 +3114,10 @@ export const SettingsPage = () => {
                         {!isSerialConn ? (
                           <button
                             type="button"
-                            disabled={isSerialPairing}
                             onClick={handleConnectSerial}
-                            style={{ flex: 1, padding: '0.75rem', background: 'var(--primary-gold)', color: '#0b0f19', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                            disabled={isSerialPairing}
+                            className="primary-button"
+                            style={{ flex: 1, padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
                           >
                             {isSerialPairing ? <span className="spinner" style={{ width: '14px', height: '14px', border: '2px solid #0b0f19', borderTopColor: 'transparent' }} /> : <Printer size={16} />}
                             Conectar Impressora USB (Cabo)
@@ -3129,13 +3126,14 @@ export const SettingsPage = () => {
                           <button
                             type="button"
                             onClick={handleDisconnectSerial}
-                            style={{ flex: 1, padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '10px', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}
+                            style={{ flex: 1, padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'transparent', border: '1px solid #ef4444', color: '#ef4444', borderRadius: '12px', fontWeight: 600 }}
                           >
-                            Desconectar USB
+                            <X size={16} />
+                            Desconectar
                           </button>
                         )}
                       </div>
-                    </>
+                    </div>
                   )}
 
                   {printerSettings.method === 'browser' && (
@@ -3146,7 +3144,7 @@ export const SettingsPage = () => {
                       
                       <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px dashed rgba(245, 158, 11, 0.25)', borderRadius: '10px', padding: '1rem', marginTop: '0.5rem' }}>
                         <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-gold)', display: 'block', marginBottom: '0.3rem' }}>
-                          ⚡ DICA: IMPRESSÃO DIRETA/SILENCIOSA
+                          💡 DICA: IMPRESSÃO DIRETA/SILENCIOSA
                         </span>
                         <span style={{ fontSize: '0.78rem', color: '#cbd5e1', display: 'block', lineHeight: '1.3', marginBottom: '0.6rem' }}>
                           Para imprimir direto sem abrir a janela de confirmação de impressão do navegador, adicione o parâmetro abaixo no final do campo <strong>Destino</strong> nas propriedades do atalho do Chrome:
@@ -3231,173 +3229,6 @@ export const SettingsPage = () => {
                 </div>
               </div>
 
-            </div>
-          )}
-
-        
-          {/* Aba 9: Impressora Bematech Elgin i8 */}
-          {activeTab === 'elgin_i8' && (isAdmin || role === 'staff') && (
-            <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', height: '100%' }}>
-              <div>
-                <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem', margin: 0, color: 'var(--primary-gold)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Printer size={22} style={{ color: 'var(--primary-gold)' }} />
-                  Impressora Bematech Elgin i8 (Térmica Não Fiscal)
-                </h3>
-                <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: '1.4' }}>
-                  A Elgin i8 é uma impressora térmica robusta com tripla interface e alta velocidade (250mm/s). Utilize esta seção para configurar os parâmetros específicos de comunicação e corte para emissão de comandas, NFC-e e recibos.
-                </p>
-              </div>
-
-              {printError && (
-                <div style={{ background: 'rgba(239, 68, 68, 0.1)', borderLeft: '4px solid #ef4444', color: '#f87171', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.85rem' }}>
-                  ⚠️ {printError}
-                </div>
-              )}
-
-              {printSuccess && (
-                <div style={{ background: 'rgba(16, 185, 129, 0.1)', borderLeft: '4px solid #10b981', color: '#34d399', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.85rem' }}>
-                  ✅ Ação executada com sucesso na Elgin i8!
-                </div>
-              )}
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <h4 style={{ margin: '0 0 1rem 0', color: '#fff', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Settings size={18} style={{ color: 'var(--text-secondary)' }} />
-                    Tripla Interface de Comunicação
-                  </h4>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', color: '#cbd5e1', fontSize: '0.85rem' }}>Modo de Conexão (Elgin i8)</label>
-                      <select
-                        value={printerSettings.method}
-                        onChange={(e) => handleSavePrinterSettings({ ...printerSettings, method: e.target.value })}
-                        style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}
-                      >
-                        <option value="browser">USB / Spooler do Windows (Padrão)</option>
-                        <option value="ethernet">Rede Local (Ethernet / IP Direto)</option>
-                        <option value="serial">Cabo Serial / COM Direta</option>
-                      </select>
-                    </div>
-
-                    {printerSettings.method === 'ethernet' && (
-                      <div className="fade-in">
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#cbd5e1', fontSize: '0.85rem' }}>Endereço IP da Elgin i8</label>
-                        <input
-                          type="text"
-                          placeholder="Ex: 192.168.1.100"
-                          style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.9rem' }}
-                        />
-                      </div>
-                    )}
-                    
-                    {printerSettings.method === 'serial' && (
-                      <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                          <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: isSerialConn ? '#10b981' : '#ef4444', display: 'inline-block' }}></span>
-                          <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#fff' }}>
-                            {isSerialConn ? 'Serial COM Conectada: ' + serialDeviceName : 'Porta Serial Fechada'}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.75rem' }}>
-                          {!isSerialConn ? (
-                            <button
-                              type="button"
-                              onClick={handleConnectSerial}
-                              disabled={isSerialPairing}
-                              className="primary-button"
-                              style={{ flex: 1, padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                            >
-                              {isSerialPairing ? <span className="spinner" style={{ width: '14px', height: '14px', border: '2px solid #0b0f19', borderTopColor: 'transparent' }} /> : <Printer size={16} />}
-                              Abrir Porta COM
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={handleDisconnectSerial}
-                              style={{ flex: 1, padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'transparent', border: '1px solid #ef4444', color: '#ef4444', borderRadius: '12px', fontWeight: 600 }}
-                            >
-                              <X size={16} />
-                              Desconectar
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <h4 style={{ margin: '0 0 1rem 0', color: '#fff', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <ClipboardList size={18} style={{ color: 'var(--text-secondary)' }} />
-                    Hardware & Impressão (80mm)
-                  </h4>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', color: '#cbd5e1', fontSize: '0.85rem' }}>Guilhotina Integrada</label>
-                      <select
-                        style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}
-                      >
-                        <option value="auto">Corte Automático (Padrão de Fábrica)</option>
-                        <option value="manual">Corte Manual</option>
-                      </select>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '1rem' }}>
-                      <div style={{ flex: 1 }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#cbd5e1', fontSize: '0.85rem' }}>Largura do Papel</label>
-                        <input
-                          type="text"
-                          readOnly
-                          value="80mm (Bobina Padrão)"
-                          style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', color: '#94a3b8', fontSize: '0.9rem', cursor: 'not-allowed' }}
-                        />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#cbd5e1', fontSize: '0.85rem' }}>Velocidade Max.</label>
-                        <input
-                          type="text"
-                          readOnly
-                          value="250 mm/s"
-                          style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', color: '#94a3b8', fontSize: '0.9rem', cursor: 'not-allowed' }}
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px dashed rgba(245, 158, 11, 0.25)', borderRadius: '10px', padding: '1rem', marginTop: '0.5rem' }}>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-gold)', display: 'block', marginBottom: '0.3rem' }}>
-                          💡 IMPRESSÃO DIRETA WINDOWS (MODO USB)
-                        </span>
-                        <span style={{ fontSize: '0.78rem', color: '#cbd5e1', display: 'block', lineHeight: '1.3', marginBottom: '0.6rem' }}>
-                          Para emitir cupons diretamente via USB sem pop-up no Windows, use o modo silencioso do Chrome adicionando ao atalho:
-                        </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#0b0f19', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '0.5rem 0.75rem', justifyContent: 'space-between' }}>
-                          <code style={{ fontSize: '0.85rem', color: '#10b981', fontFamily: 'monospace', fontWeight: 600 }}>--kiosk-printing</code>
-                          <button
-                            type="button"
-                            onClick={() => navigator.clipboard.writeText('--kiosk-printing')}
-                            style={{ padding: '0.3rem 0.6rem', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}
-                          >
-                            Copiar
-                          </button>
-                        </div>
-                    </div>
-                  </div>
-
-                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem', marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                    <button
-                      type="button"
-                      onClick={handleTestPrint}
-                      style={{ padding: '0.75rem', background: 'rgba(245, 158, 11, 0.1)', color: 'var(--primary-gold)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '10px', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                    >
-                      <Printer size={16} />
-                      Emitir Cupom Elgin i8 (80mm) 🖨️
-                    </button>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
 
