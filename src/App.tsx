@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import type { OrderItem } from './types/order';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AuthButton } from './components/common/AuthButton';
-import { ShieldCheck, ChefHat, CreditCard, Bell, ShoppingCart, Heart, FileText, Users, Navigation, CheckCircle, Clock, Map, Settings, Menu, ChevronDown, Grid, Boxes, MessageCircle } from 'lucide-react';
+import { ShieldCheck, ChefHat, CreditCard, Bell, ShoppingCart, Heart, FileText, Users, Navigation, CheckCircle, Clock, Map, Settings, Menu, ChevronDown, Grid, Boxes, MessageCircle, ShoppingBag } from 'lucide-react';
 import logoDonalu from './assets/logo_donalu.png';
 import logoDonaluMobile from './assets/logo_donalu_mobile.png';
 import { doc, onSnapshot, collection, query, orderBy, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -31,6 +31,7 @@ const StockControl = lazy(() => import('./pages/staff/StockControl'));
 const SupportPanel = lazy(() => import('./pages/staff/SupportPanel'));
 const RiderLocationMonitor = lazy(() => import('./pages/manager/RiderLocationMonitor'));
 const SystemLogs = lazy(() => import('./pages/manager/SystemLogs'));
+const PdvSales = lazy(() => import('./pages/staff/PdvSales'));
 
 // Premium feedback state for lazy loading
 const ViewLoader = () => (
@@ -749,6 +750,11 @@ const MainLayout = () => {
       menuItems.push({ id: 'caixa', label: 'Fila Caixa', icon: CreditCard });
     }
 
+    // Operações de Venda (PDV)
+    if (role === 'developer' || role === 'owner' || role === 'manager' || (role === 'staff' && (staff?.cashier || staff?.attendant))) {
+      menuItems.push({ id: 'pdv_vendas', label: 'PDV Vendas', icon: ShoppingBag });
+    }
+
     // Fila de entregas (Entregador, admin, owner, dev)
     if (role === 'developer' || role === 'owner' || role === 'manager' || (role === 'staff' && staff?.delivery)) {
       menuItems.push({ id: 'entrega_andamento', label: 'Entrega em Andamento', icon: Navigation });
@@ -794,6 +800,7 @@ const MainLayout = () => {
 
   const menuGroups = [
     { label: 'Cardápio / Cliente', ids: ['menu', 'tracking', 'fidelidade', 'suporte_virtual'] },
+    { label: 'Operações de Venda', ids: ['pdv_vendas'] },
     { label: 'Operações de Entrega', ids: ['entrega_andamento', 'entrega_finalizada', 'teste_mapa'] },
     { label: 'Painéis de Trabalho', ids: ['cozinha', 'atendimento', 'caixa', 'mapa_mesas', 'estoque', 'painel_atendimento', 'admin'] },
     { label: 'Configurações', ids: ['users', 'registros', 'configuracoes'] },
@@ -948,6 +955,7 @@ const getRoleLabel = (r: string): React.ReactNode => {
             {activeView === 'configuracoes' && <SettingsPage />}
             {activeView === 'mapa_mesas' && <TableMap />}
             {activeView === 'teste_mapa' && <RiderLocationMonitor />}
+            {activeView === 'pdv_vendas' && <PdvSales />}
           </Suspense>
           
           {/* Mobile Footer (visible only on mobile, scrolls with content) */}

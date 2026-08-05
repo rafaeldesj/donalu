@@ -182,6 +182,8 @@ interface ClientDashboardProps {
   cart?: OrderItem[];
   setCart?: React.Dispatch<React.SetStateAction<OrderItem[]>>;
   storeStatus?: { status: 'open' | 'closing_soon' | 'closed'; label: string };
+  isPdvMode?: boolean;
+  pdvClientOverride?: { uid: string; name: string; phoneNumber?: string } | null;
 }
 
 export const ClientDashboard = ({ 
@@ -191,9 +193,21 @@ export const ClientDashboard = ({
   onNavigate,
   cart: externalCart,
   setCart: externalSetCart,
-  storeStatus
+  storeStatus,
+  isPdvMode = false,
+  pdvClientOverride = null
 }: ClientDashboardProps) => {
-  const { user, userData, updatePhoneNumber } = useAuth();
+  const authContext = useAuth();
+  
+  const user = isPdvMode && pdvClientOverride 
+    ? { ...authContext.user, uid: pdvClientOverride.uid, email: 'pdv@donalu.com', displayName: pdvClientOverride.name } 
+    : authContext.user;
+    
+  const userData = isPdvMode && pdvClientOverride 
+    ? { ...authContext.userData, uid: pdvClientOverride.uid, name: pdvClientOverride.name, role: 'client', phoneNumber: pdvClientOverride.phoneNumber } 
+    : authContext.userData;
+    
+  const updatePhoneNumber = authContext.updatePhoneNumber;
 
   const createOrderAndLog = async (orderData: any, customOrderId?: string) => {
     let docRef;
@@ -238,10 +252,10 @@ export const ClientDashboard = ({
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [isNewItem, setIsNewItem] = useState<number | null>(null);
 
-  const role = userData?.role || 'client';
-  const staff = userData?.staffFunctions;
-  const canEdit = ['developer', 'owner', 'manager'].includes(role);
-  const canManageStock = role !== 'client' && !(role === 'staff' && staff?.delivery);
+  const role = authContext.userData?.role || 'client';
+  const staff = authContext.userData?.staffFunctions;
+  const canEdit = !isPdvMode && ['developer', 'owner', 'manager'].includes(role);
+  const canManageStock = !isPdvMode && role !== 'client' && !(role === 'staff' && staff?.delivery);
   const isStoreClosed = storeStatus?.status === 'closed';
   const isClosedForUser = isStoreClosed && !canEdit;
 
@@ -254,7 +268,7 @@ export const ClientDashboard = ({
   const [error, setError] = useState<string | null>(null);
   const [deliveryAddress, setDeliveryAddress] = useState<MapAddress | null>(null);
   const [routeDistance, setRouteDistance] = useState<number | null>(null);
-  const [orderType, setOrderType] = useState<'pickup' | 'delivery' | 'dine_in' | 'dine_in_table'>(() => {
+  const [orderType, setOrderType] = useState<'pickup' | 'delivery' | 'dine_in' | 'dine_in_table' | 'pdv'>(() => {
     const params = new URLSearchParams(window.location.search);
     const hasTable = params.has('mesa') || params.has('table');
     return hasTable ? 'dine_in_table' : 'delivery';
@@ -347,8 +361,8 @@ export const ClientDashboard = ({
   useEffect(() => {
     if (!storeConfig) return;
     
-    const disabled = storeConfig.disabledPaymentMethodsByOrderType?.[orderType] || storeConfig.disabledPaymentMethods || [];
-    const visConfig = storeConfig.paymentMethodsVisibility || {};
+    const disabled = storeConfig.disabledPaymentMethodsByOrderType?.[isPdvMode ? 'pdv' : orderType] || storeConfig.disabledPaymentMethods || [];
+    const visConfig = storeConfig.paymentMethodsVisibilityByOrderType?.[isPdvMode ? 'pdv' : orderType] || storeConfig.paymentMethodsVisibility || {};
     const isClient = role === 'client';
     const isMethodVisible = (id: string) => {
       if (disabled.includes(id)) return false;
@@ -3537,8 +3551,8 @@ export const ClientDashboard = ({
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                 {(() => {
-                  const disabled = storeConfig?.disabledPaymentMethodsByOrderType?.[orderType] || storeConfig?.disabledPaymentMethods || [];
-                  const visConfig = storeConfig?.paymentMethodsVisibility || {};
+                  const disabled = storeConfig?.disabledPaymentMethodsByOrderType?.[isPdvMode ? 'pdv' : orderType] || storeConfig?.disabledPaymentMethods || [];
+                  const visConfig = storeConfig?.paymentMethodsVisibilityByOrderType?.[isPdvMode ? 'pdv' : orderType] || storeConfig?.paymentMethodsVisibility || {};
                   const isClient = role === 'client';
                   const isMethodAllowed = (id: string) => {
                     if (disabled.includes(id)) return false;
@@ -5064,7 +5078,7 @@ export const ClientDashboard = ({
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
                            {(() => {
                             const disabled = storeConfig?.disabledPaymentMethodsByOrderType?.['dine_in_table'] || storeConfig?.disabledPaymentMethods || [];
-                            const visConfig = storeConfig?.paymentMethodsVisibility || {};
+                            const visConfig = storeConfig?.paymentMethodsVisibilityByOrderType?.['dine_in_table'] || storeConfig?.paymentMethodsVisibility || {};
                             const isClient = role === 'client';
                             const isMethodAllowed = (id: string) => {
                               if (disabled.includes(id)) return false;

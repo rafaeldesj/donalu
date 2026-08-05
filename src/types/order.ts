@@ -21,7 +21,7 @@ export interface OrderDocument {
   total: number;
   status: OrderStatus;
   createdAt: string;
-  orderType?: 'pickup' | 'delivery' | 'dine_in' | 'dine_in_table';
+  orderType?: 'pickup' | 'delivery' | 'dine_in' | 'dine_in_table' | 'pdv';
   tableNumber?: string | null;
   deliveryFee?: number;
   serviceFee?: number;

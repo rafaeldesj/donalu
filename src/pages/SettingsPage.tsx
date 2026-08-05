@@ -47,6 +47,7 @@ interface StoreConfig {
   disabledPaymentMethods?: string[];
   paymentMethodsThemes?: Record<string, 'light' | 'dark'>;
   paymentMethodsVisibility?: Record<string, 'client' | 'staff' | 'both'>;
+  paymentMethodsVisibilityByOrderType?: Record<string, Record<string, 'client' | 'staff' | 'both'>>;
   requireCashierApproval?: boolean;
   deliveryBaseKm?: number;
   deliveryBaseFee?: number;
@@ -62,7 +63,7 @@ export const SettingsPage = () => {
   
   // Tabs state: 'profile' (all) | 'store' (admin) | 'loyalty' (admin) | 'advanced' (dev) | 'audit_logs' (admin) | 'commissions' | 'security' | 'payments' | 'printer'
   const [activeTab, setActiveTab] = useState<'profile' | 'store' | 'loyalty' | 'advanced' | 'audit_logs' | 'commissions' | 'security' | 'mesas' | 'point_guide' | 'payments' | 'printer'>('profile');
-  const [selectedOrderTypeFilter, setSelectedOrderTypeFilter] = useState<'dine_in_table' | 'dine_in' | 'pickup' | 'delivery'>('delivery');
+  const [selectedOrderTypeFilter, setSelectedOrderTypeFilter] = useState<'dine_in_table' | 'dine_in' | 'pickup' | 'delivery' | 'pdv'>('delivery');
 
   // Printer config states
   const [printerSettings, setPrinterSettingsState] = useState<PrinterSettings>(() => getPrinterSettings());
@@ -586,6 +587,7 @@ export const SettingsPage = () => {
         disabledPaymentMethodsByOrderType: storeConfig.disabledPaymentMethodsByOrderType || {},
         paymentMethodsThemes: storeConfig.paymentMethodsThemes || {},
         paymentMethodsVisibility: storeConfig.paymentMethodsVisibility || {},
+        paymentMethodsVisibilityByOrderType: storeConfig.paymentMethodsVisibilityByOrderType || {},
         requireCashierApproval: storeConfig.requireCashierApproval !== undefined ? storeConfig.requireCashierApproval : false
       });
 
@@ -1184,6 +1186,7 @@ export const SettingsPage = () => {
                 </span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                   {[
+                    { id: 'pdv', label: 'PDV (Presencial) 🏪' },
                     { id: 'dine_in_table', label: 'Comer na Mesa 🍽️' },
                     { id: 'dine_in', label: 'Comer aí (Preparar) 🏢' },
                     { id: 'pickup', label: 'Retirar na Loja 🛍️' },
@@ -1218,7 +1221,7 @@ export const SettingsPage = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
                    {[
                     { id: 'pix', name: 'Pix', desc: 'Pagamento instantâneo via QR Code gerado no Mercado Pago.', label: 'Pix 🟡' },
-                    { id: 'credito', name: 'Crédito Online', desc: 'Pagamento via cartão de crédito online no checkout.', label: 'Crédito Online 💳' },
+                    { id: 'credito_mp', name: 'Crédito / Débito MP', desc: 'Pagamento via cartão de crédito ou débito online no checkout.', label: 'Crédito / Débito MP 💳' },
                     { id: 'google_pay', name: 'Google Pay', desc: 'Carteira digital rápida integrada.', label: 'Google Pay 📱' },
                     { id: 'debito_point', name: 'Débito Maquininha', desc: 'Débito presencial via maquininha Point.', label: 'Débito Maquininha 💴' },
                     { id: 'credito_point', name: 'Crédito Maquininha', desc: 'Crédito presencial via maquininha Point.', label: 'Crédito Maquininha 💳' },
@@ -1311,7 +1314,8 @@ export const SettingsPage = () => {
 
                           {/* Visibility Checkboxes: Clientes / Funcionários */}
                           {(() => {
-                            const vis = storeConfig?.paymentMethodsVisibility?.[method.id] || 'both';
+                            const visMap = storeConfig?.paymentMethodsVisibilityByOrderType?.[selectedOrderTypeFilter] || storeConfig?.paymentMethodsVisibility || {};
+                            const vis = visMap[method.id] || 'both';
                             const showClient = vis === 'both' || vis === 'client';
                             const showStaff = vis === 'both' || vis === 'staff';
                             const setVis = (forClient: boolean, forStaff: boolean) => {
@@ -1319,13 +1323,21 @@ export const SettingsPage = () => {
                               if (forClient && !forStaff) newVis = 'client';
                               else if (!forClient && forStaff) newVis = 'staff';
                               else newVis = 'both';
-                              setStoreConfig(prev => prev ? {
-                                ...prev,
-                                paymentMethodsVisibility: {
-                                  ...(prev.paymentMethodsVisibility || {}),
-                                  [method.id]: newVis
-                                }
-                              } : prev);
+                              setStoreConfig(prev => {
+                                if (!prev) return prev;
+                                const prevMap = prev.paymentMethodsVisibilityByOrderType || {};
+                                const orderTypeMap = prevMap[selectedOrderTypeFilter] || {};
+                                return {
+                                  ...prev,
+                                  paymentMethodsVisibilityByOrderType: {
+                                    ...prevMap,
+                                    [selectedOrderTypeFilter]: {
+                                      ...orderTypeMap,
+                                      [method.id]: newVis
+                                    }
+                                  }
+                                };
+                              });
                             };
                             return (
                               <div style={{
