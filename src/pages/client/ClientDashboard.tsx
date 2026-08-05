@@ -3908,7 +3908,7 @@ export const ClientDashboard = ({
                         orderType,
                         tableNumber: orderType === 'dine_in_table' ? tableNumber : null,
                         paymentMethod: 'credito_mp',
-                        mercadoPagoOrderId: orderId,
+                        mercadoPagoPaymentId: orderId,
                         dailySeq,
                         address: orderType === 'delivery' && deliveryAddress ? {
                           street: deliveryAddress.street,
