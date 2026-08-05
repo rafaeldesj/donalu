@@ -61,7 +61,8 @@ service cloud.firestore {
       // Também permite criação se for um Pix aguardando pagamento (evita erros caso o Auth silencioso falhe ou atrase)
       allow create: if 
         (request.auth != null && request.resource.data.clientUid == request.auth.uid) ||
-        (request.resource.data.paymentMethod == 'pix' && request.resource.data.status == 'awaiting_payment');
+        (request.resource.data.paymentMethod == 'pix' && request.resource.data.status == 'awaiting_payment') ||
+        (request.resource.data.paymentMethod == 'credito_mp' && request.resource.data.status == 'pending');
       
       // Atualizar pedido: staff/admin pode atualizar qualquer pedido. O próprio cliente só pode atualizar se o pedido ainda for dele
       // Também permite atualização via backend usando o token de verificação do pagamento (webhook)
