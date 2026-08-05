@@ -39,3 +39,4 @@ get_*.js
 check_*.js
 *.js
 !vite.config.ts
+!api/**/*.js
