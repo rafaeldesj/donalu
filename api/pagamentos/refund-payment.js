@@ -83,7 +83,8 @@ export default async function handler(req, res) {
 
     const mpUrl = `https://api.mercadopago.com/v1/payments/${paymentId}/refunds`;
     const headers = {
-      'Authorization': `Bearer ${token}`
+      'Authorization': `Bearer ${token}`,
+      'X-Idempotency-Key': 'DONALU_REFUND_' + paymentId + '_' + Date.now()
     };
 
     const response = await nativeRequest(mpUrl, 'POST', headers, {});
