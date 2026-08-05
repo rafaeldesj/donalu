@@ -75,7 +75,7 @@ export const AdminDashboard = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          paymentId: order.mercadoPagoPaymentId,
+          paymentId: order.mercadoPagoPaymentId || order.mercadoPagoOrderId,
           token: token
         })
       });
@@ -101,7 +101,7 @@ export const AdminDashboard = () => {
         title: 'Pagamento Estornado',
         description: `Estornou o pagamento de R$ ${order.total.toFixed(2).replace('.', ',')} do Pedido ${order.dailySeq || ''} (ID: "${order.id}").`,
         userRole: userData?.role || 'admin',
-        metadata: { orderId: order.id, dailySeq: order.dailySeq, total: order.total, paymentId: order.mercadoPagoPaymentId }
+        metadata: { orderId: order.id, dailySeq: order.dailySeq, total: order.total, paymentId: order.mercadoPagoPaymentId || order.mercadoPagoOrderId }
       });
 
       alert('Pagamento estornado com sucesso no Mercado Pago!');
@@ -506,7 +506,7 @@ export const AdminDashboard = () => {
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Por: {order.refundedBy} em {new Date(order.refundedAt || '').toLocaleDateString('pt-BR')}</span>
                     </div>
                   )}
-                  {!order.refunded && order.status === 'cancelled' && order.mercadoPagoPaymentId && (
+                  {!order.refunded && order.status === 'cancelled' && (order.mercadoPagoPaymentId || order.mercadoPagoOrderId) && (
                     <div style={{ gridColumn: 'span 2', marginTop: '0.75rem' }}>
                       <button
                         type="button"
