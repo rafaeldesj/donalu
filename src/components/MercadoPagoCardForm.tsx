@@ -12,7 +12,7 @@ interface MercadoPagoCardFormProps {
 }
 
 export function MercadoPagoCardForm({
-  amount, publicKey, accessToken, payer, onSuccess, onError
+  amount, publicKey, accessToken, payer, items, onSuccess, onError
 }: MercadoPagoCardFormProps) {
   const [cardNumber, setCardNumber] = useState("");
   const [cardHolder, setCardHolder] = useState("");
@@ -59,32 +59,7 @@ export function MercadoPagoCardForm({
         const d2id = document.cookie.split(";").find(c => c.trim().startsWith("_d2id="));
         if (d2id) deviceSessionId = d2id.split("=")[1]?.trim();
       } catch (_) {}
-      const totalAmount = parseFloat(amount.toString()).toFixed(2);
-      const firstName = (payer.name || 'Cliente').split(' ')[0];
-      const lastName = (payer.name || 'Cliente').split(' ').slice(1).join(' ') || 'Dona Lu';
-
-      const firstDigit = cardNumber.charAt(0);
-      let paymentMethodId = cardType === "credit" ? "master" : "debmaster";
-      if (firstDigit === "4") paymentMethodId = cardType === "credit" ? "visa" : "debvisa";
-      else if (firstDigit === "3") paymentMethodId = "amex";
-      else if (firstDigit === "6") paymentMethodId = cardType === "credit" ? "elo" : "debelo";
-
-      const orderPayload = {
-        transaction_amount: parseFloat(totalAmount),
-        token: tokenResp.id,
-        description: 'Pedido Dona Lu Pastelaria',
-        installments: parseInt(installments.toString() || '1'),
-        payment_method_id: paymentMethodId,
-        payer: {
-          email: payer.email || 'cliente@email.com',
-          first_name: firstName,
-          last_name: lastName,
-          identification: {
-            type: 'CPF',
-            number: (payer.cpf || '').replace(/\D/g, '') || '80288053702'
-          }
-        }
-      };
+      
 
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://localhost:5173";
       const resp = await fetch(`${API_BASE_URL}/api/pagamentos/create-mp-card-order`, {
