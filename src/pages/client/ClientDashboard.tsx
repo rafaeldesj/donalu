@@ -315,7 +315,7 @@ export const ClientDashboard = ({
   const [pointDeviceLabel, setPointDeviceLabel] = useState('');
   const [showPointDeviceSelector, setShowPointDeviceSelector] = useState(false);
   const [pointAmount, setPointAmount] = useState(0);
-  const [pointType, setPointType] = useState<'debito' | 'credito'>('debito');
+  const [pointType, setPointType] = useState<'debito' | 'credito' | 'pix'>('debito');
   const [pointActionCallback, setPointActionCallback] = useState<'place_order' | 'close_bill'>('place_order');
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
 
@@ -1627,7 +1627,7 @@ export const ClientDashboard = ({
     }, 1500);
   };
 
-  const handleStartPointPayment = async (deviceId: string, label: string, directAmount?: number, directType?: 'debito' | 'credito') => {
+  const handleStartPointPayment = async (deviceId: string, label: string, directAmount?: number, directType?: 'debito' | 'credito' | 'pix') => {
     try {
       setBillError(null);
       setError(null);
