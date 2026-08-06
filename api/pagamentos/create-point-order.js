@@ -122,7 +122,7 @@ export default async function handler(req, res) {
     }
 
     // Chamada oficial da Orders API do Mercado Pago Point
-    const mpUrl = `https://api.mercadopago.com/v1/orders`;
+    const mpUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}/payment-intents`;
     const headers = {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
@@ -130,35 +130,29 @@ export default async function handler(req, res) {
     };
 
     const payload = {
-      type: 'point',
-      external_reference: externalReference || 'PED_' + Date.now(),
+      amount: numericAmount,
       description: 'Pedido Dona Lu Pastelaria',
-      total_amount: numericAmount,
-      items: [
-        {
-          title: 'Pedido Dona Lu',
-          unit_price: numericAmount,
-          quantity: 1
-        }
-      ],
-      point_of_interaction: {
-        type: 'POINT',
-        business_info: {
-          device_id: devIdStr
-        }
+      payment: {
+        installments: 1,
+        type: paymentType === 'credito' ? 'credit_card' : 'debit_card',
+        installments_cost: 'seller'
+      },
+      additional_info: {
+        external_reference: externalReference || 'PED_' + Date.now(),
+        print_on_terminal: true
       }
     };
 
-    console.log('[Mercado Pago Point v1/orders] URL:', mpUrl);
-    console.log('[Mercado Pago Point v1/orders] Enviando Payload:', JSON.stringify(payload, null, 2));
+    console.log('[Mercado Pago Point Intents] URL:', mpUrl);
+    console.log('[Mercado Pago Point Intents] Enviando Payload:', JSON.stringify(payload, null, 2));
 
     const response = await nativeRequest(mpUrl, 'POST', headers, payload);
 
-    console.log('[Mercado Pago Point v1/orders] Resposta Status:', response.status);
-    console.log('[Mercado Pago Point v1/orders] Resposta JSON:', JSON.stringify(response.json, null, 2));
+    console.log('[Mercado Pago Point Intents] Resposta Status:', response.status);
+    console.log('[Mercado Pago Point Intents] Resposta JSON:', JSON.stringify(response.json, null, 2));
 
     if (!response.ok) {
-      console.error('[Mercado Pago Point v1/orders] Erro ao criar ordem de pagamento:', response.json);
+      console.error('[Mercado Pago Point Intents] Erro ao criar ordem de pagamento:', response.json);
       
       // Fallback para mock caso dê erro na API real, para não travar a pastelaria durante testes
       console.log('[Mercado Pago Point] Iniciando MOCK de fallback devido a erro na API.');

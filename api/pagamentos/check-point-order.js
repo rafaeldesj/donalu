@@ -87,7 +87,7 @@ export default async function handler(req, res) {
 
     // Consulta real à Orders API do Mercado Pago
     // Endpoint: GET https://api.mercadopago.com/v1/orders/{order_id}
-    const mpUrl = `https://api.mercadopago.com/v1/orders/${intentId}`;
+    const mpUrl = `https://api.mercadopago.com/point/integration-api/payment-intents/${intentId}`;
     const headers = {
       'Authorization': `Bearer ${token}`
     };
@@ -113,11 +113,13 @@ export default async function handler(req, res) {
     
     // Mapeamento de status da Orders API para o formato esperado pelo frontend
     let finalStatus = 'OPEN';
-    if (r.status === 'processed' || r.status === 'paid') {
+    // O endpoint payment-intents retorna state em vez de status
+    const state = r.state || r.status;
+    if (state === 'FINISHED' || state === 'processed' || state === 'paid') {
       finalStatus = 'FINISHED';
-    } else if (r.status === 'canceled' || r.status === 'expired') {
+    } else if (state === 'CANCELED' || state === 'canceled' || state === 'expired' || state === 'ERROR') {
       finalStatus = 'CANCELED';
-    } else if (r.status === 'created' || r.status === 'action_required') {
+    } else if (state === 'OPEN' || state === 'created' || state === 'action_required') {
       finalStatus = 'OPEN';
     } else {
       finalStatus = 'ERROR';
