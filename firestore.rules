@@ -60,6 +60,7 @@ service cloud.firestore {
       // Criar pedido: usuário autenticado inserindo seu próprio uid como clientUid
       // Também permite criação se for um Pix aguardando pagamento (evita erros caso o Auth silencioso falhe ou atrase)
       allow create: if 
+        isStaff() ||
         (request.auth != null && request.resource.data.clientUid == request.auth.uid) ||
         (request.resource.data.paymentMethod == 'pix' && request.resource.data.status == 'awaiting_payment') ||
         (request.resource.data.paymentMethod == 'credito_mp' && request.resource.data.status == 'pending');

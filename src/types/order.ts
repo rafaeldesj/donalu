@@ -22,6 +22,7 @@ export interface OrderDocument {
   status: OrderStatus;
   createdAt: string;
   orderType?: 'pickup' | 'delivery' | 'dine_in' | 'dine_in_table' | 'pdv';
+  packForTakeout?: boolean;
   tableNumber?: string | null;
   deliveryFee?: number;
   serviceFee?: number;

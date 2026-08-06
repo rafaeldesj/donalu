@@ -273,6 +273,8 @@ export const ClientDashboard = ({
     const hasTable = params.has('mesa') || params.has('table');
     return hasTable ? 'dine_in_table' : 'delivery';
   });
+  const [packForTakeout, setPackForTakeout] = useState<boolean>(false);
+  const [eatAtCounter, setEatAtCounter] = useState<boolean>(false);
   const [tableNumber, setTableNumber] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credito' | 'credito_mp' | 'debito' | 'dinheiro' | 'pagar_final' | 'google_pay' | 'debito_point' | 'credito_point' | 'cartao'>('pix');
   const [changeFor, setChangeFor] = useState('');
@@ -979,12 +981,12 @@ export const ClientDashboard = ({
       } else {
         setTableNumber(null);
         sessionStorage.removeItem('donalu_mesa');
-        if (orderType === 'dine_in_table') {
+        if (orderType === 'dine_in_table' && !isPdvMode) {
           setOrderType('delivery');
         }
       }
     }
-  }, [userData]);
+  }, [userData?.tableNumber, isPdvMode]);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'menu_categories'), (docSnap) => {
@@ -1494,7 +1496,8 @@ export const ClientDashboard = ({
     }
     
     // Exige cadastro de número de celular se o cliente não tiver um cadastrado
-    if (!isVisitor && user && !userData?.phoneNumber) {
+    const requirePhone = isPdvMode ? orderType === 'delivery' : true;
+    if (requirePhone && !isVisitor && user && !userData?.phoneNumber) {
       setPromptPhone('');
       setPromptPhoneError(null);
       setShowPhonePrompt(true);
@@ -1587,7 +1590,8 @@ export const ClientDashboard = ({
       kitchenEnteredAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       orderType,
-      tableNumber: orderType === 'dine_in_table' ? tableNumber : null,
+        packForTakeout: orderType === 'dine_in' && isPdvMode ? packForTakeout : false,
+        tableNumber: (orderType === 'dine_in_table' || (orderType === 'dine_in' && isPdvMode && eatAtCounter)) ? tableNumber : null,
       paymentMethod: pointType, // Salva como 'debito' ou 'credito' para manter painéis
       pointPaymentIntentId: pointPaymentId,
       pointDeviceId: deviceId,
@@ -1782,7 +1786,8 @@ export const ClientDashboard = ({
             createdAt: new Date().toISOString(),
             ...(storeConfig?.requireCashierApproval !== true ? { kitchenEnteredAt: new Date().toISOString() } : {}),
             orderType,
-            tableNumber: orderType === 'dine_in_table' ? tableNumber : null,
+        packForTakeout: orderType === 'dine_in' && isPdvMode ? packForTakeout : false,
+        tableNumber: (orderType === 'dine_in_table' || (orderType === 'dine_in' && isPdvMode && eatAtCounter)) ? tableNumber : null,
             paymentMethod: type,
             dailySeq,
             address: orderType === 'delivery' ? {
@@ -1916,7 +1921,8 @@ export const ClientDashboard = ({
         kitchenEnteredAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
         orderType,
-        tableNumber: orderType === 'dine_in_table' ? tableNumber : null,
+        packForTakeout: orderType === 'dine_in' && isPdvMode ? packForTakeout : false,
+        tableNumber: (orderType === 'dine_in_table' || (orderType === 'dine_in' && isPdvMode && eatAtCounter)) ? tableNumber : null,
         paymentMethod: 'pix',
         mercadoPagoPaymentId: pixPaymentId,
         dailySeq,
@@ -2306,7 +2312,8 @@ export const ClientDashboard = ({
             status: 'awaiting_payment',
             createdAt: new Date().toISOString(),
             orderType,
-            tableNumber: orderType === 'dine_in_table' ? tableNumber : null,
+        packForTakeout: orderType === 'dine_in' && isPdvMode ? packForTakeout : false,
+        tableNumber: (orderType === 'dine_in_table' || (orderType === 'dine_in' && isPdvMode && eatAtCounter)) ? tableNumber : null,
             paymentMethod: 'pix',
             mercadoPagoPaymentId: result.paymentId,
             dailySeq: pixDailySeq,
@@ -2466,7 +2473,8 @@ export const ClientDashboard = ({
         createdAt: new Date().toISOString(),
         ...(finalStatus === 'pending' ? { kitchenEnteredAt: new Date().toISOString() } : {}),
         orderType,
-        tableNumber: orderType === 'dine_in_table' ? tableNumber : null,
+        packForTakeout: orderType === 'dine_in' && isPdvMode ? packForTakeout : false,
+        tableNumber: (orderType === 'dine_in_table' || (orderType === 'dine_in' && isPdvMode && eatAtCounter)) ? tableNumber : null,
         paymentMethod,
         changeFor: paymentMethod === 'dinheiro' && changeFor ? parseFloat(changeFor.replace(',', '.')) : null,
         dailySeq,
@@ -3338,9 +3346,19 @@ export const ClientDashboard = ({
                 }}
               >
                 <span style={{ fontSize: '1.6rem' }}>🍽️</span>
-                <span style={{ fontWeight: 600 }}>Vou comer aí</span>
-                <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>(Pode ir preparando)</span>
+                {isPdvMode ? (
+                  <>
+                    <span style={{ fontWeight: 600 }}>Pedido no Balcão</span>
+                    <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>(Sem mesa)</span>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontWeight: 600 }}>Vou comer aí</span>
+                    <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>(Pode ir preparando)</span>
+                  </>
+                )}
               </button>
+              {!isPdvMode && (
               <button
                 type="button"
                 onClick={() => { setOrderType('pickup'); setDeliveryAddress(null); setRouteDistance(null); }}
@@ -3364,6 +3382,7 @@ export const ClientDashboard = ({
                 <span style={{ fontWeight: 600 }}>Vou retirar na loja</span>
                 <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>(Embale para viagem)</span>
               </button>
+            )}
               <button
                 type="button"
                 onClick={() => setOrderType('delivery')}
@@ -3389,7 +3408,51 @@ export const ClientDashboard = ({
               </button>
             </div>
 
-            {(orderType === 'pickup' || orderType === 'dine_in' || orderType === 'dine_in_table') && (
+            {orderType === 'dine_in' && isPdvMode && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer' }} onClick={() => { setPackForTakeout(!packForTakeout); setEatAtCounter(false); setTableNumber(null); }}>
+                  <input type="checkbox" checked={packForTakeout} onChange={() => {}} style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--primary-gold)' }} />
+                  <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 500 }}>Embalar para viagem 🛍️</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={() => { setEatAtCounter(!eatAtCounter); setPackForTakeout(false); if(eatAtCounter) setTableNumber(null); }}>
+                    <input type="checkbox" checked={eatAtCounter} onChange={() => {}} style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--primary-gold)' }} />
+                    <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 500 }}>Vou comer aqui 🍽️</span>
+                  </div>
+                  {eatAtCounter && (
+                    <div style={{ marginTop: '0.2rem', paddingLeft: '2rem' }} onClick={(e) => e.stopPropagation()}>
+                       <select 
+                         value={tableNumber || ''} 
+                         onChange={(e) => setTableNumber(e.target.value || null)}
+                         style={{ padding: '0.5rem', borderRadius: '8px', background: '#262626', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', width: '100%', outline: 'none' }}
+                       >
+                         <option value="">Selecione a mesa (Opcional)</option>
+                         {Array.from({ length: 40 }, (_, i) => i + 1).map(num => (
+                           <option key={num} value={num.toString()}>Mesa {num}</option>
+                         ))}
+                       </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {orderType === 'dine_in_table' && isPdvMode && (
+              <div style={{ marginTop: '0.75rem', padding: '0.75rem', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                 <select 
+                   value={tableNumber || ''} 
+                   onChange={(e) => setTableNumber(e.target.value || null)}
+                   style={{ padding: '0.5rem', borderRadius: '8px', background: '#262626', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', width: '100%', outline: 'none' }}
+                 >
+                   <option value="">Selecione a mesa (Opcional)</option>
+                   {Array.from({ length: 40 }, (_, i) => i + 1).map(num => (
+                     <option key={num} value={num.toString()}>Mesa {num}</option>
+                   ))}
+                 </select>
+              </div>
+            )}
+            
+            {!isPdvMode && (orderType === 'pickup' || orderType === 'dine_in' || orderType === 'dine_in_table') && (
               <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', padding: '0.5rem 0.75rem', lineHeight: '1.5' }}>
                 📍 <strong style={{ color: '#fff' }}>Dona Lu Pastelaria</strong> &mdash; Rua Jícara, 239 · Campo Grande · RJ
                 {orderType === 'dine_in' && (
@@ -3405,7 +3468,7 @@ export const ClientDashboard = ({
               </div>
             )}
 
-            {tableNumber && (
+            {tableNumber && !isPdvMode && (
               orderType === 'dine_in_table' ? (
                 /* Caso Comer à Mesa: Exibe banner padrão */
                 <div className="alert-box animate-fade-in" style={{
@@ -3583,6 +3646,9 @@ export const ClientDashboard = ({
                       ['dinheiro', 'Dinheiro 💵'],
                       ['cartao', 'Cartões ou Pix 💳']
                     ];
+                    if (isPdvMode) {
+                      methods.splice(methods.length - 2, 0, ['pagar_final', 'Pagar no Final 🍽️']);
+                    }
                   }
                   return methods.filter(([val]) => isMethodAllowed(val)) as any;
                 })().map(([val, label]: [string, string]) => {
@@ -3920,7 +3986,8 @@ export const ClientDashboard = ({
                         status: 'pending',
                         createdAt: now.toISOString(),
                         orderType,
-                        tableNumber: orderType === 'dine_in_table' ? tableNumber : null,
+        packForTakeout: orderType === 'dine_in' && isPdvMode ? packForTakeout : false,
+        tableNumber: (orderType === 'dine_in_table' || (orderType === 'dine_in' && isPdvMode && eatAtCounter)) ? tableNumber : null,
                         paymentMethod: 'credito_mp',
                         mercadoPagoPaymentId: orderId,
                         dailySeq,

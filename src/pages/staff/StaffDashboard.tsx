@@ -19,7 +19,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
 
   const getOrderTypeLabel = (order: any) => {
     if (order.orderType === 'delivery') return '🛵 Entrega';
-    if (order.orderType === 'dine_in') return '🍽️ Comer no Local';
+    if (order.orderType === 'dine_in') return `🍽️ Balcão${order.packForTakeout ? ' (Para Viagem)' : ''}`;
     if (order.orderType === 'dine_in_table') return `🪑 Mesa ${order.tableNumber || '?'}`;
     if (order.orderType === 'pickup') return '🏪 Retirada (Para Viagem)';
     return order.address ? '🛵 Entrega' : '🏪 Retirada';
