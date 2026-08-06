@@ -4921,7 +4921,7 @@ export const ClientDashboard = ({
                 R$ {pointAmount.toFixed(2).replace('.', ',')}
               </span>
               <span style={{ fontSize: '0.8rem', color: '#60a5fa', fontWeight: 600 }}>
-                Modo: {pointType === 'debito' ? '💳 Débito' : '💳 Crédito'}
+                Modo: {pointType === 'pix' ? '💠 Pix' : (pointType === 'debito' ? '💳 Débito' : '💳 Crédito')}
               </span>
             </div>
 
