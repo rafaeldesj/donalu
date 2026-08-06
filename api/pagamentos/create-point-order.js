@@ -139,10 +139,7 @@ export default async function handler(req, res) {
       description: 'Pedido Dona Lu Pastelaria',
       transactions: [
         {
-          amount: numericAmount,
-          payment_method: {
-            default_type: pType
-          }
+          amount: numericAmount
         }
       ],
       config: {
@@ -152,6 +149,12 @@ export default async function handler(req, res) {
         }
       }
     };
+
+    if (pType !== 'pix') {
+      payload.transactions[0].payment_method = {
+        default_type: pType
+      };
+    }
 
     console.log('[Mercado Pago v1/orders] URL:', mpUrl);
     console.log('[Mercado Pago v1/orders] Enviando Payload:', JSON.stringify(payload, null, 2));
