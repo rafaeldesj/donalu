@@ -74,15 +74,14 @@ export default async function handler(req, res) {
     }
 
     // Orders API: POST https://api.mercadopago.com/v1/orders/{order_id}/cancel
-    const mpUrl = `https://api.mercadopago.com/point/integration-api/devices/${deviceId}/payment-intents/${intentId}`; // DELETE method required
+    const mpUrl = `https://api.mercadopago.com/v1/orders/${intentId}/cancel`;
     const headers = {
       'Authorization': `Bearer ${token}`,
       'X-Idempotency-Key': `cancel_${intentId}_${Date.now()}`
     };
 
     console.log(`[Mercado Pago Point] Cancelando ordem real ${intentId} para o dispositivo ${devIdStr} (Orders API)...`);
-    // The cancel endpoint for payment-intents is DELETE /point/integration-api/devices/{device_id}/payment-intents/{payment_intent_id}
-    const response = await nativeRequest(mpUrl, 'DELETE', headers);
+    const response = await nativeRequest(mpUrl, 'POST', headers);
     console.log(`[Mercado Pago Point] Resposta cancelamento status: ${response.status}`);
 
     if (response.status === 200 || response.ok) {
