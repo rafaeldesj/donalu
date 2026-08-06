@@ -1477,7 +1477,8 @@ export const ClientDashboard = ({
     debito: 'Cartão de Débito',
     dinheiro: 'Dinheiro',
     pagar_final: 'Pagar no Final (na Mesa) 🍽️',
-    debito_point: 'Débito Maquininha 💴',
+    debito_point: 'Débito Maquininha 💳',
+    pix_point: 'Pix Maquininha 💳',
     credito_point: 'Crédito Maquininha 💳',
     cartao: 'Cartão 💳',
   };
@@ -2214,8 +2215,8 @@ export const ClientDashboard = ({
           console.error("Erro no Google Pay:", err);
           throw new Error(err.message || 'Falha ao processar o pagamento com Google Pay. Tente novamente.');
         }
-      } else if (paymentMethod === 'debito_point' || paymentMethod === 'credito_point') {
-        await handleTriggerPointPaymentFlow(finalTotal, paymentMethod === 'debito_point' ? 'debito' : 'credito', 'place_order');
+      } else if (paymentMethod === 'debito_point' || paymentMethod === 'credito_point' || paymentMethod === 'pix_point') {
+        await handleTriggerPointPaymentFlow(finalTotal, paymentMethod === 'pix_point' ? 'pix' : (paymentMethod === 'debito_point' ? 'debito' : 'credito'), 'place_order');
         return;
       } else if (paymentMethod === 'pix') {
         let token = storeConfig?.storeOwnerAccessToken || storeConfig?.devAccessToken || 'mock';
@@ -3630,7 +3631,8 @@ export const ClientDashboard = ({
                       ['pix', 'Pix 🟡'],
                       ...(hasMpToken ? [['credito_mp', 'Crédito / Débito MP 💳']] : [['credito', 'Crédito Online 💳']]),
                       ['google_pay', 'Google Pay 📱'],
-                      ['debito_point', 'Débito Maquininha 💴'],
+                      ['pix_point', 'Pix Maquininha 💳'],
+                      ['debito_point', 'Débito Maquininha 💳'],
                       ['credito_point', 'Crédito Maquininha 💳'],
                       ['pagar_final', 'Pagar no Final 🍽️'],
                       ['dinheiro', 'Dinheiro 💵'],
@@ -3641,7 +3643,8 @@ export const ClientDashboard = ({
                       ['pix', 'Pix 🟡'],
                       ...(hasMpToken ? [['credito_mp', 'Crédito / Débito MP 💳']] : [['credito', 'Crédito Online 💳']]),
                       ['google_pay', 'Google Pay 📱'],
-                      ['debito_point', 'Débito Maquininha 💴'],
+                      ['pix_point', 'Pix Maquininha 💳'],
+                      ['debito_point', 'Débito Maquininha 💳'],
                       ['credito_point', 'Crédito Maquininha 💳'],
                       ['dinheiro', 'Dinheiro 💵'],
                       ['cartao', 'Cartões ou Pix 💳']
@@ -5157,7 +5160,8 @@ export const ClientDashboard = ({
                               ['pix', 'Pix 🟡'],
                               ['credito', 'Crédito Online 💳'],
                               ['google_pay', 'Google Pay 📱'],
-                              ['debito_point', 'Débito Maquininha 💴'],
+                              ['pix_point', 'Pix Maquininha 💳'],
+                      ['debito_point', 'Débito Maquininha 💳'],
                               ['credito_point', 'Crédito Maquininha 💳'],
                               ['dinheiro', 'Dinheiro 💵'],
                               ['cartao', 'Cartões ou Pix 💳']
@@ -5404,10 +5408,10 @@ export const ClientDashboard = ({
                             </button>
                           );
                         })()
-                      ) : (billPaymentMethod === 'debito_point' || billPaymentMethod === 'credito_point') ? (
+                      ) : (billPaymentMethod === 'debito_point' || billPaymentMethod === 'credito_point' || billPaymentMethod === 'pix_point') ? (
                         <button
                           type="button"
-                          onClick={() => handleTriggerPointPaymentFlow(totalToPay, billPaymentMethod === 'debito_point' ? 'debito' : 'credito', 'close_bill')}
+                          onClick={() => handleTriggerPointPaymentFlow(totalToPay, billPaymentMethod === 'pix_point' ? 'pix' : (billPaymentMethod === 'debito_point' ? 'debito' : 'credito'), 'close_bill')}
                           disabled={billSubmitting}
                           className="auth-btn"
                           style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', fontWeight: 700, padding: '0.7rem' }}
