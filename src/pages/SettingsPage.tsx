@@ -1739,22 +1739,22 @@ export const SettingsPage = () => {
                   ⚙️ Configurar IDs das Maquininhas Point
                 </h4>
                 <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                  Insira o <strong>ID do Caixa (external_id)</strong> obtido no Passo 5 para cada maquininha correspondente. Se deixar em branco, o modelo não ficará integrado.
+                  Insira o <strong>ID Interno</strong> numérico (obtido na busca automática acima) para cada maquininha correspondente. Se deixar em branco, o modelo não ficará integrado.
                 </p>
                 
                 <div className="responsive-grid-2">
                   <div className="input-group">
-                    <label>Point Smart 2 (external_id)</label>
+                    <label>Point Smart 2</label>
                     <input
                       type="text"
                       className="pastel-edit-input"
-                      placeholder="Ex: CAIXA_SMART2"
+                      placeholder="ID Interno (Ex: 118144954)"
                       value={storeConfig.pointSmart2Id || ''}
                       onChange={(e) => setStoreConfig(prev => ({ ...prev, pointSmart2Id: e.target.value }))}
                     />
                   </div>
                   <div className="input-group">
-                    <label>Point Pro 3 (external_id)</label>
+                    <label>Point Pro 3</label>
                     <input
                       type="text"
                       className="pastel-edit-input"
@@ -1764,7 +1764,7 @@ export const SettingsPage = () => {
                     />
                   </div>
                   <div className="input-group">
-                    <label>Point Air 2 (external_id)</label>
+                    <label>Point Air 2</label>
                     <input
                       type="text"
                       className="pastel-edit-input"
@@ -1774,7 +1774,7 @@ export const SettingsPage = () => {
                     />
                   </div>
                   <div className="input-group">
-                    <label>Point Mini NFC 2 (external_id)</label>
+                    <label>Point Mini NFC 2</label>
                     <input
                       type="text"
                       className="pastel-edit-input"
