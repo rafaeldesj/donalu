@@ -276,7 +276,7 @@ export const ClientDashboard = ({
   const [packForTakeout, setPackForTakeout] = useState<boolean>(false);
   const [eatAtCounter, setEatAtCounter] = useState<boolean>(false);
   const [tableNumber, setTableNumber] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credito' | 'credito_mp' | 'debito' | 'dinheiro' | 'pagar_final' | 'google_pay' | 'debito_point' | 'credito_point' | 'cartao'>('pix');
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credito' | 'credito_mp' | 'debito' | 'dinheiro' | 'pagar_final' | 'google_pay' | 'debito_point' | 'credito_point' | 'pix_point' | 'cartao'>('pix');
   const [changeFor, setChangeFor] = useState('');
   const [noChangeNeeded, setNoChangeNeeded] = useState(false);
   const [showOrderSummary, setShowOrderSummary] = useState(false);
@@ -323,7 +323,7 @@ export const ClientDashboard = ({
   const [showCloseBillModal, setShowCloseBillModal] = useState(false);
   const [tableOrders, setTableOrders] = useState<any[]>([]);
   const [loadingBill, setLoadingBill] = useState(false);
-  const [billPaymentMethod, setBillPaymentMethod] = useState<'pix' | 'credito' | 'dinheiro' | 'debito' | 'google_pay' | 'debito_point' | 'credito_point' | 'cartao'>('pix');
+  const [billPaymentMethod, setBillPaymentMethod] = useState<'pix' | 'credito' | 'dinheiro' | 'debito' | 'google_pay' | 'debito_point' | 'credito_point' | 'pix_point' | 'cartao'>('pix');
   const [billChangeFor, setBillChangeFor] = useState('');
   const [billNoChangeNeeded, setBillNoChangeNeeded] = useState(false);
   const [billSubmitting, setBillSubmitting] = useState(false);
@@ -1686,7 +1686,7 @@ export const ClientDashboard = ({
     handleStartPointPayment(deviceId, label);
   };
 
-  const handleTriggerPointPaymentFlow = async (amount: number, type: 'debito' | 'credito', callback: 'place_order' | 'close_bill') => {
+  const handleTriggerPointPaymentFlow = async (amount: number, type: 'debito' | 'credito' | 'pix', callback: 'place_order' | 'close_bill') => {
     const devices = [];
     if (storeConfig?.pointSmart2Id) devices.push({ id: storeConfig.pointSmart2Id, label: 'Point Smart 2' });
     if (storeConfig?.pointPro3Id) devices.push({ id: storeConfig.pointPro3Id, label: 'Point Pro 3' });
