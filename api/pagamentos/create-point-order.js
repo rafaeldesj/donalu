@@ -133,6 +133,18 @@ export default async function handler(req, res) {
       'X-Idempotency-Key': `create_${devIdStr}_${Date.now()}`
     };
 
+    let pType = 'debit_card';
+    if (paymentType === 'credito') pType = 'credit_card';
+    if (paymentType === 'pix') pType = 'pix';
+
+    const paymentMethodObj = {};
+    if (pType === 'pix') {
+      paymentMethodObj.id = 'pix';
+      paymentMethodObj.type = 'bank_transfer';
+    } else {
+      paymentMethodObj.type = pType;
+    }
+
     const payload = {
       type: 'point',
       external_reference: externalReference || 'PED_' + Date.now(),
@@ -140,7 +152,8 @@ export default async function handler(req, res) {
       transactions: {
         payments: [
           {
-            amount: numericAmount.toFixed(2)
+            amount: numericAmount.toFixed(2),
+            payment_method: paymentMethodObj
           }
         ]
       },

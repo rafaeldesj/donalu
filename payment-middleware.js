@@ -647,8 +647,12 @@ export const cancelPointOrderMiddleware = async (req, res) => {
         }
         
         try {
-          console.log(`[Mercado Pago Point Cancel] Forçando maquininha ${devIdStr} a limpar tela...`);
+          console.log(`[Mercado Pago Point Cancel] Limpando tela da maquininha ${devIdStr} (Toggle Mode)...`);
           const clearUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}`;
+          await nativeRequest(clearUrl, 'PATCH', {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }, { operating_mode: 'STANDALONE' });
           await nativeRequest(clearUrl, 'PATCH', {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

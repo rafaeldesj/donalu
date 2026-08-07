@@ -90,10 +90,18 @@ export default async function handler(req, res) {
         delete global.activePointIntents[devIdStr];
       }
       
-      // Força a maquininha a limpar a tela e voltar ao estado inicial imediatamente (Workaround/Hack)
+      // Workaround: A Orders API às vezes demora para limpar a tela da máquina no cancelamento.
+      // Forçamos a limpeza alterando o modo de operação para STANDALONE e depois de volta para PDV.
       try {
-        console.log(`[Mercado Pago Point] Forçando maquininha ${devIdStr} a voltar para o estado inicial...`);
+        console.log(`[Mercado Pago Point] Limpando tela da maquininha ${devIdStr} (Toggle Mode)...`);
         const clearUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}`;
+        // 1. Muda pra Standalone
+        await nativeRequest(clearUrl, 'PATCH', {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }, { operating_mode: 'STANDALONE' });
+        
+        // 2. Volta pra PDV
         await nativeRequest(clearUrl, 'PATCH', {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
