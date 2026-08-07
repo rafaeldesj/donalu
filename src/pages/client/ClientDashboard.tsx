@@ -3719,6 +3719,43 @@ export const ClientDashboard = ({
                 })}
               </div>
 
+              {/* Descrição da forma de pagamento selecionada */}
+              {(() => {
+                const defaultDescs: Record<string, string> = {
+                  pix: 'Pagamento instantâneo via QR Code gerado no Mercado Pago.',
+                  credito_mp: 'Pagamento via cartão de crédito ou débito online no checkout.',
+                  credito: 'Pagamento via cartão de crédito online.',
+                  google_pay: 'Carteira digital rápida integrada.',
+                  debito_point: 'Débito presencial via maquininha Point.',
+                  credito_point: 'Crédito presencial via maquininha Point.',
+                  pix_point: 'Pagamento via Pix direto na maquininha Point (QR Code na tela da máquina).',
+                  dinheiro: 'Pagamento em dinheiro vivo.',
+                  cartao: 'Pagamento presencial via cartão ou Pix com baixa manual pelo operador.',
+                  pagar_final: 'Permitir que o cliente pague ao final do atendimento na mesa.',
+                };
+                const desc = storeConfig?.paymentMethodsDescriptions?.[paymentMethod] || defaultDescs[paymentMethod];
+                if (!desc) return null;
+                return (
+                  <div style={{
+                    marginTop: '0.6rem',
+                    padding: '0.55rem 0.85rem',
+                    background: 'rgba(245,158,11,0.06)',
+                    border: '1px solid rgba(245,158,11,0.18)',
+                    borderRadius: '10px',
+                    fontSize: '0.8rem',
+                    color: 'rgba(255,255,255,0.65)',
+                    lineHeight: '1.4',
+                    transition: 'all 0.25s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}>
+                    <span style={{ color: 'var(--primary-gold)', fontSize: '0.9rem', flexShrink: 0 }}>ℹ</span>
+                    {desc}
+                  </div>
+                );
+              })()}
+
               {/* Opção de Pedido de Teste para desenvolvedores */}
               {userData?.role === 'developer' && (
                 <div style={{

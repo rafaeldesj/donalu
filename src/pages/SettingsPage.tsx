@@ -734,6 +734,7 @@ export const SettingsPage = () => {
         paymentMethodsThemes: storeConfig.paymentMethodsThemes || {},
         paymentMethodsVisibility: storeConfig.paymentMethodsVisibility || {},
         paymentMethodsVisibilityByOrderType: storeConfig.paymentMethodsVisibilityByOrderType || {},
+        paymentMethodsDescriptions: storeConfig.paymentMethodsDescriptions || {},
         requireCashierApproval: storeConfig.requireCashierApproval !== undefined ? storeConfig.requireCashierApproval : false
       });
 
@@ -1425,9 +1426,31 @@ export const SettingsPage = () => {
                           <span style={{ fontWeight: 600, fontSize: '0.95rem', color: isDisabled ? 'var(--text-secondary)' : '#fff' }}>
                             {method.label}
                           </span>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                            {method.desc}
-                          </span>
+                          <input
+                            type="text"
+                            value={storeConfig?.paymentMethodsDescriptions?.[method.id] ?? method.desc}
+                            onChange={(e) => {
+                              const descs = storeConfig?.paymentMethodsDescriptions || {};
+                              setStoreConfig(prev => prev ? {
+                                ...prev,
+                                paymentMethodsDescriptions: { ...descs, [method.id]: e.target.value }
+                              } : prev);
+                            }}
+                            placeholder={method.desc}
+                            title="Descrição exibida ao cliente ao selecionar esta forma de pagamento"
+                            style={{
+                              fontSize: '0.8rem',
+                              color: 'var(--text-secondary)',
+                              background: 'transparent',
+                              border: 'none',
+                              borderBottom: '1px dashed rgba(255,255,255,0.15)',
+                              outline: 'none',
+                              padding: '2px 0',
+                              width: '100%',
+                              cursor: 'text',
+                              fontFamily: 'inherit'
+                            }}
+                          />
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
