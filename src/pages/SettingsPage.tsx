@@ -1396,6 +1396,7 @@ export const SettingsPage = () => {
                     { id: 'google_pay', name: 'Google Pay', desc: 'Carteira digital rápida integrada.', label: 'Google Pay 📱' },
                     { id: 'debito_point', name: 'Débito Maquininha', desc: 'Débito presencial via maquininha Point.', label: 'Débito Maquininha 💴' },
                     { id: 'credito_point', name: 'Crédito Maquininha', desc: 'Crédito presencial via maquininha Point.', label: 'Crédito Maquininha 💳' },
+                    { id: 'pix_point', name: 'Pix Maquininha', desc: 'Pagamento via Pix direto na maquininha Point (QR Code na tela da máquina).', label: 'Pix Maquininha 🟢' },
                     { id: 'dinheiro', name: 'Dinheiro', desc: 'Pagamento em dinheiro vivo.', label: 'Dinheiro 💵' },
                     { id: 'cartao', name: 'Cartões ou Pix', desc: 'Pagamento presencial via cartão ou Pix com baixa manual pelo operador.', label: 'Cartões ou Pix 💳' },
                     { id: 'pagar_final', name: 'Pagar no Final', desc: 'Permitir que o cliente pague ao final do atendimento na mesa.', label: 'Pagar no Final 🍽️' }
