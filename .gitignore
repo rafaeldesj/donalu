@@ -40,3 +40,4 @@ check_*.js
 *.js
 !vite.config.ts
 !api/**/*.js
+transcript.txt
