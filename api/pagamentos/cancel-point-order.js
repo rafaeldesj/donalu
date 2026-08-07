@@ -73,16 +73,14 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, message: 'Pagamento simulado cancelado.' });
     }
 
-    // Nova v1/orders API (Point Devices)
-    const mpUrl = `https://api.mercadopago.com/v1/orders/${intentId}/cancel`;
+    // Point Integration API oficial para cancelar intent de imediato na tela da maquininha
+    const mpUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}/payment-intents/${intentId}`;
     const headers = {
-      'Authorization': `Bearer ${token}`,
-      'X-Idempotency-Key': `cancel_${intentId}_${Date.now()}`,
-      'x-allow-cancelable-status': 'at_terminal'
+      'Authorization': `Bearer ${token}`
     };
 
-    console.log(`[Mercado Pago Point] Cancelando ordem real ${intentId} para o dispositivo ${devIdStr} (v1/orders API)...`);
-    const response = await nativeRequest(mpUrl, 'POST', headers);
+    console.log(`[Mercado Pago Point] Cancelando intent real ${intentId} para o dispositivo ${devIdStr} (Point API)...`);
+    const response = await nativeRequest(mpUrl, 'DELETE', headers);
     console.log(`[Mercado Pago Point] Resposta cancelamento status: ${response.status}`);
 
     if (response.status === 200 || response.ok) {

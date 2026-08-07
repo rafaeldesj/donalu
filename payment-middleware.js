@@ -422,11 +422,9 @@ export const createPointOrderMiddleware = async (req, res) => {
         console.log(`[Mercado Pago Point] Cancelando ordem anterior ${previousIntentId}...`);
         logToFile(`[Silent Cancel Request] Device: ${devIdStr}, IntentId: ${previousIntentId}`);
         try {
-          const cancelUrl = `https://api.mercadopago.com/v1/orders/${previousIntentId}/cancel`;
-          const cancelRes = await nativeRequest(cancelUrl, 'POST', {
-            'Authorization': `Bearer ${token}`,
-            'X-Idempotency-Key': `cancel_${previousIntentId}_${Date.now()}`,
-            'x-allow-cancelable-status': 'at_terminal'
+          const cancelUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}/payment-intents/${previousIntentId}`;
+          const cancelRes = await nativeRequest(cancelUrl, 'DELETE', {
+            'Authorization': `Bearer ${token}`
           });
           console.log(`[Mercado Pago Point] Resposta cancelamento anterior status: ${cancelRes.status}`);
           logToFile(`[Silent Cancel Response] Status: ${cancelRes.status}, Body: ${JSON.stringify(cancelRes.json || cancelRes.text || '')}`);
@@ -567,8 +565,8 @@ export const checkPointOrderMiddleware = async (req, res) => {
       return res.end(JSON.stringify({ success: true, status: mockIntent.status, isMock: true }));
     }
 
-    // Consulta a nova Orders API
-    const mpUrl = `https://api.mercadopago.com/v1/orders/${intentId}`;
+    // Consulta real à Point Integration API do Mercado Pago
+    const mpUrl = `https://api.mercadopago.com/point/integration-api/payment-intents/${intentId}`;
     const headers = {
       'Authorization': `Bearer ${token}`
     };
@@ -576,26 +574,35 @@ export const checkPointOrderMiddleware = async (req, res) => {
     const response = await nativeRequest(mpUrl, 'GET', headers);
 
     if (!response.ok) {
-      console.error('[Mercado Pago Point] Erro ao consultar ordem:', response.json);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify({ success: true, status: 'ERROR', isMock: false }));
+      console.error('[Mercado Pago Point Check] Erro ao consultar intent:', response.json);
+      
+      const mockIntent = global.mockPointIntents[intentId];
+      if (mockIntent) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({
+          success: true,
+          status: mockIntent.status,
+          isMock: true
+        }));
+      }
+
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ success: false, message: 'Erro ao consultar status da maquininha no Mercado Pago.' }));
     }
 
     const r = response.json;
     
-    // Mapeamento de status da Orders API v1
-    // status: created, open, at_terminal, on_terminal, in_process, action_required, processed, paid, closed, cancelled, expired
+    // Mapeamento de status da Point API
     let finalStatus = 'OPEN';
-    const statusLower = (r.status || '').toLowerCase();
-    if (statusLower === 'processed' || statusLower === 'paid' || statusLower === 'closed') {
+    const state = r.status || r.state;
+    if (state === 'FINISHED' || state === 'processed' || state === 'paid' || state === 'CLOSED' || state === 'closed' || state === 'closed_paid') {
       finalStatus = 'FINISHED';
-    } else if (statusLower === 'cancelled' || statusLower === 'canceled' || statusLower === 'expired' || statusLower === 'failed' || statusLower === 'rejected') {
+    } else if (state === 'CANCELED' || state === 'canceled' || state === 'expired' || state === 'ERROR' || state === 'error') {
       finalStatus = 'CANCELED';
-    } else if (statusLower === 'open' || statusLower === 'in_process' || statusLower === 'created' || statusLower === 'action_required' || statusLower === 'at_terminal' || statusLower === 'on_terminal' || statusLower === 'opened') {
+    } else if (state === 'OPEN' || state === 'opened' || state === 'created' || state === 'action_required') {
       finalStatus = 'OPEN';
     } else {
-      console.log('[Mercado Pago Point] Status desconhecido retornado pela API:', r.status);
-      finalStatus = 'OPEN'; // Trata qualquer status intermediário ativo como OPEN para não cancelar precocemente
+      finalStatus = 'ERROR';
     }
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -625,18 +632,16 @@ export const cancelPointOrderMiddleware = async (req, res) => {
         return res.end(JSON.stringify({ success: true, message: 'Pagamento simulado cancelado.' }));
       }
       
-      // Cancelar via nova Orders API
-      const mpUrl = `https://api.mercadopago.com/v1/orders/${intentId}/cancel`;
+      // Cancelar via Point API
+      const mpUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}/payment-intents/${intentId}`;
       const headers = {
-        'Authorization': `Bearer ${token}`,
-        'X-Idempotency-Key': `cancel_${intentId}_${Date.now()}`,
-        'x-allow-cancelable-status': 'at_terminal'
+        'Authorization': `Bearer ${token}`
       };
       
-      console.log(`[Mercado Pago Point Cancel] Cancelando ordem ${intentId} (Orders API)...`);
+      console.log(`[Mercado Pago Point Cancel] Cancelando ordem ${intentId} (Point API)...`);
       logToFile(`[Cancel Request] Device: ${devIdStr}, IntentId: ${intentId}`);
       
-      const response = await nativeRequest(mpUrl, 'POST', headers);
+      const response = await nativeRequest(mpUrl, 'DELETE', headers);
       
       console.log(`[Mercado Pago Point Cancel] Status resposta: ${response.status}`);
       logToFile(`[Cancel Response] Status: ${response.status}, Body: ${JSON.stringify(response.json || response.text || '')}`);
