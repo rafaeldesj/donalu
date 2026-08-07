@@ -124,44 +124,45 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: 'O valor mínimo para pagamento na maquininha é de R$ 1,00.' });
     }
 
-    // Vamos usar a Point Integration API oficial porque ela é a única que
-    // nos permite controlar a tela da maquininha em tempo real (limpar a tela instantaneamente no cancelamento).
-    const mpUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}/payment-intents`;
+    // Nova Orders API — suporta TODOS os meios: crédito, débito e Pix na maquininha
+    // O terminal em modo PDV "puxa" a ordem e apresenta as opções ao cliente na tela
+    const mpUrl = `https://api.mercadopago.com/v1/orders`;
     const headers = {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
       'X-Idempotency-Key': `create_${devIdStr}_${Date.now()}`
     };
 
-    let pType = 'debit_card';
-    if (paymentType === 'credito') pType = 'credit_card';
-    if (paymentType === 'pix') pType = 'pix';
-
     const payload = {
-      amount: numericAmount,
+      type: 'point',
+      external_reference: externalReference || 'PED_' + Date.now(),
       description: 'Pedido Dona Lu Pastelaria',
-      payment: {
-        installments: 1,
-        type: pType,
-        installments_cost: 'seller'
+      transactions: {
+        payments: [
+          {
+            amount: numericAmount.toFixed(2)
+          }
+        ]
       },
-      additional_info: {
-        external_reference: externalReference || 'PED_' + Date.now(),
-        print_on_terminal: true
+      config: {
+        point: {
+          terminal_id: terminalId,
+          print_on_terminal: 'no_ticket'
+        }
       }
     };
 
-    console.log('[Mercado Pago Point API] URL:', mpUrl);
-    console.log('[Mercado Pago Point API] deviceId:', devIdStr);
-    console.log('[Mercado Pago Point API] Payload:', JSON.stringify(payload, null, 2));
+    console.log('[Mercado Pago Point Orders API] URL:', mpUrl);
+    console.log('[Mercado Pago Point Orders API] terminal_id:', terminalId, '| deviceId:', devIdStr);
+    console.log('[Mercado Pago Point Orders API] Payload:', JSON.stringify(payload, null, 2));
 
     const response = await nativeRequest(mpUrl, 'POST', headers, payload);
 
-    console.log('[Mercado Pago Point API] Resposta Status:', response.status);
-    console.log('[Mercado Pago Point API] Resposta JSON:', JSON.stringify(response.json, null, 2));
+    console.log('[Mercado Pago Point Orders API] Resposta Status:', response.status);
+    console.log('[Mercado Pago Point Orders API] Resposta JSON:', JSON.stringify(response.json, null, 2));
 
     if (!response.ok) {
-      console.error('[Mercado Pago Point] Erro ao criar intent:', response.json);
+      console.error('[Mercado Pago Point] Erro ao criar ordem:', response.json);
       const errMsg = (response.json?.errors || []).map(e => e.message).join(', ') || response.json?.message || 'Verifique se o ID do terminal está correto e em modo PDV.';
       return res.status(500).json({
         success: false,
