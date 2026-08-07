@@ -82,7 +82,8 @@ export default async function handler(req, res) {
         const cancelUrl = `https://api.mercadopago.com/v1/orders/${previousIntentId}/cancel`;
         await nativeRequest(cancelUrl, 'POST', {
           'Authorization': `Bearer ${token}`,
-          'X-Idempotency-Key': `cancel_${previousIntentId}_${Date.now()}`
+          'X-Idempotency-Key': `cancel_${previousIntentId}_${Date.now()}`,
+          'x-allow-cancelable-status': 'at_terminal'
         });
         delete global.activePointIntents[devIdStr];
       } catch (cancelErr) {

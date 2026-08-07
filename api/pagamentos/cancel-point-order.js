@@ -77,7 +77,8 @@ export default async function handler(req, res) {
     const mpUrl = `https://api.mercadopago.com/v1/orders/${intentId}/cancel`;
     const headers = {
       'Authorization': `Bearer ${token}`,
-      'X-Idempotency-Key': `cancel_${intentId}_${Date.now()}`
+      'X-Idempotency-Key': `cancel_${intentId}_${Date.now()}`,
+      'x-allow-cancelable-status': 'at_terminal'
     };
 
     console.log(`[Mercado Pago Point] Cancelando ordem real ${intentId} para o dispositivo ${devIdStr} (v1/orders API)...`);

@@ -425,7 +425,8 @@ export const createPointOrderMiddleware = async (req, res) => {
           const cancelUrl = `https://api.mercadopago.com/v1/orders/${previousIntentId}/cancel`;
           const cancelRes = await nativeRequest(cancelUrl, 'POST', {
             'Authorization': `Bearer ${token}`,
-            'X-Idempotency-Key': `cancel_${previousIntentId}_${Date.now()}`
+            'X-Idempotency-Key': `cancel_${previousIntentId}_${Date.now()}`,
+            'x-allow-cancelable-status': 'at_terminal'
           });
           console.log(`[Mercado Pago Point] Resposta cancelamento anterior status: ${cancelRes.status}`);
           logToFile(`[Silent Cancel Response] Status: ${cancelRes.status}, Body: ${JSON.stringify(cancelRes.json || cancelRes.text || '')}`);
@@ -628,7 +629,8 @@ export const cancelPointOrderMiddleware = async (req, res) => {
       const mpUrl = `https://api.mercadopago.com/v1/orders/${intentId}/cancel`;
       const headers = {
         'Authorization': `Bearer ${token}`,
-        'X-Idempotency-Key': `cancel_${intentId}_${Date.now()}`
+        'X-Idempotency-Key': `cancel_${intentId}_${Date.now()}`,
+        'x-allow-cancelable-status': 'at_terminal'
       };
       
       console.log(`[Mercado Pago Point Cancel] Cancelando ordem ${intentId} (Orders API)...`);
