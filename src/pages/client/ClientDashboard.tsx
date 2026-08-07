@@ -1627,7 +1627,7 @@ export const ClientDashboard = ({
     }, 1500);
   };
 
-  const handleStartPointPayment = async (deviceId: string, label: string, directAmount?: number, directType?: 'debito' | 'credito' | 'pix') => {
+  const handleStartPointPayment = async (deviceId: string, label: string, directAmount?: number, directType?: 'debito' | 'credito' | 'pix', posId?: string) => {
     try {
       setBillError(null);
       setError(null);
@@ -1651,6 +1651,7 @@ export const ClientDashboard = ({
         body: JSON.stringify({
           token,
           deviceId,
+          posId: posId || '',
           amount: finalAmount,
           paymentType: finalType,
           externalReference: 'PED_' + Date.now()
@@ -1681,17 +1682,17 @@ export const ClientDashboard = ({
     }
   };
 
-  const handleConfirmPointPaymentChoice = (deviceId: string, label: string) => {
+  const handleConfirmPointPaymentChoice = (deviceId: string, label: string, posId?: string) => {
     setShowPointDeviceSelector(false);
-    handleStartPointPayment(deviceId, label);
+    handleStartPointPayment(deviceId, label, undefined, undefined, posId);
   };
 
   const handleTriggerPointPaymentFlow = async (amount: number, type: 'debito' | 'credito' | 'pix', callback: 'place_order' | 'close_bill') => {
-    const devices = [];
-    if (storeConfig?.pointSmart2Id) devices.push({ id: storeConfig.pointSmart2Id, label: 'Point Smart 2' });
-    if (storeConfig?.pointPro3Id) devices.push({ id: storeConfig.pointPro3Id, label: 'Point Pro 3' });
-    if (storeConfig?.pointAir2Id) devices.push({ id: storeConfig.pointAir2Id, label: 'Point Air 2' });
-    if (storeConfig?.pointMiniNfc2Id) devices.push({ id: storeConfig.pointMiniNfc2Id, label: 'Point Mini NFC 2' });
+    const devices: { id: string; label: string; posId: string }[] = [];
+    if (storeConfig?.pointSmart2Id && storeConfig?.pointSmart2Mode === 'PDV') devices.push({ id: storeConfig.pointSmart2Id, label: 'Point Smart 2', posId: storeConfig.pointSmart2PosId || '' });
+    if (storeConfig?.pointPro3Id && storeConfig?.pointPro3Mode === 'PDV') devices.push({ id: storeConfig.pointPro3Id, label: 'Point Pro 3', posId: storeConfig.pointPro3PosId || '' });
+    if (storeConfig?.pointAir2Id && storeConfig?.pointAir2Mode === 'PDV') devices.push({ id: storeConfig.pointAir2Id, label: 'Point Air 2', posId: storeConfig.pointAir2PosId || '' });
+    if (storeConfig?.pointMiniNfc2Id && storeConfig?.pointMiniNfc2Mode === 'PDV') devices.push({ id: storeConfig.pointMiniNfc2Id, label: 'Point Mini NFC 2', posId: storeConfig.pointMiniNfc2PosId || '' });
 
     if (devices.length === 0) {
       if (callback === 'close_bill') {
@@ -1832,7 +1833,7 @@ export const ClientDashboard = ({
 
     if (devices.length === 1) {
       // Ativa diretamente a única maquininha
-      handleStartPointPayment(devices[0].id, devices[0].label, amount, type);
+      handleStartPointPayment(devices[0].id, devices[0].label, amount, type, devices[0].posId);
     } else {
       // Abre o seletor de maquininhas
       setShowPointDeviceSelector(true);
@@ -4777,15 +4778,15 @@ export const ClientDashboard = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               {(() => {
                 const devices = [];
-                if (storeConfig?.pointSmart2Id) devices.push({ id: storeConfig.pointSmart2Id, label: 'Point Smart 2' });
-                if (storeConfig?.pointPro3Id) devices.push({ id: storeConfig.pointPro3Id, label: 'Point Pro 3' });
-                if (storeConfig?.pointAir2Id) devices.push({ id: storeConfig.pointAir2Id, label: 'Point Air 2' });
-                if (storeConfig?.pointMiniNfc2Id) devices.push({ id: storeConfig.pointMiniNfc2Id, label: 'Point Mini NFC 2' });
+                if (storeConfig?.pointSmart2Id && storeConfig?.pointSmart2Mode === 'PDV') devices.push({ id: storeConfig.pointSmart2Id, label: 'Point Smart 2' });
+                if (storeConfig?.pointPro3Id && storeConfig?.pointPro3Mode === 'PDV') devices.push({ id: storeConfig.pointPro3Id, label: 'Point Pro 3' });
+                if (storeConfig?.pointAir2Id && storeConfig?.pointAir2Mode === 'PDV') devices.push({ id: storeConfig.pointAir2Id, label: 'Point Air 2' });
+                if (storeConfig?.pointMiniNfc2Id && storeConfig?.pointMiniNfc2Mode === 'PDV') devices.push({ id: storeConfig.pointMiniNfc2Id, label: 'Point Mini NFC 2' });
                 return devices.map(dev => (
                   <button
                     key={dev.id}
                     type="button"
-                    onClick={() => handleConfirmPointPaymentChoice(dev.id, dev.label)}
+                    onClick={() => handleConfirmPointPaymentChoice(dev.id, dev.label, dev.posId)}
                     style={{
                       display: 'flex',
                       alignItems: 'center',

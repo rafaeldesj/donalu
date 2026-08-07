@@ -85,8 +85,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // Consulta real à Orders API do Mercado Pago
-    // Endpoint: GET https://api.mercadopago.com/v1/orders/{order_id}
+    // Consulta a nova Orders API
     const mpUrl = `https://api.mercadopago.com/v1/orders/${intentId}`;
     const headers = {
       'Authorization': `Bearer ${token}`
@@ -111,22 +110,25 @@ export default async function handler(req, res) {
 
     const r = response.json;
     
-    // Mapeamento de status da Orders API para o formato esperado pelo frontend
+    // Mapeamento de status da Orders API v1
+    // status: created, open, at_terminal, on_terminal, in_process, action_required, processed, paid, closed, cancelled, expired
     let finalStatus = 'OPEN';
-    const state = r.status || r.state;
-    if (state === 'FINISHED' || state === 'processed' || state === 'paid' || state === 'CLOSED' || state === 'closed' || state === 'closed_paid') {
+    const statusLower = (r.status || '').toLowerCase();
+    if (statusLower === 'processed' || statusLower === 'paid' || statusLower === 'closed') {
       finalStatus = 'FINISHED';
-    } else if (state === 'CANCELED' || state === 'canceled' || state === 'expired' || state === 'ERROR' || state === 'error') {
+    } else if (statusLower === 'cancelled' || statusLower === 'canceled' || statusLower === 'expired' || statusLower === 'failed' || statusLower === 'rejected') {
       finalStatus = 'CANCELED';
-    } else if (state === 'OPEN' || state === 'opened' || state === 'created' || state === 'action_required') {
+    } else if (statusLower === 'open' || statusLower === 'in_process' || statusLower === 'created' || statusLower === 'action_required' || statusLower === 'at_terminal' || statusLower === 'on_terminal' || statusLower === 'opened') {
       finalStatus = 'OPEN';
     } else {
-      finalStatus = 'ERROR';
+      console.log('[Mercado Pago Point] Status desconhecido retornado pela API:', r.status);
+      finalStatus = 'OPEN'; // Trata qualquer status intermediário ativo como OPEN para não cancelar precocemente
     }
 
     return res.status(200).json({
       success: true,
       status: finalStatus,
+      rawStatus: r.status,
       isMock: false
     });
 

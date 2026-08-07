@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import mkcert from 'vite-plugin-mkcert'
 // @ts-ignore
-import { processPaymentMiddleware, createPixMiddleware, checkPixMiddleware, createPointOrderMiddleware, checkPointOrderMiddleware, mpOAuthExchangeMiddleware, listPointDevicesMiddleware, setPointDeviceModeMiddleware, cancelPointOrderMiddleware, processMPCardOrderMiddleware, webhookMiddleware } from './payment-middleware.js'
+import { processPaymentMiddleware, createPixMiddleware, checkPixMiddleware, createPointOrderMiddleware, checkPointOrderMiddleware, mpOAuthExchangeMiddleware, listPointDevicesMiddleware, setPointDeviceModeMiddleware, cancelPointOrderMiddleware, processMPCardOrderMiddleware, webhookMiddleware, pointUserMiddleware, pointStoresMiddleware, pointPosMiddleware } from './payment-middleware.js'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -35,6 +35,12 @@ export default defineConfig({
             setPointDeviceModeMiddleware(req, res);
           } else if (req.url?.startsWith('/api/pagamentos/create-mp-card-order') && req.method === 'POST') {
             processMPCardOrderMiddleware(req, res);
+          } else if (req.url?.startsWith('/api/point/user') && req.method === 'GET') {
+            pointUserMiddleware(req, res);
+          } else if (req.url?.startsWith('/api/point/stores')) {
+            pointStoresMiddleware(req, res);
+          } else if (req.url?.startsWith('/api/point/pos')) {
+            pointPosMiddleware(req, res);
           } else {
             next();
           }

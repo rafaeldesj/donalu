@@ -2,6 +2,27 @@ import https from 'https';
 import fs from 'fs';
 import path from 'path';
 
+// Função utilitária para ler o corpo da requisição JSON com segurança em middlewares Node
+function parseJsonBody(req) {
+  return new Promise((resolve) => {
+    if (req.body) {
+      try {
+        return resolve(typeof req.body === 'string' ? JSON.parse(req.body) : req.body);
+      } catch (e) {
+        return resolve({});
+      }
+    }
+    let body = '';
+    req.on('data', chunk => { body += chunk.toString(); });
+    req.on('end', () => {
+      try { resolve(body ? JSON.parse(body) : {}); } catch(e) { resolve({}); }
+    });
+    if (req.readableEnded || req.complete) {
+      try { resolve(body ? JSON.parse(body) : {}); } catch(e) { resolve({}); }
+    }
+  });
+}
+
 // Função utilitária para gravar logs de depuração do Point no arquivo point-debug.log
 function logToFile(message) {
   try {
@@ -386,23 +407,19 @@ if (!global.activePointIntents) {
 }
 
 export const createPointOrderMiddleware = async (req, res) => {
-  let body = '';
-  req.on('data', chunk => {
-    body += chunk.toString();
-  });
-  
-  req.on('end', async () => {
-    try {
-      const data = JSON.parse(body);
-      const { token, deviceId, amount, paymentType, externalReference } = data || {};
+  try {
+    const data = await parseJsonBody(req);
+    const { token, deviceId, posId, amount, paymentType, externalReference } = data || {};
       
       const devIdStr = deviceId ? String(deviceId) : '';
+      // terminal_id para a Orders API é o ID do dispositivo (ex: NEWLAND_N950__N950NCC603892853)
+      const terminalId = devIdStr;
       const isMock = !token || token === 'mock' || token === '' || token === 'null' || token === 'undefined' || devIdStr.includes('MOCK') || devIdStr === 'mock';
       
-      // Cancelar a ordem anterior se existir na memória global para este terminal (Orders API)
+      // Cancelar a ordem anterior se existir na memória global para este terminal
       const previousIntentId = global.activePointIntents[devIdStr];
       if (previousIntentId && !isMock) {
-        console.log(`[Mercado Pago Point] Cancelando ordem anterior ${previousIntentId} para o dispositivo ${devIdStr} antes de criar uma nova... (Orders API)`);
+        console.log(`[Mercado Pago Point] Cancelando ordem anterior ${previousIntentId}...`);
         logToFile(`[Silent Cancel Request] Device: ${devIdStr}, IntentId: ${previousIntentId}`);
         try {
           const cancelUrl = `https://api.mercadopago.com/v1/orders/${previousIntentId}/cancel`;
@@ -454,7 +471,8 @@ export const createPointOrderMiddleware = async (req, res) => {
         return res.end(JSON.stringify({ success: false, message: 'O valor mínimo para pagamento na maquininha é de R$ 1,00.' }));
       }
 
-      // Chamada real ao Mercado Pago Point (Orders API)
+      // Nova Orders API — suporta TODOS os meios: crédito, débito e Pix na maquininha
+      // O terminal em modo PDV "puxa" a ordem e apresenta as opções ao cliente na tela
       const mpUrl = `https://api.mercadopago.com/v1/orders`;
       const headers = {
         'Authorization': `Bearer ${token}`,
@@ -466,60 +484,43 @@ export const createPointOrderMiddleware = async (req, res) => {
         type: 'point',
         external_reference: externalReference || 'PED_' + Date.now(),
         description: 'Pedido Dona Lu Pastelaria',
-        total_amount: numericAmount,
-        items: [
-          {
-            title: 'Pedido Dona Lu',
-            unit_price: numericAmount,
-            quantity: 1
-          }
-        ],
-        point_of_interaction: {
-          type: 'POINT',
-          business_info: {
-            device_id: devIdStr
+        transactions: {
+          payments: [
+            {
+              amount: numericAmount.toFixed(2)
+            }
+          ]
+        },
+        config: {
+          point: {
+            terminal_id: terminalId,
+            print_on_terminal: 'no_ticket'
           }
         }
       };
 
-      console.log('[Mercado Pago Point v1/orders] URL:', mpUrl);
-      console.log('[Mercado Pago Point v1/orders] Enviando Payload:', JSON.stringify(payload, null, 2));
-      logToFile(`[Create Request] Device: ${devIdStr}, Amount: ${amount}, Payload: ${JSON.stringify(payload)}`);
+      console.log('[Mercado Pago Point Orders API] URL:', mpUrl);
+      console.log('[Mercado Pago Point Orders API] terminal_id:', terminalId, '| deviceId:', devIdStr);
+      console.log('[Mercado Pago Point Orders API] Enviando Payload:', JSON.stringify(payload, null, 2));
+      logToFile(`[Create Request] Device: ${devIdStr}, TerminalId: ${terminalId}, Amount: ${amount}, PaymentType: ${paymentType}, Payload: ${JSON.stringify(payload)}`);
 
       const response = await nativeRequest(mpUrl, 'POST', headers, payload);
 
-      console.log('[Mercado Pago Point v1/orders] Resposta Status:', response.status);
+      console.log('[Mercado Pago Point Orders API] Resposta Status:', response.status);
       if (response.json) {
-        console.log('[Mercado Pago Point v1/orders] Resposta JSON:', JSON.stringify(response.json, null, 2));
+        console.log('[Mercado Pago Point Orders API] Resposta JSON:', JSON.stringify(response.json, null, 2));
       } else if (response.text) {
-        console.log('[Mercado Pago Point v1/orders] Resposta Texto:', response.text);
+        console.log('[Mercado Pago Point Orders API] Resposta Texto:', response.text);
       }
       logToFile(`[Create Response] Status: ${response.status}, Body: ${JSON.stringify(response.json || response.text || '')}`);
 
       if (!response.ok) {
-        console.error('[Mercado Pago Point Dev] Erro ao criar ordem de pagamento:', response.json);
-        
-        // Fallback para mock em desenvolvimento se der erro na API
-        const mockIntentId = 'INTENT_MOCK_' + Math.random().toString(36).substring(2, 11).toUpperCase();
-        global.mockPointIntents[mockIntentId] = {
-          status: 'OPEN',
-          createdAt: Date.now(),
-          amount: numericAmount,
-          deviceId: devIdStr
-        };
-        setTimeout(() => {
-          if (global.mockPointIntents[mockIntentId]) {
-            global.mockPointIntents[mockIntentId].status = 'FINISHED';
-          }
-        }, 10000);
-
-        res.writeHead(200, { 'Content-Type': 'application/json' });
+        console.error('[Mercado Pago Point] Erro ao criar ordem:', response.json);
+        const errMsg = (response.json?.errors || []).map(e => e.message).join(', ') || response.json?.message || 'Verifique se o ID do terminal está correto e em modo PDV.';
+        res.writeHead(500, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({
-          success: true,
-          intentId: mockIntentId,
-          status: 'OPEN',
-          isMock: true,
-          message: 'Modo de testes ativo (erro na API real).'
+          success: false,
+          message: 'Erro ao enviar pagamento para a maquininha: ' + errMsg
         }));
       }
 
@@ -531,16 +532,15 @@ export const createPointOrderMiddleware = async (req, res) => {
       return res.end(JSON.stringify({
         success: true,
         intentId: r.id,
-        status: r.status || 'created',
+        status: r.status || 'OPEN',
         isMock: false
       }));
 
     } catch (err) {
-      console.error('[Mercado Pago Point Dev] Erro no middleware:', err);
+      console.error('[Mercado Pago Point] Erro no middleware:', err);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify({ success: false, message: 'Erro interno ao acionar maquininha.' }));
     }
-  });
 };
 
 export const checkPointOrderMiddleware = async (req, res) => {
@@ -566,7 +566,7 @@ export const checkPointOrderMiddleware = async (req, res) => {
       return res.end(JSON.stringify({ success: true, status: mockIntent.status, isMock: true }));
     }
 
-    // Consulta real ao Mercado Pago (Orders API)
+    // Consulta a nova Orders API
     const mpUrl = `https://api.mercadopago.com/v1/orders/${intentId}`;
     const headers = {
       'Authorization': `Bearer ${token}`
@@ -575,52 +575,42 @@ export const checkPointOrderMiddleware = async (req, res) => {
     const response = await nativeRequest(mpUrl, 'GET', headers);
 
     if (!response.ok) {
-      console.error('[Mercado Pago Point Dev] Erro ao consultar ordem:', response.json);
-      
-      const mockIntent = global.mockPointIntents[intentId];
-      if (mockIntent) {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify({ success: true, status: mockIntent.status, isMock: true }));
-      }
-
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify({ success: false, message: 'Erro ao verificar maquininha no Mercado Pago.' }));
+      console.error('[Mercado Pago Point] Erro ao consultar ordem:', response.json);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ success: true, status: 'ERROR', isMock: false }));
     }
 
     const r = response.json;
     
-    // Mapeamento de status da Orders API
+    // Mapeamento de status da Orders API v1
+    // status: created, open, at_terminal, on_terminal, in_process, action_required, processed, paid, closed, cancelled, expired
     let finalStatus = 'OPEN';
-    if (r.status === 'processed' || r.status === 'paid') {
+    const statusLower = (r.status || '').toLowerCase();
+    if (statusLower === 'processed' || statusLower === 'paid' || statusLower === 'closed') {
       finalStatus = 'FINISHED';
-    } else if (r.status === 'canceled' || r.status === 'expired') {
+    } else if (statusLower === 'cancelled' || statusLower === 'canceled' || statusLower === 'expired' || statusLower === 'failed' || statusLower === 'rejected') {
       finalStatus = 'CANCELED';
-    } else if (r.status === 'created' || r.status === 'action_required') {
+    } else if (statusLower === 'open' || statusLower === 'in_process' || statusLower === 'created' || statusLower === 'action_required' || statusLower === 'at_terminal' || statusLower === 'on_terminal' || statusLower === 'opened') {
       finalStatus = 'OPEN';
     } else {
-      finalStatus = 'ERROR';
+      console.log('[Mercado Pago Point] Status desconhecido retornado pela API:', r.status);
+      finalStatus = 'OPEN'; // Trata qualquer status intermediário ativo como OPEN para não cancelar precocemente
     }
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({ success: true, status: finalStatus, isMock: false }));
+    return res.end(JSON.stringify({ success: true, status: finalStatus, rawStatus: r.status, isMock: false }));
 
   } catch (err) {
-    console.error('[Mercado Pago Point Status Dev] Erro no middleware:', err);
+    console.error('[Mercado Pago Point] Erro no checkPointOrder middleware:', err);
     res.writeHead(500, { 'Content-Type': 'application/json' });
     return res.end(JSON.stringify({ success: false, message: 'Erro interno ao checar maquininha.' }));
   }
 };
 
 export const cancelPointOrderMiddleware = async (req, res) => {
-  let body = '';
-  req.on('data', chunk => {
-    body += chunk.toString();
-  });
-  
-  req.on('end', async () => {
-    try {
-      const data = JSON.parse(body);
-      const { token, deviceId, intentId } = data || {};
+  try {
+    const data = await parseJsonBody(req);
+    const { token, deviceId, intentId } = data || {};
       
       const devIdStr = deviceId ? String(deviceId) : '';
       const isMock = !token || token === 'mock' || !intentId || intentId.startsWith('INTENT_MOCK_');
@@ -634,13 +624,14 @@ export const cancelPointOrderMiddleware = async (req, res) => {
         return res.end(JSON.stringify({ success: true, message: 'Pagamento simulado cancelado.' }));
       }
       
+      // Cancelar via nova Orders API
       const mpUrl = `https://api.mercadopago.com/v1/orders/${intentId}/cancel`;
       const headers = {
         'Authorization': `Bearer ${token}`,
         'X-Idempotency-Key': `cancel_${intentId}_${Date.now()}`
       };
       
-      console.log(`[Mercado Pago Point Cancel] Cancelando ordem ${intentId} para o dispositivo ${devIdStr} (Orders API)...`);
+      console.log(`[Mercado Pago Point Cancel] Cancelando ordem ${intentId} (Orders API)...`);
       logToFile(`[Cancel Request] Device: ${devIdStr}, IntentId: ${intentId}`);
       
       const response = await nativeRequest(mpUrl, 'POST', headers);
@@ -664,7 +655,6 @@ export const cancelPointOrderMiddleware = async (req, res) => {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify({ success: false, message: 'Erro interno ao cancelar pagamento.' }));
     }
-  });
 };
 
 /**
@@ -1085,3 +1075,130 @@ export const webhookMiddleware = async (req, res) => {
     }
   });
 };
+
+export const pointUserMiddleware = async (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  if (req.method === "OPTIONS") return res.writeHead(200).end();
+
+  try {
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const token = url.searchParams.get("token");
+    if (!token) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ success: false, message: "Token � obrigat�rio." }));
+    }
+    const response = await nativeRequest("https://api.mercadopago.com/users/me", "GET", {
+      "Authorization": `Bearer ${token}`
+    });
+    const user = response.json || {};
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ success: response.ok, user: user }));
+  } catch (error) {
+    if (!res.headersSent) res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ success: false, message: "Erro interno." }));
+  }
+};
+
+export const pointStoresMiddleware = async (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS,POST");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") return res.writeHead(200).end();
+
+  try {
+    if (req.method === "GET") {
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const token = url.searchParams.get("token");
+      const userId = url.searchParams.get("user_id");
+      const response = await nativeRequest(`https://api.mercadopago.com/users/${userId}/stores/search`, "GET", {
+        "Authorization": `Bearer ${token}`
+      });
+      const stores = (response.json && response.json.results) ? response.json.results : [];
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ success: true, stores: stores }));
+    } else if (req.method === "POST") {
+      let body = "";
+      req.on("data", chunk => body += chunk);
+      req.on("end", async () => {
+        const { token, user_id, name } = JSON.parse(body);
+        const payload = {
+          name,
+          business_hours: {
+            monday: [{ open: "08:00", close: "23:59" }],
+            tuesday: [{ open: "08:00", close: "23:59" }],
+            wednesday: [{ open: "08:00", close: "23:59" }],
+            thursday: [{ open: "08:00", close: "23:59" }],
+            friday: [{ open: "08:00", close: "23:59" }],
+            saturday: [{ open: "08:00", close: "23:59" }],
+            sunday: [{ open: "08:00", close: "23:59" }]
+          },
+          location: {
+            street_number: "S/N",
+            street_name: "Rua do Restaurante",
+            city_name: "Cidade",
+            state_name: "Estado",
+            latitude: -23.550520,
+            longitude: -46.633308,
+            reference: "Matriz"
+          },
+          external_id: `STORE_${Date.now()}`
+        };
+        const response = await nativeRequest(`https://api.mercadopago.com/users/${user_id}/stores`, "POST", {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }, payload);
+        const storeResponse = response.json || {};
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: response.ok, store: storeResponse }));
+      });
+    }
+  } catch (error) {
+    if (!res.headersSent) res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ success: false, message: "Erro interno." }));
+  }
+};
+
+export const pointPosMiddleware = async (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS,POST");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") return res.writeHead(200).end();
+
+  try {
+    if (req.method === "GET") {
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const token = url.searchParams.get("token");
+      const response = await nativeRequest(`https://api.mercadopago.com/pos`, "GET", {
+        "Authorization": `Bearer ${token}`
+      });
+      const posList = (response.json && response.json.results) ? response.json.results : [];
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ success: true, pos: posList }));
+    } else if (req.method === "POST") {
+      let body = "";
+      req.on("data", chunk => body += chunk);
+      req.on("end", async () => {
+        const { token, name, store_id, external_store_id, external_id } = JSON.parse(body);
+        const payload = {
+          name,
+          fixed_amount: true,
+          store_id: Number(store_id),
+          external_store_id,
+          external_id,
+          category: 621102
+        };
+        const response = await nativeRequest(`https://api.mercadopago.com/pos`, "POST", {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }, payload);
+        const posResponse = response.json || {};
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: response.ok, pos: posResponse }));
+      });
+    }
+  } catch (error) {
+    if (!res.headersSent) res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ success: false, message: "Erro interno." }));
+  }
+};
+

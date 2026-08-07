@@ -67,15 +67,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { token, deviceId, amount, paymentType, externalReference } = req.body || {};
+    const { token, deviceId, posId, amount, paymentType, externalReference } = req.body || {};
 
     const devIdStr = deviceId ? String(deviceId) : '';
+    // terminal_id para a Orders API é o ID do dispositivo (ex: NEWLAND_N950__N950NCC603892853)
+    const terminalId = devIdStr;
     const isMock = !token || token === 'mock' || token === '' || token === 'null' || token === 'undefined' || devIdStr.includes('MOCK') || devIdStr === 'mock';
 
     // Cancelar a ordem anterior se existir na memória global para este terminal
     const previousIntentId = global.activePointIntents[devIdStr];
     if (previousIntentId && !isMock) {
-      console.log(`[Mercado Pago Point] Cancelando ordem anterior ${previousIntentId} para o dispositivo ${devIdStr} antes de criar uma nova... (Orders API)`);
+      console.log(`[Mercado Pago Point] Cancelando ordem anterior ${previousIntentId} para o dispositivo ${devIdStr}...`);
       try {
         const cancelUrl = `https://api.mercadopago.com/v1/orders/${previousIntentId}/cancel`;
         await nativeRequest(cancelUrl, 'POST', {
@@ -121,7 +123,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: 'O valor mínimo para pagamento na maquininha é de R$ 1,00.' });
     }
 
-    // Chamada oficial da Orders API do Mercado Pago Point
+    // Nova Orders API — suporta TODOS os meios: crédito, débito e Pix na maquininha
+    // O terminal em modo PDV "puxa" a ordem e apresenta as opções ao cliente na tela
     const mpUrl = `https://api.mercadopago.com/v1/orders`;
     const headers = {
       'Authorization': `Bearer ${token}`,
@@ -129,65 +132,40 @@ export default async function handler(req, res) {
       'X-Idempotency-Key': `create_${devIdStr}_${Date.now()}`
     };
 
-    let pType = 'debit_card';
-    if (paymentType === 'credito') pType = 'credit_card';
-    if (paymentType === 'pix') pType = 'pix';
-
     const payload = {
       type: 'point',
       external_reference: externalReference || 'PED_' + Date.now(),
       description: 'Pedido Dona Lu Pastelaria',
-      transactions: [
-        {
-          amount: numericAmount
-        }
-      ],
+      transactions: {
+        payments: [
+          {
+            amount: numericAmount.toFixed(2)
+          }
+        ]
+      },
       config: {
         point: {
-          terminal_id: devIdStr,
-          print_on_terminal: 'always'
+          terminal_id: terminalId,
+          print_on_terminal: 'no_ticket'
         }
       }
     };
 
-    if (pType === 'pix') pType = 'bank_transfer';
-    
-    payload.transactions[0].payment_method = {
-      default_type: pType
-    };
-
-    console.log('[Mercado Pago v1/orders] URL:', mpUrl);
-    console.log('[Mercado Pago v1/orders] Enviando Payload:', JSON.stringify(payload, null, 2));
+    console.log('[Mercado Pago Point Orders API] URL:', mpUrl);
+    console.log('[Mercado Pago Point Orders API] terminal_id:', terminalId, '| deviceId:', devIdStr);
+    console.log('[Mercado Pago Point Orders API] Payload:', JSON.stringify(payload, null, 2));
 
     const response = await nativeRequest(mpUrl, 'POST', headers, payload);
 
-    console.log('[Mercado Pago v1/orders] Resposta Status:', response.status);
-    console.log('[Mercado Pago v1/orders] Resposta JSON:', JSON.stringify(response.json, null, 2));
+    console.log('[Mercado Pago Point Orders API] Resposta Status:', response.status);
+    console.log('[Mercado Pago Point Orders API] Resposta JSON:', JSON.stringify(response.json, null, 2));
 
     if (!response.ok) {
-      console.error('[Mercado Pago v1/orders] Erro ao criar ordem de pagamento:', response.json);
-      
-      // Fallback para mock caso dê erro na API real, para não travar a pastelaria durante testes
-      console.log('[Mercado Pago Point] Iniciando MOCK de fallback devido a erro na API.');
-      const mockIntentId = 'INTENT_MOCK_' + Math.random().toString(36).substring(2, 11).toUpperCase();
-      global.mockPointIntents[mockIntentId] = {
-        status: 'OPEN',
-        createdAt: Date.now(),
-        amount: numericAmount,
-        deviceId: devIdStr
-      };
-      setTimeout(() => {
-        if (global.mockPointIntents[mockIntentId]) {
-          global.mockPointIntents[mockIntentId].status = 'FINISHED';
-        }
-      }, 10000);
-
-      return res.status(200).json({
-        success: true,
-        intentId: mockIntentId,
-        status: 'OPEN',
-        isMock: true,
-        message: 'Modo de testes ativo (erro na API real).'
+      console.error('[Mercado Pago Point] Erro ao criar ordem:', response.json);
+      const errMsg = (response.json?.errors || []).map(e => e.message).join(', ') || response.json?.message || 'Verifique se o ID do terminal está correto e em modo PDV.';
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao enviar pagamento para a maquininha: ' + errMsg
       });
     }
 
@@ -199,7 +177,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       intentId: r.id,
-      status: r.status || 'created',
+      status: r.status || 'open',
       isMock: false
     });
 

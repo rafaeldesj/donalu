@@ -41,9 +41,17 @@ interface StoreConfig {
   storeOwnerId?: string;
   mpPublicKey?: string;
   pointSmart2Id?: string;
+  pointSmart2PosId?: string;
   pointPro3Id?: string;
+  pointPro3PosId?: string;
   pointAir2Id?: string;
+  pointAir2PosId?: string;
   pointMiniNfc2Id?: string;
+  pointMiniNfc2PosId?: string;
+  pointSmart2Mode?: string;
+  pointPro3Mode?: string;
+  pointAir2Mode?: string;
+  pointMiniNfc2Mode?: string;
   disabledPaymentMethods?: string[];
   paymentMethodsThemes?: Record<string, 'light' | 'dark'>;
   paymentMethodsVisibility?: Record<string, 'client' | 'staff' | 'both'>;
@@ -201,10 +209,27 @@ export const SettingsPage = () => {
   const [pointDevices, setPointDevices] = useState<PointDevice[]>([]);
   const [loadingDevices, setLoadingDevices] = useState(false);
   const [deviceError, setDeviceError] = useState<string | null>(null);
-  // Map: deviceId -> which model slot it occupies ('smart2'|'pro3'|'air2'|'mininfc2'|'')
   const [deviceModelMap, setDeviceModelMap] = useState<Record<string, string>>({});
+  // Map: deviceId -> selected pos external_id
+  const [devicePosMap, setDevicePosMap] = useState<Record<string, string>>({});
   const [settingMode, setSettingMode] = useState<Record<string, boolean>>({});
   const [savingDeviceSelection, setSavingDeviceSelection] = useState(false);
+
+  interface MPStore {
+    id: string | number;
+    name: string;
+  }
+  interface MPPos {
+    id: number;
+    name: string;
+    store_id: number;
+    external_id: string;
+  }
+  const [mpStores, setMpStores] = useState<MPStore[]>([]);
+  const [mpPosList, setMpPosList] = useState<MPPos[]>([]);
+  const [mpUserId, setMpUserId] = useState<string>('');
+  const [creatingStorePos, setCreatingStorePos] = useState(false);
+
 
   const handleFetchDevices = async () => {
     const token = storeConfig?.storeOwnerAccessToken;
@@ -226,25 +251,118 @@ export const SettingsPage = () => {
       if ((data.devices || []).length === 0) {
         setDeviceError('Nenhuma maquininha encontrada nesta conta. Verifique se as maquininhas estão cadastradas no painel do Mercado Pago.');
       }
-      // Pre-fill deviceModelMap based on existing pointXxxId config
+      // Fetch User ID
+      let fetchedUserId = '';
+      try {
+        const uRes = await fetch(`${API_BASE_URL}/api/point/user?token=${encodeURIComponent(token)}`);
+        const uData = await uRes.json();
+        if (uData.success && uData.user && uData.user.id) {
+          fetchedUserId = String(uData.user.id);
+          setMpUserId(fetchedUserId);
+        }
+      } catch(e) { console.error('Erro user:', e); }
+
+      // Fetch Stores
+      if (fetchedUserId) {
+        try {
+          const sRes = await fetch(`${API_BASE_URL}/api/point/stores?token=${encodeURIComponent(token)}&user_id=${fetchedUserId}`);
+          const sData = await sRes.json();
+          if (sData.success) {
+            setMpStores(sData.stores || []);
+          }
+        } catch(e) { console.error('Erro stores:', e); }
+      }
+
+      // Fetch POS
+      try {
+        const pRes = await fetch(`${API_BASE_URL}/api/point/pos?token=${encodeURIComponent(token)}`);
+        const pData = await pRes.json();
+        if (pData.success) {
+          setMpPosList(pData.pos || []);
+        }
+      } catch(e) { console.error('Erro pos:', e); }
+
+      // Pre-fill deviceModelMap and devicePosMap based on existing configs
       const existingMap: Record<string, string> = {};
-      const modelFields: [string, string][] = [
-        [storeConfig?.pointSmart2Id || '', 'smart2'],
-        [storeConfig?.pointPro3Id || '', 'pro3'],
-        [storeConfig?.pointAir2Id || '', 'air2'],
-        [storeConfig?.pointMiniNfc2Id || '', 'mininfc2'],
+      const existingPosMap: Record<string, string> = {};
+      const modelFields: { id: string, slot: string, posId: string }[] = [
+        { id: storeConfig?.pointSmart2Id || '', slot: 'smart2', posId: storeConfig?.pointSmart2PosId || '' },
+        { id: storeConfig?.pointPro3Id || '', slot: 'pro3', posId: storeConfig?.pointPro3PosId || '' },
+        { id: storeConfig?.pointAir2Id || '', slot: 'air2', posId: storeConfig?.pointAir2PosId || '' },
+        { id: storeConfig?.pointMiniNfc2Id || '', slot: 'mininfc2', posId: storeConfig?.pointMiniNfc2PosId || '' },
       ];
-      for (const [storedId, slot] of modelFields) {
-        if (storedId) {
-          const matched = (data.devices || []).find((d: PointDevice) => d.id === storedId || d.external_id === storedId || d.pos_id === storedId);
-          if (matched) existingMap[matched.id] = slot;
+      for (const { id, slot, posId } of modelFields) {
+        if (id) {
+          const matched = (data.devices || []).find((d: PointDevice) => d.id === id || d.external_id === id || d.pos_id === id);
+          if (matched) {
+            existingMap[matched.id] = slot;
+            if (posId) existingPosMap[matched.id] = posId;
+          }
         }
       }
       setDeviceModelMap(existingMap);
+      setDevicePosMap(existingPosMap);
     } catch (err: any) {
       setDeviceError(err.message || 'Erro ao buscar maquininhas.');
     } finally {
       setLoadingDevices(false);
+    }
+  };
+
+  const handleCreateStore = async () => {
+    const token = storeConfig?.storeOwnerAccessToken;
+    if (!token || !mpUserId) return;
+    setCreatingStorePos(true);
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+      const res = await fetch(`${API_BASE_URL}/api/point/stores`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, user_id: mpUserId, name: 'Dona Lu Pastelaria (Matriz)' })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showFeedback('success', 'Loja matriz criada com sucesso!');
+        handleFetchDevices(); // re-fetch
+      } else {
+        throw new Error(data.message || 'Erro ao criar loja');
+      }
+    } catch(err: any) {
+      showFeedback('error', `Erro: ${err.message}`);
+    } finally {
+      setCreatingStorePos(false);
+    }
+  };
+
+  const handleCreatePos = async () => {
+    const token = storeConfig?.storeOwnerAccessToken;
+    if (!token || mpStores.length === 0) return;
+    setCreatingStorePos(true);
+    try {
+      const storeId = mpStores[0].id;
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+      const res = await fetch(`${API_BASE_URL}/api/point/pos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          token, 
+          name: `Caixa PDV ${mpPosList.length + 1}`, 
+          store_id: storeId, 
+          external_store_id: `LOJA_${storeId}`, 
+          external_id: `CAIXA_${Date.now()}` 
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showFeedback('success', 'Caixa criado com sucesso!');
+        handleFetchDevices(); // re-fetch
+      } else {
+        throw new Error(data.message || 'Erro ao criar caixa');
+      }
+    } catch(err: any) {
+      showFeedback('error', `Erro: ${err.message}`);
+    } finally {
+      setCreatingStorePos(false);
     }
   };
 
@@ -265,6 +383,15 @@ export const SettingsPage = () => {
       }
       // Update local state
       setPointDevices(prev => prev.map(d => d.id === deviceId ? { ...d, operating_mode: mode } : d));
+      
+      const assignedSlot = deviceModelMap[deviceId];
+      const slotMap: Record<string, string> = { smart2: 'pointSmart2Mode', pro3: 'pointPro3Mode', air2: 'pointAir2Mode', mininfc2: 'pointMiniNfc2Mode' };
+      if (assignedSlot && slotMap[assignedSlot]) {
+        const docRef = doc(db, 'settings', 'store_config');
+        updateDoc(docRef, { [slotMap[assignedSlot]]: mode }).catch(e => console.error("Error updating mode in store_config:", e));
+        setStoreConfig(prev => prev ? ({ ...prev, [slotMap[assignedSlot]]: mode }) : prev);
+      }
+      
       showFeedback('success', `✅ ${data.message}`);
     } catch (err: any) {
       showFeedback('error', `❌ ${err.message}`);
@@ -278,27 +405,46 @@ export const SettingsPage = () => {
     setSavingDeviceSelection(true);
     try {
       const slotToId: Record<string, string> = { smart2: '', pro3: '', air2: '', mininfc2: '' };
+      const slotToMode: Record<string, string> = { smart2: '', pro3: '', air2: '', mininfc2: '' };
+      const slotToPos: Record<string, string> = { smart2: '', pro3: '', air2: '', mininfc2: '' };
       for (const [devId, slot] of Object.entries(deviceModelMap)) {
         if (slot && slotToId[slot] !== undefined) {
-          // Use pos_id if available (it's what the payment API uses), fallback to device id
           const device = pointDevices.find(d => d.id === devId);
           slotToId[slot] = device?.id || device?.external_id || devId;
+          slotToMode[slot] = device?.operating_mode || 'PDV';
+          slotToPos[slot] = devicePosMap[devId] || '';
         }
       }
       const docRef = doc(db, 'settings', 'store_config');
       await updateDoc(docRef, {
         pointSmart2Id: slotToId.smart2,
+        pointSmart2Mode: slotToMode.smart2,
+        pointSmart2PosId: slotToPos.smart2,
         pointPro3Id: slotToId.pro3,
+        pointPro3Mode: slotToMode.pro3,
+        pointPro3PosId: slotToPos.pro3,
         pointAir2Id: slotToId.air2,
-        pointMiniNfc2Id: slotToId.mininfc2
+        pointAir2Mode: slotToMode.air2,
+        pointAir2PosId: slotToPos.air2,
+        pointMiniNfc2Id: slotToId.mininfc2,
+        pointMiniNfc2Mode: slotToMode.mininfc2,
+        pointMiniNfc2PosId: slotToPos.mininfc2
       });
-      setStoreConfig(prev => ({
+      setStoreConfig(prev => prev ? ({
         ...prev,
         pointSmart2Id: slotToId.smart2,
+        pointSmart2Mode: slotToMode.smart2,
+        pointSmart2PosId: slotToPos.smart2,
         pointPro3Id: slotToId.pro3,
+        pointPro3Mode: slotToMode.pro3,
+        pointPro3PosId: slotToPos.pro3,
         pointAir2Id: slotToId.air2,
-        pointMiniNfc2Id: slotToId.mininfc2
-      }));
+        pointAir2Mode: slotToMode.air2,
+        pointAir2PosId: slotToPos.air2,
+        pointMiniNfc2Id: slotToId.mininfc2,
+        pointMiniNfc2Mode: slotToMode.mininfc2,
+        pointMiniNfc2PosId: slotToPos.mininfc2
+      }) : prev);
       await logAuditAction({
         userId: user.uid,
         userEmail: user.email || '',
@@ -1599,8 +1745,24 @@ export const SettingsPage = () => {
                         📱 {pointDevices.length} maquininha{pointDevices.length !== 1 ? 's' : ''} encontrada{pointDevices.length !== 1 ? 's' : ''}
                       </span>
                       <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                        Selecione o modelo e gerencie o modo PDV de cada dispositivo
+                        Selecione o modelo, o caixa (POS) correspondente e ative o modo PDV
                       </span>
+                    </div>
+
+                    {/* Store / POS Creation UI */}
+                    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                      {mpUserId && mpStores.length === 0 && (
+                        <button type="button" onClick={handleCreateStore} disabled={creatingStorePos}
+                          style={{ background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.4)', borderRadius: '8px', padding: '0.5rem 1rem', color: '#60a5fa', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          {creatingStorePos ? 'Criando...' : '🏢 Criar Loja Matriz no MP'}
+                        </button>
+                      )}
+                      {mpStores.length > 0 && mpPosList.length === 0 && (
+                        <button type="button" onClick={handleCreatePos} disabled={creatingStorePos}
+                          style={{ background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.4)', borderRadius: '8px', padding: '0.5rem 1rem', color: '#60a5fa', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          {creatingStorePos ? 'Criando...' : '💻 Criar Caixa (POS) no MP'}
+                        </button>
+                      )}
                     </div>
 
                     {pointDevices.map((device) => {
@@ -1667,6 +1829,24 @@ export const SettingsPage = () => {
                               <option value="" style={{ background: '#1a1f2e' }}>— Não configurar —</option>
                               {modelOptions.map(opt => (
                                 <option key={opt.value} value={opt.value} style={{ background: '#1a1f2e' }}>{opt.label}</option>
+                              ))}
+                            </select>
+                            
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600, marginTop: '0.3rem' }}>Caixa Vinculado (POS):</span>
+                            <select
+                              value={devicePosMap[device.id] || ''}
+                              onChange={(e) => setDevicePosMap(prev => ({ ...prev, [device.id]: e.target.value }))}
+                              style={{
+                                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: '8px', padding: '0.4rem 0.6rem', color: '#fff', fontSize: '0.82rem',
+                                cursor: 'pointer', outline: 'none'
+                              }}
+                            >
+                              <option value="" style={{ background: '#1a1f2e' }}>— Sem Caixa (Erro) —</option>
+                              {mpPosList.map(pos => (
+                                <option key={pos.id} value={String(pos.id)} style={{ background: '#1a1f2e' }}>
+                                  {pos.name} (Loja {pos.store_id})
+                                </option>
                               ))}
                             </select>
                           </div>
