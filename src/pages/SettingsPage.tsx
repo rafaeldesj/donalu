@@ -56,6 +56,7 @@ interface StoreConfig {
   paymentMethodsThemes?: Record<string, 'light' | 'dark'>;
   paymentMethodsVisibility?: Record<string, 'client' | 'staff' | 'both'>;
   paymentMethodsVisibilityByOrderType?: Record<string, Record<string, 'client' | 'staff' | 'both'>>;
+  paymentMethodsDescriptions?: Record<string, string>;
   requireCashierApproval?: boolean;
   deliveryBaseKm?: number;
   deliveryBaseFee?: number;
