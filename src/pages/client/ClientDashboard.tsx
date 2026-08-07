@@ -4786,7 +4786,7 @@ export const ClientDashboard = ({
                   <button
                     key={dev.id}
                     type="button"
-                    onClick={() => handleConfirmPointPaymentChoice(dev.id, dev.label, dev.posId)}
+                    onClick={() => handleConfirmPointPaymentChoice(dev.id, dev.label)}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
