@@ -1,4 +1,4 @@
-import https from 'https';
+﻿import https from 'https';
 
 function nativeRequest(url, method, headers, data) {
   return new Promise((resolve, reject) => {
@@ -14,12 +14,9 @@ function nativeRequest(url, method, headers, data) {
         ...(body ? { 'Content-Length': Buffer.byteLength(body).toString() } : {})
       }
     };
-
     const req = https.request(options, (res) => {
       let responseBody = '';
-      res.on('data', chunk => {
-        responseBody += chunk;
-      });
+      res.on('data', chunk => { responseBody += chunk; });
       res.on('end', () => {
         try {
           const parsed = JSON.parse(responseBody);
@@ -29,94 +26,81 @@ function nativeRequest(url, method, headers, data) {
         }
       });
     });
-
-    req.on('error', (err) => {
-      reject(err);
-    });
-
-    if (body) {
-      req.write(body);
-    }
+    req.on('error', (err) => { reject(err); });
+    if (body) { req.write(body); }
     req.end();
   });
 }
 
 export default async function handler(req, res) {
-  // CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
-  );
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ success: false, message: 'Method Not Allowed' });
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ success: false, message: 'Method Not Allowed' });
 
   try {
     const { token, deviceId, intentId } = req.body || {};
-
     const devIdStr = deviceId ? String(deviceId) : '';
     const isMock = !token || token === 'mock' || !intentId || intentId.startsWith('INTENT_MOCK_');
 
     if (isMock) {
-      console.log(`[Mercado Pago Point] Cancelando intent MOCK: ${intentId}`);
+      console.log(`[Point Cancel] Cancelando MOCK: ${intentId}`);
       if (global.mockPointIntents && global.mockPointIntents[intentId]) {
         global.mockPointIntents[intentId].status = 'CANCELED';
       }
       return res.status(200).json({ success: true, message: 'Pagamento simulado cancelado.' });
     }
 
-    // Nova v1/orders API (Point Devices)
-    const mpUrl = `https://api.mercadopago.com/v1/orders/${intentId}/cancel`;
-    const headers = {
-      'Authorization': `Bearer ${token}`,
-      'X-Idempotency-Key': `cancel_${intentId}_${Date.now()}`,
-      'x-allow-cancelable-status': 'at_terminal'
-    };
+    // Step 1: Cancel order via v1/orders API
+    let cancelOk = false;
+    try {
+      const cancelUrl = `https://api.mercadopago.com/v1/orders/${intentId}/cancel`;
+      console.log(`[Point Cancel] Cancelando ${intentId} via v1/orders...`);
+      const r = await nativeRequest(cancelUrl, 'POST', {
+        'Authorization': `Bearer ${token}`,
+        'X-Idempotency-Key': `cancel_${intentId}_${Date.now()}`,
+        'x-allow-cancelable-status': 'at_terminal'
+      });
+      console.log(`[Point Cancel] v1/orders status=${r.status} body=${JSON.stringify(r.json || r.text)}`);
+      cancelOk = r.status === 200 || r.ok;
+    } catch (e) {
+      console.error('[Point Cancel] Erro cancel:', e.message);
+    }
 
-    console.log(`[Mercado Pago Point] Cancelando ordem real ${intentId} para o dispositivo ${devIdStr} (v1/orders API)...`);
-    const response = await nativeRequest(mpUrl, 'POST', headers);
-    console.log(`[Mercado Pago Point] Resposta cancelamento status: ${response.status}`);
+    if (global.activePointIntents && global.activePointIntents[devIdStr] === intentId) {
+      delete global.activePointIntents[devIdStr];
+    }
 
-    if (response.status === 200 || response.ok) {
-      if (global.activePointIntents && global.activePointIntents[devIdStr] === intentId) {
-        delete global.activePointIntents[devIdStr];
-      }
-      
-      // Workaround: A Orders API às vezes demora para limpar a tela da máquina no cancelamento.
-      // Forçamos a limpeza alterando o modo de operação para STANDALONE e depois de volta para PDV.
+    // Step 2: Force terminal screen clear via mode toggle STANDALONE -> PDV
+    if (devIdStr) {
       try {
-        console.log(`[Mercado Pago Point] Limpando tela da maquininha ${devIdStr} (Toggle Mode)...`);
-        const clearUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}`;
-        // 1. Muda pra Standalone
-        await nativeRequest(clearUrl, 'PATCH', {
+        const deviceUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}`;
+        console.log(`[Point Cancel] Toggle STANDALONE em ${devIdStr}...`);
+        const r1 = await nativeRequest(deviceUrl, 'PATCH', {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }, { operating_mode: 'STANDALONE' });
-        
-        // 2. Volta pra PDV
-        await nativeRequest(clearUrl, 'PATCH', {
+        console.log(`[Point Cancel] STANDALONE: ${r1.status} ${JSON.stringify(r1.json || r1.text)}`);
+
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        console.log(`[Point Cancel] Toggle PDV em ${devIdStr}...`);
+        const r2 = await nativeRequest(deviceUrl, 'PATCH', {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }, { operating_mode: 'PDV' });
+        console.log(`[Point Cancel] PDV: ${r2.status} ${JSON.stringify(r2.json || r2.text)}`);
       } catch (clearErr) {
-        console.error('[Mercado Pago Point] Erro silencioso ao limpar tela da maquininha:', clearErr);
+        console.error('[Point Cancel] Erro toggle:', clearErr.message);
       }
-
-      return res.status(200).json({ success: true, message: 'Pagamento cancelado com sucesso.' });
     }
 
-    return res.status(400).json({ success: false, message: response.json?.message || 'Erro ao cancelar pagamento na maquininha.' });
-
+    return res.status(200).json({ success: true, canceledOnServer: cancelOk, message: 'Pagamento cancelado.' });
   } catch (err) {
-    console.error('[Mercado Pago Point] Erro no endpoint cancel-point-order:', err);
+    console.error('[Point Cancel] Erro interno:', err);
     return res.status(500).json({ success: false, message: 'Erro interno ao cancelar pagamento.' });
   }
 }
