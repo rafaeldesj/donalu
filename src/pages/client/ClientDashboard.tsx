@@ -3705,14 +3705,14 @@ export const ClientDashboard = ({
                     >
                       {val === 'google_pay' ? (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: isSelected ? 'var(--primary-gold)' : (isLight ? '#000000' : '#ffffff') }}>
-                          Pagar com <GooglePayLogo height="14px" color={isSelected ? 'var(--primary-gold)' : (isLight ? '#000000' : '#ffffff')} />
+                          {storeConfig?.paymentMethodsNames?.['google_pay'] || 'Pagar com'} <GooglePayLogo height="14px" color={isSelected ? 'var(--primary-gold)' : (isLight ? '#000000' : '#ffffff')} />
                         </span>
                       ) : val === 'pix' ? (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                          Pix <QrCode size={14} style={{ color: isSelected ? 'var(--primary-gold)' : (isLight ? '#0b0f19' : '#ffffff') }} />
+                          {storeConfig?.paymentMethodsNames?.['pix'] || 'Pix'} <QrCode size={14} style={{ color: isSelected ? 'var(--primary-gold)' : (isLight ? '#0b0f19' : '#ffffff') }} />
                         </span>
                       ) : (
-                        label
+                        storeConfig?.paymentMethodsNames?.[val] || label
                       )}
                     </button>
                   );
@@ -5253,14 +5253,14 @@ export const ClientDashboard = ({
                               >
                                 {val === 'google_pay' ? (
                                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: isSelected ? 'var(--primary-gold)' : (isLight ? '#000000' : '#ffffff') }}>
-                                    Pagar com <GooglePayLogo height="12px" color={isSelected ? 'var(--primary-gold)' : (isLight ? '#000000' : '#ffffff')} />
+                                    {storeConfig?.paymentMethodsNames?.['google_pay'] || 'Pagar com'} <GooglePayLogo height="12px" color={isSelected ? 'var(--primary-gold)' : (isLight ? '#000000' : '#ffffff')} />
                                   </span>
                                 ) : val === 'pix' ? (
                                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                                    Pix <QrCode size={12} style={{ color: isSelected ? 'var(--primary-gold)' : (isLight ? '#0b0f19' : '#ffffff') }} />
+                                    {storeConfig?.paymentMethodsNames?.['pix'] || 'Pix'} <QrCode size={12} style={{ color: isSelected ? 'var(--primary-gold)' : (isLight ? '#0b0f19' : '#ffffff') }} />
                                   </span>
                                 ) : (
-                                  label
+                                  storeConfig?.paymentMethodsNames?.[val] || label
                                 )}
                               </button>
                             );

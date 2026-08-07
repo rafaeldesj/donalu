@@ -57,6 +57,7 @@ interface StoreConfig {
   paymentMethodsVisibility?: Record<string, 'client' | 'staff' | 'both'>;
   paymentMethodsVisibilityByOrderType?: Record<string, Record<string, 'client' | 'staff' | 'both'>>;
   paymentMethodsDescriptions?: Record<string, string>;
+  paymentMethodsNames?: Record<string, string>;
   requireCashierApproval?: boolean;
   deliveryBaseKm?: number;
   deliveryBaseFee?: number;
@@ -736,6 +737,7 @@ export const SettingsPage = () => {
         paymentMethodsVisibility: storeConfig.paymentMethodsVisibility || {},
         paymentMethodsVisibilityByOrderType: storeConfig.paymentMethodsVisibilityByOrderType || {},
         paymentMethodsDescriptions: storeConfig.paymentMethodsDescriptions || {},
+        paymentMethodsNames: storeConfig.paymentMethodsNames || {},
         requireCashierApproval: storeConfig.requireCashierApproval !== undefined ? storeConfig.requireCashierApproval : false
       });
 
@@ -1424,9 +1426,32 @@ export const SettingsPage = () => {
                         }}
                       >
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', flex: 1, minWidth: '250px' }}>
-                          <span style={{ fontWeight: 600, fontSize: '0.95rem', color: isDisabled ? 'var(--text-secondary)' : '#fff' }}>
-                            {method.label}
-                          </span>
+                          <input
+                            type="text"
+                            value={storeConfig?.paymentMethodsNames?.[method.id] ?? method.label}
+                            onChange={(e) => {
+                              const names = storeConfig?.paymentMethodsNames || {};
+                              setStoreConfig(prev => prev ? {
+                                ...prev,
+                                paymentMethodsNames: { ...names, [method.id]: e.target.value }
+                              } : prev);
+                            }}
+                            placeholder={method.label}
+                            title="Nome da forma de pagamento exibido ao cliente"
+                            style={{
+                              fontWeight: 600,
+                              fontSize: '0.95rem',
+                              color: isDisabled ? 'var(--text-secondary)' : '#fff',
+                              background: 'transparent',
+                              border: 'none',
+                              borderBottom: '1px dashed rgba(255,255,255,0.15)',
+                              outline: 'none',
+                              padding: '2px 0',
+                              width: '100%',
+                              cursor: 'text',
+                              fontFamily: 'inherit'
+                            }}
+                          />
                           <input
                             type="text"
                             value={storeConfig?.paymentMethodsDescriptions?.[method.id] ?? method.desc}
