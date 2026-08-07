@@ -1426,57 +1426,70 @@ export const SettingsPage = () => {
                         }}
                       >
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', flex: 1, minWidth: '250px' }}>
-                          <input
-                            type="text"
-                            value={storeConfig?.paymentMethodsNames?.[method.id] ?? method.label}
-                            onChange={(e) => {
-                              const names = storeConfig?.paymentMethodsNames || {};
-                              setStoreConfig(prev => prev ? {
-                                ...prev,
-                                paymentMethodsNames: { ...names, [method.id]: e.target.value }
-                              } : prev);
-                            }}
-                            placeholder={method.label}
-                            title="Nome da forma de pagamento exibido ao cliente"
-                            style={{
-                              fontWeight: 600,
-                              fontSize: '0.95rem',
-                              color: isDisabled ? 'var(--text-secondary)' : '#fff',
-                              background: 'transparent',
-                              border: 'none',
-                              borderBottom: '1px dashed rgba(255,255,255,0.15)',
-                              outline: 'none',
-                              padding: '2px 0',
-                              width: '100%',
-                              cursor: 'text',
-                              fontFamily: 'inherit'
-                            }}
-                          />
-                          <input
-                            type="text"
-                            value={storeConfig?.paymentMethodsDescriptions?.[method.id] ?? method.desc}
-                            onChange={(e) => {
-                              const descs = storeConfig?.paymentMethodsDescriptions || {};
-                              setStoreConfig(prev => prev ? {
-                                ...prev,
-                                paymentMethodsDescriptions: { ...descs, [method.id]: e.target.value }
-                              } : prev);
-                            }}
-                            placeholder={method.desc}
-                            title="Descrição exibida ao cliente ao selecionar esta forma de pagamento"
-                            style={{
-                              fontSize: '0.8rem',
-                              color: 'var(--text-secondary)',
-                              background: 'transparent',
-                              border: 'none',
-                              borderBottom: '1px dashed rgba(255,255,255,0.15)',
-                              outline: 'none',
-                              padding: '2px 0',
-                              width: '100%',
-                              cursor: 'text',
-                              fontFamily: 'inherit'
-                            }}
-                          />
+                          {isDev ? (
+                            <input
+                              type="text"
+                              value={storeConfig?.paymentMethodsNames?.[method.id] ?? method.label}
+                              onChange={(e) => {
+                                const names = storeConfig?.paymentMethodsNames || {};
+                                setStoreConfig(prev => prev ? {
+                                  ...prev,
+                                  paymentMethodsNames: { ...names, [method.id]: e.target.value }
+                                } : prev);
+                              }}
+                              placeholder={method.label}
+                              title="Nome da forma de pagamento exibido ao cliente"
+                              style={{
+                                fontWeight: 600,
+                                fontSize: '0.95rem',
+                                color: isDisabled ? 'var(--text-secondary)' : '#fff',
+                                background: 'transparent',
+                                border: 'none',
+                                borderBottom: '1px dashed rgba(255,255,255,0.15)',
+                                outline: 'none',
+                                padding: '2px 0',
+                                width: '100%',
+                                cursor: 'text',
+                                fontFamily: 'inherit'
+                              }}
+                            />
+                          ) : (
+                            <span style={{ fontWeight: 600, fontSize: '0.95rem', color: isDisabled ? 'var(--text-secondary)' : '#fff' }}>
+                              {storeConfig?.paymentMethodsNames?.[method.id] ?? method.label}
+                            </span>
+                          )}
+                          
+                          {isDev ? (
+                            <input
+                              type="text"
+                              value={storeConfig?.paymentMethodsDescriptions?.[method.id] ?? method.desc}
+                              onChange={(e) => {
+                                const descs = storeConfig?.paymentMethodsDescriptions || {};
+                                setStoreConfig(prev => prev ? {
+                                  ...prev,
+                                  paymentMethodsDescriptions: { ...descs, [method.id]: e.target.value }
+                                } : prev);
+                              }}
+                              placeholder={method.desc}
+                              title="Descrição exibida ao cliente ao selecionar esta forma de pagamento"
+                              style={{
+                                fontSize: '0.8rem',
+                                color: 'var(--text-secondary)',
+                                background: 'transparent',
+                                border: 'none',
+                                borderBottom: '1px dashed rgba(255,255,255,0.15)',
+                                outline: 'none',
+                                padding: '2px 0',
+                                width: '100%',
+                                cursor: 'text',
+                                fontFamily: 'inherit'
+                              }}
+                            />
+                          ) : (
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                              {storeConfig?.paymentMethodsDescriptions?.[method.id] ?? method.desc}
+                            </span>
+                          )}
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
