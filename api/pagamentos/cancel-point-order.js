@@ -89,6 +89,19 @@ export default async function handler(req, res) {
       if (global.activePointIntents && global.activePointIntents[devIdStr] === intentId) {
         delete global.activePointIntents[devIdStr];
       }
+      
+      // Força a maquininha a limpar a tela e voltar ao estado inicial imediatamente (Workaround/Hack)
+      try {
+        console.log(`[Mercado Pago Point] Forçando maquininha ${devIdStr} a voltar para o estado inicial...`);
+        const clearUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}`;
+        await nativeRequest(clearUrl, 'PATCH', {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }, { operating_mode: 'PDV' });
+      } catch (clearErr) {
+        console.error('[Mercado Pago Point] Erro silencioso ao limpar tela da maquininha:', clearErr);
+      }
+
       return res.status(200).json({ success: true, message: 'Pagamento cancelado com sucesso.' });
     }
 

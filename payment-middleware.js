@@ -642,9 +642,21 @@ export const cancelPointOrderMiddleware = async (req, res) => {
       logToFile(`[Cancel Response] Status: ${response.status}, Body: ${JSON.stringify(response.json || response.text || '')}`);
       
       if (response.status === 200 || response.ok) {
-        if (global.activePointIntents[devIdStr] === intentId) {
+        if (global.activePointIntents && global.activePointIntents[devIdStr] === intentId) {
           delete global.activePointIntents[devIdStr];
         }
+        
+        try {
+          console.log(`[Mercado Pago Point Cancel] Forçando maquininha ${devIdStr} a limpar tela...`);
+          const clearUrl = `https://api.mercadopago.com/point/integration-api/devices/${devIdStr}`;
+          await nativeRequest(clearUrl, 'PATCH', {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }, { operating_mode: 'PDV' });
+        } catch (clearErr) {
+          console.error('[Mercado Pago Point Cancel] Erro ao limpar tela:', clearErr);
+        }
+
         res.writeHead(200, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ success: true, message: 'Pagamento cancelado com sucesso.' }));
       }
