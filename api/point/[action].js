@@ -50,7 +50,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const { action } = req.query;
-  const token = req.query.token || req.headers.authorization?.split(' ')[1];
+  const token = req.query.token || req.body?.token || req.headers.authorization?.split(' ')[1];
 
   if (!token) {
     return res.status(400).json({ success: false, message: 'Token é obrigatório.' });
@@ -65,19 +65,47 @@ export default async function handler(req, res) {
     }
 
     if (action === 'pos') {
-      if (req.method !== 'GET') return res.status(405).json({ success: false, message: 'Method Not Allowed' });
-      const response = await nativeRequest(`https://api.mercadopago.com/pos`, 'GET', { 'Authorization': `Bearer ${token}` });
-      if (!response.ok) return res.status(400).json({ success: false, message: 'Erro ao buscar caixas (POS).', error: response.json });
-      return res.status(200).json({ success: true, results: response.json.results || [] });
+      if (req.method === 'GET') {
+        const response = await nativeRequest(`https://api.mercadopago.com/pos`, 'GET', { 'Authorization': `Bearer ${token}` });
+        if (!response.ok) return res.status(400).json({ success: false, message: 'Erro ao buscar caixas (POS).', error: response.json });
+        return res.status(200).json({ success: true, pos: response.json.results || [] });
+      }
+      if (req.method === 'POST') {
+        const { name, store_id, external_store_id, external_id } = req.body || {};
+        if (!name || !store_id || !external_store_id || !external_id) {
+          return res.status(400).json({ success: false, message: 'Parâmetros obrigatórios ausentes para criar POS.' });
+        }
+        const payload = { name, fixed_amount: true, store_id: Number(store_id), external_store_id, external_id, category: 621102 };
+        const response = await nativeRequest(`https://api.mercadopago.com/pos`, 'POST', { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, payload);
+        if (!response.ok) return res.status(400).json({ success: false, message: 'Erro ao criar caixa (POS).', error: response.json });
+        return res.status(200).json({ success: true, pos: response.json });
+      }
+      return res.status(405).json({ success: false, message: 'Method Not Allowed' });
     }
 
     if (action === 'stores') {
-      if (req.method !== 'GET') return res.status(405).json({ success: false, message: 'Method Not Allowed' });
-      const { userId } = req.query;
-      if (!userId) return res.status(400).json({ success: false, message: 'User ID obrigatório' });
-      const response = await nativeRequest(`https://api.mercadopago.com/users/${userId}/stores/search`, 'GET', { 'Authorization': `Bearer ${token}` });
-      if (!response.ok) return res.status(400).json({ success: false, message: 'Erro ao buscar lojas.', error: response.json });
-      return res.status(200).json({ success: true, results: response.json.results || [] });
+      if (req.method === 'GET') {
+        const userId = req.query.userId || req.query.user_id;
+        if (!userId) return res.status(400).json({ success: false, message: 'User ID obrigatório' });
+        const response = await nativeRequest(`https://api.mercadopago.com/users/${userId}/stores/search`, 'GET', { 'Authorization': `Bearer ${token}` });
+        if (!response.ok) return res.status(400).json({ success: false, message: 'Erro ao buscar lojas.', error: response.json });
+        return res.status(200).json({ success: true, stores: response.json.results || [] });
+      }
+      if (req.method === 'POST') {
+        const userId = req.body?.user_id || req.body?.userId;
+        const name = req.body?.name;
+        if (!userId || !name) return res.status(400).json({ success: false, message: 'User ID e name são obrigatórios.' });
+        const payload = {
+          name,
+          location: req.body?.location || {
+            street_number: "239", street_name: "Rua Jicara", city_name: "Rio de Janeiro", state_name: "Rio de Janeiro", latitude: -22.9035, longitude: -43.2096, reference: "Dona Lu Pastelaria"
+          }
+        };
+        const response = await nativeRequest(`https://api.mercadopago.com/users/${userId}/stores`, 'POST', { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, payload);
+        if (!response.ok) return res.status(400).json({ success: false, message: 'Erro ao criar loja.', error: response.json });
+        return res.status(200).json({ success: true, store: response.json });
+      }
+      return res.status(405).json({ success: false, message: 'Method Not Allowed' });
     }
 
     if (action === 'devices') {
