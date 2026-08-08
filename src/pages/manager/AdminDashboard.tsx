@@ -71,18 +71,22 @@ export const AdminDashboard = () => {
       const storeConfigData = storeConfigSnap.exists() ? storeConfigSnap.data() : null;
       const token = storeConfigData?.storeOwnerAccessToken || storeConfigData?.devAccessToken || 'mock';
 
-      const response = await fetch(`${API_BASE_URL}/api/pagamentos/refund-payment`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          paymentId: order.mercadoPagoPaymentId || order.mercadoPagoOrderId,
-          token: token
-        })
-      });
+      const paymentId = order.mercadoPagoPaymentId || order.mercadoPagoOrderId;
 
-      const result = await response.json();
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Erro ao processar estorno no Mercado Pago.');
+      if (paymentId) {
+        const response = await fetch(`${API_BASE_URL}/api/pagamentos/refund-payment`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            paymentId: paymentId,
+            token: token
+          })
+        });
+
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          throw new Error(result.message || 'Erro ao processar estorno no Mercado Pago.');
+        }
       }
 
       const orderDocRef = doc(db, 'orders', order.id!);
@@ -104,7 +108,11 @@ export const AdminDashboard = () => {
         metadata: { orderId: order.id, dailySeq: order.dailySeq, total: order.total, paymentId: order.mercadoPagoPaymentId || order.mercadoPagoOrderId }
       });
 
-      alert('Pagamento estornado com sucesso no Mercado Pago!');
+      if (paymentId) {
+        alert('Pagamento estornado com sucesso no Mercado Pago!');
+      } else {
+        alert('Pagamento marcado como estornado no sistema (sem integração Mercado Pago)!');
+      }
       
       setActiveModal(prev => {
         if (prev?.type === 'order' && prev.order.id === order.id) {
@@ -506,7 +514,7 @@ export const AdminDashboard = () => {
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Por: {order.refundedBy} em {new Date(order.refundedAt || '').toLocaleDateString('pt-BR')}</span>
                     </div>
                   )}
-                  {!order.refunded && (order.status === 'cancelled' || (order.status === 'completed' && userData?.role === 'developer')) && (order.mercadoPagoPaymentId || order.mercadoPagoOrderId) && (
+                  {!order.refunded && ((order.status === 'cancelled' && (order.mercadoPagoPaymentId || order.mercadoPagoOrderId)) || userData?.role === 'developer') && (
                     <div style={{ gridColumn: 'span 2', marginTop: '0.75rem' }}>
                       <button
                         type="button"
@@ -531,7 +539,7 @@ export const AdminDashboard = () => {
                         onMouseEnter={(e) => { if (!refundLoading) e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'; }}
                         onMouseLeave={(e) => { if (!refundLoading) e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; }}
                       >
-                        {refundLoading ? 'Estornando...' : 'Estornar Pagamento no Mercado Pago'}
+                        {refundLoading ? 'Estornando...' : (order.mercadoPagoPaymentId || order.mercadoPagoOrderId ? 'Estornar Pagamento no Mercado Pago' : 'Marcar como Estornado')}
                       </button>
                     </div>
                   )}
