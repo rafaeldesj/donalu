@@ -23,7 +23,8 @@ export const AdminDashboard = () => {
   // Filtros de Tabela
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<string[]>([]);
+  const [isPaymentMenuOpen, setIsPaymentMenuOpen] = useState(false);
   const [sortBy, setSortBy] = useState('dateDesc');
   const [visibleCount, setVisibleCount] = useState(10);
 
@@ -34,8 +35,8 @@ export const AdminDashboard = () => {
       result = result.filter(o => o.status.toLowerCase() === statusFilter.toLowerCase());
     }
 
-    if (paymentMethodFilter !== 'all') {
-      result = result.filter(o => o.paymentMethod === paymentMethodFilter);
+    if (paymentMethodFilter.length > 0) {
+      result = result.filter(o => paymentMethodFilter.includes(o.paymentMethod || ''));
     }
 
     if (searchTerm.trim() !== '') {
@@ -762,26 +763,57 @@ export const AdminDashboard = () => {
                 </div>
               </div>
 
-              <div className="input-group" style={{ margin: 0 }}>
-                <div className="input-wrapper" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                  <DollarSign size={16} className="input-icon" />
-                  <select 
-                    value={paymentMethodFilter}
-                    onChange={e => setPaymentMethodFilter(e.target.value)}
-                    style={{ padding: '0.5rem 0.5rem 0.5rem 2.5rem', fontSize: '0.85rem', width: 'auto', background: 'transparent', color: '#fff', border: 'none', outline: 'none', cursor: 'pointer' }}
-                  >
-                    <option value="all" style={{ background: '#1e1b2e' }}>Todos Pagamentos</option>
-                    <option value="dinheiro" style={{ background: '#1e1b2e' }}>Dinheiro</option>
-                    <option value="pix" style={{ background: '#1e1b2e' }}>Pix</option>
-                    <option value="maq_pix" style={{ background: '#1e1b2e' }}>Pix (Maquininha)</option>
-                    <option value="debito" style={{ background: '#1e1b2e' }}>Débito</option>
-                    <option value="maq_debito" style={{ background: '#1e1b2e' }}>Débito (Maquininha)</option>
-                    <option value="credito" style={{ background: '#1e1b2e' }}>Crédito</option>
-                    <option value="maq_credito" style={{ background: '#1e1b2e' }}>Crédito (Maquininha)</option>
-                    <option value="google_pay" style={{ background: '#1e1b2e' }}>Google Pay</option>
-                    <option value="multiplo" style={{ background: '#1e1b2e' }}>Múltiplo</option>
-                  </select>
+              <div className="input-group" style={{ margin: 0, position: 'relative' }}>
+                <div 
+                  className="input-wrapper" 
+                  style={{ background: 'rgba(255,255,255,0.03)', cursor: 'pointer', padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                  onClick={() => setIsPaymentMenuOpen(!isPaymentMenuOpen)}
+                >
+                  <DollarSign size={16} className="text-secondary" />
+                  <span style={{ fontSize: '0.85rem', color: '#fff', userSelect: 'none' }}>
+                    {paymentMethodFilter.length === 0 ? 'Todos Pagamentos' : `${paymentMethodFilter.length} Selecionados`}
+                  </span>
                 </div>
+                
+                {isPaymentMenuOpen && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '0.5rem', background: '#1e1b2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '0.5rem', zIndex: 50, display: 'flex', flexDirection: 'column', gap: '0.4rem', minWidth: '200px', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+                    {[
+                      { val: 'dinheiro', label: 'Dinheiro' },
+                      { val: 'pix', label: 'Pix' },
+                      { val: 'maq_pix', label: 'Pix (Maquininha)' },
+                      { val: 'debito', label: 'Débito' },
+                      { val: 'maq_debito', label: 'Débito (Maquininha)' },
+                      { val: 'credito', label: 'Crédito' },
+                      { val: 'maq_credito', label: 'Crédito (Maquininha)' },
+                      { val: 'google_pay', label: 'Google Pay' },
+                      { val: 'multiplo', label: 'Múltiplo' }
+                    ].map(opt => (
+                      <label key={opt.val} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={paymentMethodFilter.includes(opt.val)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setPaymentMethodFilter([...paymentMethodFilter, opt.val]);
+                            } else {
+                              setPaymentMethodFilter(paymentMethodFilter.filter(v => v !== opt.val));
+                            }
+                          }}
+                        />
+                        {opt.label}
+                      </label>
+                    ))}
+                    {paymentMethodFilter.length > 0 && (
+                      <button 
+                        type="button"
+                        onClick={() => setPaymentMethodFilter([])}
+                        style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#f87171', border: 'none', padding: '0.3rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', marginTop: '0.3rem' }}
+                      >
+                        Limpar Seleção
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="input-group" style={{ margin: 0 }}>
