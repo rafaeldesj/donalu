@@ -23,6 +23,7 @@ export const AdminDashboard = () => {
   // Filtros de Tabela
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
   const [sortBy, setSortBy] = useState('dateDesc');
   const [visibleCount, setVisibleCount] = useState(10);
 
@@ -31,6 +32,10 @@ export const AdminDashboard = () => {
 
     if (statusFilter !== 'all') {
       result = result.filter(o => o.status.toLowerCase() === statusFilter.toLowerCase());
+    }
+
+    if (paymentMethodFilter !== 'all') {
+      result = result.filter(o => o.paymentMethod === paymentMethodFilter);
     }
 
     if (searchTerm.trim() !== '') {
@@ -226,6 +231,7 @@ export const AdminDashboard = () => {
       case 'maq_debito': return 'Débito (Maquininha)';
       case 'maq_credito': return 'Crédito (Maquininha)';
       case 'google_pay': return 'Google Pay';
+      case 'multiplo': return 'Múltiplos (Dividido)';
       default: return method.toUpperCase();
     }
   };
@@ -757,6 +763,28 @@ export const AdminDashboard = () => {
               </div>
 
               <div className="input-group" style={{ margin: 0 }}>
+                <div className="input-wrapper" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                  <DollarSign size={16} className="input-icon" />
+                  <select 
+                    value={paymentMethodFilter}
+                    onChange={e => setPaymentMethodFilter(e.target.value)}
+                    style={{ padding: '0.5rem 0.5rem 0.5rem 2.5rem', fontSize: '0.85rem', width: 'auto', background: 'transparent', color: '#fff', border: 'none', outline: 'none', cursor: 'pointer' }}
+                  >
+                    <option value="all" style={{ background: '#1e1b2e' }}>Todos Pagamentos</option>
+                    <option value="dinheiro" style={{ background: '#1e1b2e' }}>Dinheiro</option>
+                    <option value="pix" style={{ background: '#1e1b2e' }}>Pix</option>
+                    <option value="maq_pix" style={{ background: '#1e1b2e' }}>Pix (Maquininha)</option>
+                    <option value="debito" style={{ background: '#1e1b2e' }}>Débito</option>
+                    <option value="maq_debito" style={{ background: '#1e1b2e' }}>Débito (Maquininha)</option>
+                    <option value="credito" style={{ background: '#1e1b2e' }}>Crédito</option>
+                    <option value="maq_credito" style={{ background: '#1e1b2e' }}>Crédito (Maquininha)</option>
+                    <option value="google_pay" style={{ background: '#1e1b2e' }}>Google Pay</option>
+                    <option value="multiplo" style={{ background: '#1e1b2e' }}>Múltiplo</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="input-group" style={{ margin: 0 }}>
                 <select 
                   value={sortBy}
                   onChange={e => setSortBy(e.target.value)}
@@ -791,6 +819,7 @@ export const AdminDashboard = () => {
                 <tr>
                   <th>Código</th>
                   <th>Cliente</th>
+                  <th>Pago com</th>
                   <th>Total</th>
                   <th>Status</th>
                   <th>Tempo Preparo</th>
@@ -821,6 +850,7 @@ export const AdminDashboard = () => {
                         )}
                       </td>
                       <td>{order.clientName}</td>
+                      <td>{getPaymentMethodLabel(order.paymentMethod)}</td>
                       <td style={{ color: 'var(--primary-gold)', fontWeight: 600 }}>R$ {order.total.toFixed(2).replace('.', ',')}</td>
                       <td>
                         {renderStatusBadge(order.status, order.refunded, order.cancelReason)}
