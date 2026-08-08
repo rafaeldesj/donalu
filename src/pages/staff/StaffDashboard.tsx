@@ -2247,7 +2247,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
         const isPointMethod = ['maq_pix', 'maq_debito', 'maq_credito'].includes(checkoutPaymentMethod);
         const canClose = !isPointMethod || pointPaymentStatus === 'approved';
 
-        const handleTriggerPoint = async (deviceId: string, label: string) => {
+        const handleTriggerPoint = async (deviceId: string, label: string, pMethodOverride?: string) => {
           setPointPaymentLoading(true);
           setPointPaymentError(null);
           setPointPaymentStatus('idle');
@@ -2255,8 +2255,9 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
           try {
             let token = storeConfig?.storeOwnerAccessToken || storeConfig?.devAccessToken || 'mock';
             if (!token || token === 'null' || token === 'undefined') token = 'mock';
-            const pType = checkoutPaymentMethod === 'maq_pix' ? 'pix'
-              : checkoutPaymentMethod === 'maq_debito' ? 'debito' : 'credito';
+            const pMethod = pMethodOverride || checkoutPaymentMethod;
+            const pType = pMethod === 'maq_pix' ? 'pix'
+              : pMethod === 'maq_debito' ? 'debito' : 'credito';
             const response = await fetch(`${API_BASE_URL}/api/pagamentos/create-point-order`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -2496,6 +2497,9 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                         setPointPaymentStatus('idle');
                         setPointIntentId('');
                         setPointPaymentError(null);
+                        if (['maq_pix', 'maq_debito', 'maq_credito'].includes(method) && pointDevices.length === 1) {
+                          handleTriggerPoint(pointDevices[0].id, pointDevices[0].label, method);
+                        }
                       }}
                       style={{
                         padding: '0.65rem 0.5rem',
@@ -2536,7 +2540,9 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                 {/* Acionamento da Maquininha */}
                 {isPointMethod && pointPaymentStatus === 'idle' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Selecione a Maquininha:</span>
+                    {pointDevices.length > 1 && (
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Selecione a Maquininha:</span>
+                    )}
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                       {pointDevices.map(device => (
                         <button
@@ -2545,12 +2551,13 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                           disabled={pointPaymentLoading || tableTotal <= 0}
                           onClick={() => handleTriggerPoint(device.id, device.label)}
                           style={{
+                            display: (pointDevices.length === 1 && !pointPaymentError && !pointPaymentLoading) ? 'none' : 'block',
                             padding: '0.5rem 0.9rem', borderRadius: '8px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer',
                             border: '1px solid rgba(245,158,11,0.4)', background: 'rgba(245,158,11,0.08)', color: 'var(--primary-gold)',
                             opacity: (pointPaymentLoading || tableTotal <= 0) ? 0.5 : 1
                           }}
                         >
-                          {pointPaymentLoading ? '⏳ Aguarde...' : `📲 ${device.label}`}
+                          {pointPaymentLoading ? '⏳ Aguarde...' : (pointDevices.length === 1 ? `📲 Tentar Novamente (${device.label})` : `📲 ${device.label}`)}
                         </button>
                       ))}
                     </div>
