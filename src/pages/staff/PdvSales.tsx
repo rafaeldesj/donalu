@@ -154,6 +154,7 @@ export const PdvSales = () => {
                     style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary-gold)' }}
                     onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(245, 158, 11, 0.1)'}
                     onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
                     <Plus size={18} /> <strong>Cadastro Rápido (Nome e Telefone)</strong>
                   </div>
 
