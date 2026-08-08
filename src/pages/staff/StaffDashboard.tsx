@@ -75,9 +75,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
   // Dynamically initialize multi-selected checkout clients for the selected table
   useEffect(() => {
     if (selectedCheckoutTable) {
-      const todayStr = getBusinessDay(new Date().toISOString());
       const allTableOrders = orders.filter(o =>
-        getBusinessDay(o.createdAt) === todayStr &&
         o.status !== 'completed' &&
         o.status !== 'cancelled' &&
         o.orderType === 'dine_in_table' &&
@@ -2238,9 +2236,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
       {/* Lightbox de Fechamento de Mesa Manual */}
       {selectedCheckoutTable && (() => {
         // --- Derivações do estado ---
-        const todayStr = getBusinessDay(new Date().toISOString());
         const allTableOrders = orders.filter(o =>
-          getBusinessDay(o.createdAt) === todayStr &&
           o.status !== 'completed' &&
           o.status !== 'cancelled' &&
           o.orderType === 'dine_in_table' &&
