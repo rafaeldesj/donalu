@@ -2550,7 +2550,6 @@ export const ClientDashboard = ({
               const stampsNeeded = storeConfig?.stampsNeeded || 10;
               const activeStamps = stampsCount % stampsNeeded;
               const rewardsCount = Math.floor(stampsCount / stampsNeeded);
-              const stampsLeft = Math.max(0, stampsNeeded - activeStamps);
 
               return (
                 <>
@@ -2608,7 +2607,6 @@ export const ClientDashboard = ({
               const stampsNeeded = storeConfig?.stampsNeeded || 10;
               const activeStamps = stampsCount % stampsNeeded;
               const rewardsCount = Math.floor(stampsCount / stampsNeeded);
-              const stampsLeft = Math.max(0, stampsNeeded - activeStamps);
 
               return (
                 <>

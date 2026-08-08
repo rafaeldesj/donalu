@@ -35,5 +35,7 @@ export interface UserDocument {
   pagbank_card_last_digits?: string;
   tableNumber?: string | null;
   loyaltyStamps?: number;
+  loyaltyStampsGrande?: number;
+  loyaltyStampsKids?: number;
   authEmail?: string;
 }

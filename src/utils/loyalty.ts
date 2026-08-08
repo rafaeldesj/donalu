@@ -29,6 +29,7 @@ export const processOrderLoyaltyStamps = async (orderId: string, orderData: any)
       const currentOrder = orderSnap.data();
       if (currentOrder.loyaltyProcessed || currentOrder.status !== 'completed') return;
 
+      const userSnap = await transaction.get(userDocRef);
       const userData = userSnap.exists() ? userSnap.data() : {};
       
       // Fallback migration: if loyaltyStamps exists and loyaltyStampsGrande doesn't, migrate it.
