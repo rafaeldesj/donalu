@@ -48,8 +48,9 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
   const [selectedCheckoutOrder, setSelectedCheckoutOrder] = useState<OrderDocument | null>(null);
   const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<string>('dinheiro');
   const [checkoutChangeFor, setCheckoutChangeFor] = useState<string>('');
-  const [partialPayments, setPartialPayments] = useState<{ method: string, amount: number, id: string }[]>([]);
+  const [partialPayments, setPartialPayments] = useState<{ method: string, amount: number, id: string, payerName?: string }[]>([]);
   const [partialPaymentInputAmount, setPartialPaymentInputAmount] = useState<string>('');
+  const [partialPaymentInputName, setPartialPaymentInputName] = useState<string>('');
   // Client selection inside table checkout modal (multi-select)
   const [checkoutSelectedClients, setCheckoutSelectedClients] = useState<string[]>([]);
   // Mercado Pago Point states for operator checkout
@@ -534,13 +535,14 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
     if (pointPaymentStatus === 'approved' && pendingPointAmount > 0) {
       setPartialPayments(prev => [
         ...prev,
-        { method: pendingPointMethod, amount: pendingPointAmount, id: Date.now().toString() }
+        { method: pendingPointMethod, amount: pendingPointAmount, id: Date.now().toString(), payerName: partialPaymentInputName }
       ]);
       setPendingPointAmount(0);
       setPointPaymentStatus('idle');
       setPartialPaymentInputAmount('');
+      setPartialPaymentInputName('');
     }
-  }, [pointPaymentStatus, pendingPointAmount, pendingPointMethod]);
+  }, [pointPaymentStatus, pendingPointAmount, pendingPointMethod, partialPaymentInputName]);
 
   // Limpa todos os áudios e timers quando a tela da cozinha é desmontada por completo
   useEffect(() => {
@@ -2502,12 +2504,12 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
               {partialPayments.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Pagamentos registrados:</span>
-                  {partialPayments.map((p) => {
+                  {partialPayments.map((p, index) => {
                     const mLabel = p.method === 'dinheiro' ? 'Dinheiro' : p.method === 'maq_pix' ? 'Maq. Pix' : p.method === 'maq_debito' ? 'Maq. Débito' : 'Maq. Crédito';
                     return (
                       <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', marginTop: '4px', color: '#10b981' }}>
-                        <span>✓ {mLabel}</span>
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>#{index + 1} {p.payerName ? `- ${p.payerName}` : ''} ✓ {mLabel}</span>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
                           <span>R$ {p.amount.toFixed(2).replace('.', ',')}</span>
                           {p.method === 'dinheiro' && (
                             <button type="button" onClick={() => setPartialPayments(prev => prev.filter(x => x.id !== p.id))} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1rem', padding: '0 6px' }}>✕</button>
@@ -2528,7 +2530,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                   {/* Valor a cobrar agora */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Valor a cobrar agora (R$):</label>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Nome e Valor a cobrar (R$):</label>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Rachar em:</span>
                         <select 
@@ -2549,14 +2551,23 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                         </select>
                       </div>
                     </div>
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder={remainingBalance.toFixed(2)}
-                      value={partialPaymentInputAmount}
-                      onChange={(e) => setPartialPaymentInputAmount(e.target.value)}
-                      style={{ padding: '0.7rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: '#0b0f19', color: '#fff', fontSize: '1rem' }}
-                    />
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        type="text"
+                        placeholder="Nome (opcional)"
+                        value={partialPaymentInputName}
+                        onChange={(e) => setPartialPaymentInputName(e.target.value)}
+                        style={{ flex: 1, padding: '0.7rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: '#0b0f19', color: '#fff', fontSize: '1rem' }}
+                      />
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder={remainingBalance.toFixed(2)}
+                        value={partialPaymentInputAmount}
+                        onChange={(e) => setPartialPaymentInputAmount(e.target.value)}
+                        style={{ width: '110px', padding: '0.7rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: '#0b0f19', color: '#fff', fontSize: '1rem', textAlign: 'center' }}
+                      />
+                    </div>
                   </div>
 
               {/* Formas de Recebimento (exclusivo do operador/caixa) */}
@@ -2640,9 +2651,10 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                       }
                       setPartialPayments(prev => [
                         ...prev,
-                        { method: checkoutPaymentMethod, amount: chargeAmount, id: Date.now().toString() }
+                        { method: checkoutPaymentMethod, amount: chargeAmount, id: Date.now().toString(), payerName: partialPaymentInputName }
                       ]);
                       setPartialPaymentInputAmount('');
+                      setPartialPaymentInputName('');
                       setCheckoutChangeFor('');
                     }}
                     style={{

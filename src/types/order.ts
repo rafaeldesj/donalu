@@ -50,7 +50,7 @@ export interface OrderDocument {
   cancelledAt?: string;
   cancelledBy?: string;
   paymentMethod?: string | null;
-  payments?: { method: string, amount: number, id?: string }[];
+  payments?: { method: string, amount: number, id?: string, payerName?: string }[];
   changeFor?: number | null;
   kitchenEnteredAt?: string;
   kitchenFinishedAt?: string;
