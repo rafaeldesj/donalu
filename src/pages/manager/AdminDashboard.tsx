@@ -65,7 +65,7 @@ export const AdminDashboard = () => {
     });
 
     return result;
-  }, [orders, statusFilter, searchTerm, sortBy]);
+  }, [orders, statusFilter, searchTerm, sortBy, paymentMethodFilter]);
 
   const handleRefundPayment = async (order: OrderDocument) => {
     if (!window.confirm(`Tem certeza que deseja estornar o pagamento de R$ ${order.total.toFixed(2).replace('.', ',')} do Pedido ${order.dailySeq}?`)) {
