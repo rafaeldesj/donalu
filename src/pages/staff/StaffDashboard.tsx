@@ -2527,7 +2527,28 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                 <>
                   {/* Valor a cobrar agora */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Valor a cobrar agora (R$):</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Valor a cobrar agora (R$):</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Rachar em:</span>
+                        <select 
+                          style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', fontSize: '0.75rem', cursor: 'pointer' }}
+                          onChange={(e) => {
+                            const parts = parseInt(e.target.value);
+                            if (parts > 1) {
+                              setPartialPaymentInputAmount((tableTotal / parts).toFixed(2));
+                            } else {
+                              setPartialPaymentInputAmount('');
+                            }
+                          }}
+                        >
+                          <option value="1">Não rachar</option>
+                          {Array.from({ length: 49 }, (_, i) => i + 2).map(num => (
+                            <option key={num} value={num}>{num} pessoas</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
                     <input
                       type="number"
                       step="0.01"
