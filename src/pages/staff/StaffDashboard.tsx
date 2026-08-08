@@ -2718,8 +2718,6 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                     </div>
                   </div>
                 )}
-                </>
-              )}
 
                 {isPointMethod && pointPaymentStatus === 'rejected' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.85rem 1rem', borderRadius: '12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)' }}>
@@ -2736,6 +2734,8 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                   </div>
                 )}
               </div>
+            </>
+          )}
 
               {/* Ações */}
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
