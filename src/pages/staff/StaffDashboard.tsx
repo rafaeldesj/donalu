@@ -48,6 +48,8 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
   const [selectedCheckoutOrder, setSelectedCheckoutOrder] = useState<OrderDocument | null>(null);
   const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<string>('dinheiro');
   const [checkoutChangeFor, setCheckoutChangeFor] = useState<string>('');
+  const [partialPayments, setPartialPayments] = useState<{ method: string, amount: number, id: string }[]>([]);
+  const [partialPaymentInputAmount, setPartialPaymentInputAmount] = useState<string>('');
   // Client selection inside table checkout modal (multi-select)
   const [checkoutSelectedClients, setCheckoutSelectedClients] = useState<string[]>([]);
   // Mercado Pago Point states for operator checkout
@@ -58,6 +60,8 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
   const [pointDeviceLabel, setPointDeviceLabel] = useState<string>('');
   const [pointPaymentLoading, setPointPaymentLoading] = useState<boolean>(false);
   const [pointPaymentError, setPointPaymentError] = useState<string | null>(null);
+  const [pendingPointAmount, setPendingPointAmount] = useState<number>(0);
+  const [pendingPointMethod, setPendingPointMethod] = useState<string>('');
 
   const [timeFilterHours, setTimeFilterHours] = useState<string>('all_day');
   const [specificDateValue, setSpecificDateValue] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -220,25 +224,28 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
   };
 
   const handleManualTableCheckout = async (tableNum: string, tableOrdersList: OrderDocument[]) => {
-    // Guard: for Point methods, require approved status
-    if (['maq_pix', 'maq_debito', 'maq_credito'].includes(checkoutPaymentMethod) && pointPaymentStatus !== 'approved') {
-      alert('Aguarde a confirmação do pagamento na maquininha antes de encerrar.');
-      return;
-    }
     try {
+      const isMultiPayment = partialPayments.length > 1;
+      const finalMethod = isMultiPayment ? 'multiplo' : (partialPayments.length === 1 ? partialPayments[0].method : checkoutPaymentMethod);
+      
+      const storedMethod = finalMethod === 'maq_pix' ? 'pix'
+        : finalMethod === 'maq_debito' ? 'debito'
+        : finalMethod === 'maq_credito' ? 'credito'
+        : finalMethod;
+
+      const mappedPartialPayments = partialPayments.map(p => ({
+        ...p,
+        method: p.method === 'maq_pix' ? 'pix' : p.method === 'maq_debito' ? 'debito' : p.method === 'maq_credito' ? 'credito' : p.method
+      }));
+
       const batchPromises = tableOrdersList.map(async (order) => {
         if (!order.id) return;
         const orderDocRef = doc(db, 'orders', order.id);
         
-        // Map internal payment method to storage label
-        const storedMethod = checkoutPaymentMethod === 'maq_pix' ? 'pix'
-          : checkoutPaymentMethod === 'maq_debito' ? 'debito'
-          : checkoutPaymentMethod === 'maq_credito' ? 'credito'
-          : checkoutPaymentMethod;
-
         const updates: any = {
           status: 'completed',
           paymentMethod: storedMethod,
+          payments: mappedPartialPayments.length > 0 ? mappedPartialPayments : [{ method: storedMethod, amount: order.total }],
           changeFor: storedMethod === 'dinheiro' && checkoutChangeFor ? parseFloat(checkoutChangeFor.replace(',', '.')) : null,
           updatedAt: new Date().toISOString()
         };
@@ -255,6 +262,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
           clientUid: order.clientUid,
           total: order.total,
           paymentMethod: storedMethod,
+          payments: mappedPartialPayments.length > 0 ? mappedPartialPayments : [{ method: storedMethod, amount: order.total }],
           type: 'baixa_manual',
           approvedBy: userData?.name || userData?.email || 'Caixa',
           createdAt: new Date().toISOString()
@@ -521,6 +529,18 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
     }
     return () => clearInterval(interval);
   }, [pointIntentId, pointPaymentStatus, storeConfig]);
+
+  useEffect(() => {
+    if (pointPaymentStatus === 'approved' && pendingPointAmount > 0) {
+      setPartialPayments(prev => [
+        ...prev,
+        { method: pendingPointMethod, amount: pendingPointAmount, id: Date.now().toString() }
+      ]);
+      setPendingPointAmount(0);
+      setPointPaymentStatus('idle');
+      setPartialPaymentInputAmount('');
+    }
+  }, [pointPaymentStatus, pendingPointAmount, pendingPointMethod]);
 
   // Limpa todos os áudios e timers quando a tela da cozinha é desmontada por completo
   useEffect(() => {
@@ -2244,14 +2264,25 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
         if (storeConfig?.pointMiniNfc2Id) pointDevices.push({ id: storeConfig.pointMiniNfc2Id, label: 'Point Mini NFC 2' });
         if (pointDevices.length === 0) pointDevices.push({ id: 'MOCK_DEVICE', label: 'Simulador (Teste)' });
 
+        const totalPaid = partialPayments.reduce((sum, p) => sum + p.amount, 0);
+        const remainingBalance = Math.max(0, tableTotal - totalPaid);
+
         const isPointMethod = ['maq_pix', 'maq_debito', 'maq_credito'].includes(checkoutPaymentMethod);
-        const canClose = !isPointMethod || pointPaymentStatus === 'approved';
+        const canClose = remainingBalance === 0 || (!isPointMethod || pointPaymentStatus === 'approved');
 
         const handleTriggerPoint = async (deviceId: string, label: string, pMethodOverride?: string) => {
+          const chargeAmount = partialPaymentInputAmount ? parseFloat(partialPaymentInputAmount.replace(',', '.')) : remainingBalance;
+          if (isNaN(chargeAmount) || chargeAmount <= 0 || chargeAmount > remainingBalance) {
+            alert('Valor inválido para a cobrança.');
+            return;
+          }
+
           setPointPaymentLoading(true);
           setPointPaymentError(null);
           setPointPaymentStatus('idle');
           setPointIntentId('');
+          setPendingPointAmount(chargeAmount);
+          setPendingPointMethod(pMethodOverride || checkoutPaymentMethod);
           try {
             let token = storeConfig?.storeOwnerAccessToken || storeConfig?.devAccessToken || 'mock';
             if (!token || token === 'null' || token === 'undefined') token = 'mock';
@@ -2264,7 +2295,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
               body: JSON.stringify({
                 token,
                 deviceId,
-                amount: tableTotal.toFixed(2),
+                amount: chargeAmount.toFixed(2),
                 paymentType: pType,
                 externalReference: 'CAIXA_' + Date.now(),
                 devPercentage: storeConfig?.devPercentage || 0
@@ -2294,6 +2325,8 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                 setPointPaymentStatus('idle');
                 setPointIntentId('');
                 setPointPaymentError(null);
+                setPartialPayments([]);
+                setPartialPaymentInputAmount('');
               }
             }}
             style={{ zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)', position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh' }}
@@ -2465,9 +2498,49 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                 <strong style={{ fontSize: '1.3rem', color: 'var(--primary-gold)' }}>R$ {tableTotal.toFixed(2).replace('.', ',')}</strong>
               </div>
 
+              {/* Pagamentos Parciais Cadastrados */}
+              {partialPayments.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Pagamentos registrados:</span>
+                  {partialPayments.map((p) => {
+                    const mLabel = p.method === 'dinheiro' ? 'Dinheiro' : p.method === 'maq_pix' ? 'Maq. Pix' : p.method === 'maq_debito' ? 'Maq. Débito' : 'Maq. Crédito';
+                    return (
+                      <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', marginTop: '4px', color: '#10b981' }}>
+                        <span>✓ {mLabel}</span>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <span>R$ {p.amount.toFixed(2).replace('.', ',')}</span>
+                          {p.method === 'dinheiro' && (
+                            <button type="button" onClick={() => setPartialPayments(prev => prev.filter(x => x.id !== p.id))} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1rem', padding: '0 6px' }}>✕</button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: 700, color: remainingBalance > 0 ? '#f59e0b' : '#10b981', marginTop: '0.5rem', borderTop: '1px dashed rgba(255,255,255,0.2)', paddingTop: '0.5rem' }}>
+                    <span>Falta Pagar:</span>
+                    <span>R$ {remainingBalance.toFixed(2).replace('.', ',')}</span>
+                  </div>
+                </div>
+              )}
+
+              {remainingBalance > 0 && (
+                <>
+                  {/* Valor a cobrar agora */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Valor a cobrar agora (R$):</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder={remainingBalance.toFixed(2)}
+                      value={partialPaymentInputAmount}
+                      onChange={(e) => setPartialPaymentInputAmount(e.target.value)}
+                      style={{ padding: '0.7rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: '#0b0f19', color: '#fff', fontSize: '1rem' }}
+                    />
+                  </div>
+
               {/* Formas de Recebimento (exclusivo do operador/caixa) */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.06em' }}>Forma de Recebimento</span>
+                <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.06em' }}>Forma de Recebimento (deste valor)</span>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
                   {(() => {
                     const visConfig = storeConfig?.paymentMethodsVisibility || {};
@@ -2526,12 +2599,39 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                       onChange={(e) => setCheckoutChangeFor(e.target.value.replace(/\D/g, ''))}
                       style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: '#0b0f19', color: '#fff', fontSize: '0.85rem' }}
                     />
-                    {checkoutChangeFor && parseFloat(checkoutChangeFor) > tableTotal && (
+                    {checkoutChangeFor && parseFloat(checkoutChangeFor) > (partialPaymentInputAmount ? parseFloat(partialPaymentInputAmount) : remainingBalance) && (
                       <div style={{ fontSize: '0.8rem', color: '#10b981', marginTop: '2px', fontWeight: 600 }}>
-                        Troco a devolver: R$ {(parseFloat(checkoutChangeFor) - tableTotal).toFixed(2).replace('.', ',')}
+                        Troco a devolver: R$ {(parseFloat(checkoutChangeFor) - (partialPaymentInputAmount ? parseFloat(partialPaymentInputAmount) : remainingBalance)).toFixed(2).replace('.', ',')}
                       </div>
                     )}
                   </div>
+                )}
+
+                {/* Botão de Adicionar Pagamento em Dinheiro/Outros manuais */}
+                {!isPointMethod && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const chargeAmount = partialPaymentInputAmount ? parseFloat(partialPaymentInputAmount.replace(',', '.')) : remainingBalance;
+                      if (isNaN(chargeAmount) || chargeAmount <= 0 || chargeAmount > remainingBalance) {
+                        alert('Valor inválido para a cobrança.');
+                        return;
+                      }
+                      setPartialPayments(prev => [
+                        ...prev,
+                        { method: checkoutPaymentMethod, amount: chargeAmount, id: Date.now().toString() }
+                      ]);
+                      setPartialPaymentInputAmount('');
+                      setCheckoutChangeFor('');
+                    }}
+                    style={{
+                      padding: '0.8rem', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
+                      border: 'none', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)', marginTop: '0.5rem'
+                    }}
+                  >
+                    ✅ Registrar Pagamento ({checkoutPaymentMethod === 'dinheiro' ? 'Dinheiro' : 'Outro'})
+                  </button>
                 )}
 
                 {/* Acionamento da Maquininha */}
@@ -2540,12 +2640,12 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                     {pointDevices.length > 0 && (
                       <button
                         type="button"
-                        disabled={pointPaymentLoading || tableTotal <= 0}
+                        disabled={pointPaymentLoading || remainingBalance <= 0}
                         onClick={() => handleTriggerPoint(pointDevices[0].id, pointDevices[0].label)}
                         style={{
                           padding: '0.8rem', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
                           border: 'none', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#fff',
-                          opacity: (pointPaymentLoading || tableTotal <= 0) ? 0.5 : 1,
+                          opacity: (pointPaymentLoading || remainingBalance <= 0) ? 0.5 : 1,
                           boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
                         }}
                       >
@@ -2614,10 +2714,12 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                     <span style={{ fontSize: '1.4rem' }}>✅</span>
                     <div>
                       <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#10b981' }}>Pagamento aprovado na {pointDeviceLabel}!</div>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Agora você pode encerrar a conta.</div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Pagamento adicionado ao saldo.</div>
                     </div>
                   </div>
                 )}
+                </>
+              )}
 
                 {isPointMethod && pointPaymentStatus === 'rejected' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.85rem 1rem', borderRadius: '12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)' }}>
@@ -2668,8 +2770,8 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                     cursor: canClose && filteredOrders.length > 0 ? 'pointer' : 'not-allowed'
                   }}
                 >
-                  {isPointMethod && pointPaymentStatus !== 'approved'
-                    ? '🔒 Encerrar (aguardando pagamento)'
+                  {remainingBalance > 0
+                    ? `🔒 Faltam R$ ${remainingBalance.toFixed(2).replace('.', ',')}`
                     : '✅ Encerrar e Fechar Conta'}
                 </button>
               </div>
