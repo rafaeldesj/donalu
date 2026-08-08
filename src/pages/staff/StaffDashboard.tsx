@@ -2497,9 +2497,6 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                         setPointPaymentStatus('idle');
                         setPointIntentId('');
                         setPointPaymentError(null);
-                        if (['maq_pix', 'maq_debito', 'maq_credito'].includes(method) && pointDevices.length > 0) {
-                          handleTriggerPoint(pointDevices[0].id, pointDevices[0].label, method);
-                        }
                       }}
                       style={{
                         padding: '0.65rem 0.5rem',
@@ -2539,26 +2536,24 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
 
                 {/* Acionamento da Maquininha */}
                 {isPointMethod && pointPaymentStatus === 'idle' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                      {pointDevices.length > 0 && (
-                        <button
-                          type="button"
-                          disabled={pointPaymentLoading || tableTotal <= 0}
-                          onClick={() => handleTriggerPoint(pointDevices[0].id, pointDevices[0].label)}
-                          style={{
-                            display: (!pointPaymentError && !pointPaymentLoading) ? 'none' : 'block',
-                            padding: '0.5rem 0.9rem', borderRadius: '8px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer',
-                            border: '1px solid rgba(245,158,11,0.4)', background: 'rgba(245,158,11,0.08)', color: 'var(--primary-gold)',
-                            opacity: (pointPaymentLoading || tableTotal <= 0) ? 0.5 : 1
-                          }}
-                        >
-                          {pointPaymentLoading ? '⏳ Aguarde...' : `📲 Tentar Novamente (${pointDevices[0].label})`}
-                        </button>
-                      )}
-                    </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem' }}>
+                    {pointDevices.length > 0 && (
+                      <button
+                        type="button"
+                        disabled={pointPaymentLoading || tableTotal <= 0}
+                        onClick={() => handleTriggerPoint(pointDevices[0].id, pointDevices[0].label)}
+                        style={{
+                          padding: '0.8rem', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
+                          border: 'none', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#fff',
+                          opacity: (pointPaymentLoading || tableTotal <= 0) ? 0.5 : 1,
+                          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                        }}
+                      >
+                        {pointPaymentLoading ? '⏳ Aguardando...' : `📲 Cobrar na Maquininha`}
+                      </button>
+                    )}
                     {pointPaymentError && (
-                      <p style={{ color: '#ef4444', fontSize: '0.8rem', margin: 0 }}>⚠️ {pointPaymentError}</p>
+                      <p style={{ color: '#ef4444', fontSize: '0.8rem', margin: 0, textAlign: 'center' }}>⚠️ {pointPaymentError}</p>
                     )}
                   </div>
                 )}
