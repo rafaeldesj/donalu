@@ -118,8 +118,12 @@ export const AuthButton = () => {
     e.preventDefault();
     setError(null);
 
-    if (!email || !password) {
+    if (!isRegisterMode && (!email || !password)) {
       setError('Por favor, preencha todos os campos obrigatórios.');
+      return;
+    }
+    if (isRegisterMode && !password) {
+      setError('Por favor, crie uma senha para o seu cadastro.');
       return;
     }
 
@@ -137,7 +141,8 @@ export const AuthButton = () => {
 
     setActionLoading(true);
     try {
-      const targetEmail = email.includes('@') ? normalizeEmail(email) : email.trim();
+      let targetEmail = email ? (email.includes('@') ? normalizeEmail(email) : email.trim()) : `cliente_${Date.now()}@donalu.com`;
+      
       if (isRegisterMode) {
         await registerWithEmail(targetEmail, password, name, phone);
       } else {
@@ -480,17 +485,17 @@ export const AuthButton = () => {
 
         <div className="input-group">
           <label htmlFor="auth-email">
-            {isRegisterMode ? 'Endereço de E-mail' : 'E-mail, Celular (WhatsApp) ou Nome'}
+            {isRegisterMode ? 'Endereço de E-mail (Opcional)' : 'E-mail, Celular (WhatsApp) ou Nome'}
           </label>
           <div className="input-wrapper">
             <Mail size={18} className="input-icon" />
             <input 
               id="auth-email"
               type={isRegisterMode ? 'email' : 'text'} 
-              placeholder={isRegisterMode ? 'exemplo@email.com' : 'Digite seu e-mail, celular ou nome'} 
+              placeholder={isRegisterMode ? 'Opcional (exemplo@email.com)' : 'Digite seu e-mail, celular ou nome'} 
               value={email} 
               onChange={handleEmailOrPhoneChange} 
-              required
+              required={!isRegisterMode}
             />
           </div>
         </div>

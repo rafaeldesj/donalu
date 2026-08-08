@@ -568,7 +568,46 @@ export const OrderTracking = () => {
   const [activeTablesCount, setActiveTablesCount] = useState<number>(10);
   const [scanningOrderId, setScanningOrderId] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Survey states
+  const [surveyOrder, setSurveyOrder] = useState<OrderDocument | null>(null);
+  const [surveyRating, setSurveyRating] = useState<number>(0);
+  const [surveyFeedback, setSurveyFeedback] = useState<string>('');
+  const [surveySubmitting, setSurveySubmitting] = useState(false);
+
+  const handleSurveySubmit = async (rating: number, feedback: string) => {
+    if (!surveyOrder?.id) return;
+    setSurveySubmitting(true);
+    try {
+      await updateDoc(doc(db, 'orders', surveyOrder.id), {
+        satisfactionRating: rating,
+        satisfactionFeedback: feedback,
+        updatedAt: new Date().toISOString()
+      });
+      setSurveyOrder(null);
+      setSurveyRating(0);
+      setSurveyFeedback('');
+    } catch (err) {
+      console.error("Erro ao salvar pesquisa de satisfação:", err);
+      alert("Não foi possível salvar sua avaliação. Tente novamente.");
+    } finally {
+      setSurveySubmitting(false);
+    }
+  };
+
+  const handleSurveyDismiss = async () => {
+    if (!surveyOrder?.id) return;
+    try {
+      // Salva rating 0 para indicar que foi ignorado e não perguntar de novo
+      await updateDoc(doc(db, 'orders', surveyOrder.id), {
+        satisfactionRating: 0,
+        updatedAt: new Date().toISOString()
+      });
+      setSurveyOrder(null);
+    } catch (err) {
+      console.error("Erro ao ignorar pesquisa:", err);
+      setSurveyOrder(null);
+    }
+  };  useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'tables_config'), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
@@ -771,6 +810,22 @@ export const OrderTracking = () => {
       fetched.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
       setOrders(fetched);
+
+      // Verifica se há pedidos concluídos recentes sem avaliação
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const unrated = fetched.find(o => 
+        o.status === 'completed' && 
+        typeof o.satisfactionRating === 'undefined' && 
+        new Date(o.createdAt) >= today
+      );
+
+      // Só atualiza se o surveyOrder mudar, pra não piscar o modal
+      setSurveyOrder(prev => {
+        if (prev?.id === unrated?.id) return prev;
+        return unrated || null;
+      });
+
       setLoading(false);
     }, (error) => {
       console.error("Erro ao assinar reatividade de pedidos:", error);
@@ -1354,6 +1409,90 @@ export const OrderTracking = () => {
             >
               Cancelar
             </button>
+          </div>
+        </div>
+      )}
+      {/* Modal de Pesquisa de Satisfação */}
+      {surveyOrder && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, padding: '1rem'
+        }}>
+          <div style={{
+            background: 'var(--bg-secondary)', padding: '1.5rem', borderRadius: '16px',
+            width: '100%', maxWidth: '400px',
+            border: '1px solid rgba(245, 158, 11, 0.2)',
+            display: 'flex', flexDirection: 'column', gap: '1rem',
+            textAlign: 'center'
+          }}>
+            <div>
+              <span style={{ fontSize: '2.5rem' }}>⭐</span>
+              <h3 style={{ margin: '0.5rem 0 0 0', color: 'var(--primary-gold)' }}>Como foi seu pedido?</h3>
+              <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Seu pedido foi finalizado! Avalie sua experiência para nos ajudar a melhorar.
+              </p>
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', margin: '1rem 0' }}>
+              {[1, 2, 3, 4, 5].map(star => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setSurveyRating(star)}
+                  style={{
+                    background: 'none', border: 'none', padding: '0',
+                    fontSize: '2rem', cursor: 'pointer',
+                    color: surveyRating >= star ? 'var(--primary-gold)' : 'rgba(255,255,255,0.1)',
+                    transition: 'color 0.2s',
+                    outline: 'none'
+                  }}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              placeholder="O que achou? (Opcional)"
+              value={surveyFeedback}
+              onChange={(e) => setSurveyFeedback(e.target.value)}
+              rows={3}
+              style={{
+                width: '100%', padding: '0.75rem', borderRadius: '10px',
+                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
+                color: '#fff', fontSize: '0.85rem', resize: 'none', outline: 'none'
+              }}
+            />
+
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+              <button
+                type="button"
+                onClick={handleSurveyDismiss}
+                disabled={surveySubmitting}
+                style={{
+                  flex: 1, padding: '0.75rem', borderRadius: '10px',
+                  background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
+                  color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer'
+                }}
+              >
+                Pular
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSurveySubmit(surveyRating, surveyFeedback)}
+                disabled={surveySubmitting || surveyRating === 0}
+                style={{
+                  flex: 1, padding: '0.75rem', borderRadius: '10px',
+                  background: surveyRating > 0 ? 'var(--primary-gold)' : 'rgba(255,255,255,0.05)',
+                  border: 'none', color: surveyRating > 0 ? '#000' : 'rgba(255,255,255,0.2)',
+                  fontWeight: 600, cursor: surveyRating > 0 ? 'pointer' : 'not-allowed'
+                }}
+              >
+                {surveySubmitting ? 'Enviando...' : 'Enviar'}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -264,7 +264,8 @@ export const ClientDashboard = ({
   const setCart = externalSetCart !== undefined ? externalSetCart : setLocalCart;
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [useFidelityRescue, setUseFidelityRescue] = useState(false);
+  const [useFidelityRescueGrande, setUseFidelityRescueGrande] = useState(false);
+  const [useFidelityRescueKids, setUseFidelityRescueKids] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deliveryAddress, setDeliveryAddress] = useState<MapAddress | null>(null);
   const [routeDistance, setRouteDistance] = useState<number | null>(null);
@@ -1451,22 +1452,28 @@ export const ClientDashboard = ({
     : 0;
 
   // Verifica se há pastéis no carrinho para poder dar o desconto fidelidade
-  const cartHasPastel = cart.some(item => 
-    item.category === 'Pastéis Salgados' || 
-    item.category === 'Pastéis Doces' ||
-    (item.name && (
-      item.name.toLowerCase().includes('pastel') || 
-      item.name.toLowerCase().includes('ninho') || 
-      item.name.toLowerCase().includes('kitkat')
-    ))
-  );
+  const cartHasPastelGrande = cart.some(item => {
+    const isPastel = item.category === 'Pastéis Salgados' || item.category === 'Pastéis Doces' || (item.name && item.name.toLowerCase().includes('pastel'));
+    const isKid = item.size === 'kids' || (item.name && item.name.toLowerCase().includes('kids'));
+    return isPastel && !isKid;
+  });
+  
+  const cartHasPastelKids = cart.some(item => {
+    const isPastel = item.category === 'Pastéis Salgados' || item.category === 'Pastéis Doces' || (item.name && item.name.toLowerCase().includes('pastel'));
+    const isKid = item.size === 'kids' || (item.name && item.name.toLowerCase().includes('kids'));
+    return isPastel && isKid;
+  });
 
-  const stampsCount = userData?.loyaltyStamps || 0;
+  const stampsCountGrande = userData?.loyaltyStampsGrande !== undefined ? userData.loyaltyStampsGrande : (userData?.loyaltyStamps || 0);
+  const stampsCountKids = userData?.loyaltyStampsKids || 0;
   const stampsNeeded = storeConfig?.stampsNeeded || 10;
-  const canRescueFidelity = stampsCount >= stampsNeeded && cartHasPastel;
+  
+  const canRescueFidelityGrande = stampsCountGrande >= stampsNeeded && cartHasPastelGrande;
+  const canRescueFidelityKids = stampsCountKids >= stampsNeeded && cartHasPastelKids;
 
-  // Valor do desconto: 1 pastel de graça (R$ 23,00)
-  const fidelityDiscount = (useFidelityRescue && canRescueFidelity) ? 23.00 : 0;
+  const fidelityDiscountGrande = (useFidelityRescueGrande && canRescueFidelityGrande) ? 23.00 : 0;
+  const fidelityDiscountKids = (useFidelityRescueKids && canRescueFidelityKids) ? 14.00 : 0;
+  const fidelityDiscount = fidelityDiscountGrande + fidelityDiscountKids;
 
   const finalTotal = Math.max(0, cartTotal - fidelityDiscount) + deliveryFee + serviceFee;
 
@@ -1553,7 +1560,8 @@ export const ClientDashboard = ({
       clientUid: user?.uid || '',
       clientName: user?.displayName || user?.email || 'Cliente Anônimo',
       clientPhone: userData?.phoneNumber || '',
-      usedFidelityRescue: useFidelityRescue && canRescueFidelity,
+      usedFidelityRescueGrande: useFidelityRescueGrande && canRescueFidelityGrande,
+      usedFidelityRescueKids: useFidelityRescueKids && canRescueFidelityKids,
       items: cart.map(item => {
         let customSuffix = '';
         const details: string[] = [];
@@ -1613,7 +1621,8 @@ export const ClientDashboard = ({
     await decrementStock(cart);
     await createOrderAndLog(orderData);
     setCart([]);
-    setUseFidelityRescue(false);
+    setUseFidelityRescueGrande(false);
+    setUseFidelityRescueKids(false);
     setDeliveryAddress(null);
     setRouteDistance(null);
     setShowOrderSummary(false);
@@ -1750,7 +1759,8 @@ export const ClientDashboard = ({
             clientUid: user?.uid || '',
             clientName: user?.displayName || user?.email || 'Cliente Anônimo',
             clientPhone: userData?.phoneNumber || '',
-            usedFidelityRescue: useFidelityRescue && canRescueFidelity,
+            usedFidelityRescueGrande: useFidelityRescueGrande && canRescueFidelityGrande,
+      usedFidelityRescueKids: useFidelityRescueKids && canRescueFidelityKids,
             items: cart.map(item => {
               let customSuffix = '';
               const details: string[] = [];
@@ -1807,7 +1817,8 @@ export const ClientDashboard = ({
           await decrementStock(cart);
           await createOrderAndLog(orderData);
           setCart([]);
-          setUseFidelityRescue(false);
+          setUseFidelityRescueGrande(false);
+    setUseFidelityRescueKids(false);
           setDeliveryAddress(null);
           setRouteDistance(null);
           setShowOrderSummary(false);
@@ -1885,7 +1896,8 @@ export const ClientDashboard = ({
         clientUid: user?.uid || '',
         clientName: user?.displayName || user?.email || 'Cliente Anônimo',
         clientPhone: userData?.phoneNumber || '',
-        usedFidelityRescue: useFidelityRescue && canRescueFidelity,
+        usedFidelityRescueGrande: useFidelityRescueGrande && canRescueFidelityGrande,
+      usedFidelityRescueKids: useFidelityRescueKids && canRescueFidelityKids,
         items: cart.map(item => {
           let customSuffix = '';
           const details: string[] = [];
@@ -1946,7 +1958,8 @@ export const ClientDashboard = ({
     await decrementStock(cart);
     setPendingPixOrderId(null);
     setCart([]);
-    setUseFidelityRescue(false);
+    setUseFidelityRescueGrande(false);
+    setUseFidelityRescueKids(false);
     setDeliveryAddress(null);
     setRouteDistance(null);
     setShowOrderSummary(false);
@@ -2280,7 +2293,8 @@ export const ClientDashboard = ({
             clientUid: user?.uid || '',
             clientName: user?.displayName || user?.email || 'Cliente Anônimo',
             clientPhone: userData?.phoneNumber || '',
-            usedFidelityRescue: useFidelityRescue && canRescueFidelity,
+            usedFidelityRescueGrande: useFidelityRescueGrande && canRescueFidelityGrande,
+      usedFidelityRescueKids: useFidelityRescueKids && canRescueFidelityKids,
             items: cart.map(item => {
               let customSuffix = '';
               const details: string[] = [];
@@ -2437,7 +2451,8 @@ export const ClientDashboard = ({
         clientUid: user?.uid || '',
         clientName: user?.displayName || user?.email || 'Cliente Anônimo',
         clientPhone: userData?.phoneNumber || '',
-        usedFidelityRescue: useFidelityRescue && canRescueFidelity,
+        usedFidelityRescueGrande: useFidelityRescueGrande && canRescueFidelityGrande,
+      usedFidelityRescueKids: useFidelityRescueKids && canRescueFidelityKids,
         items: cart.map(item => {
           let customSuffix = '';
           const details: string[] = [];
@@ -2495,7 +2510,8 @@ export const ClientDashboard = ({
       await decrementStock(cart);
       await createOrderAndLog(orderData);
       setCart([]);
-      setUseFidelityRescue(false);
+      setUseFidelityRescueGrande(false);
+    setUseFidelityRescueKids(false);
       setDeliveryAddress(null);
       setRouteDistance(null);
       setShowOrderSummary(false);
@@ -2527,10 +2543,10 @@ export const ClientDashboard = ({
         </div>
         <div className="client-grid-loyalty">
           <div className="loyalty-card" style={{ padding: '2rem' }}>
-            <h3>Cartão Fidelidade Dona Lu</h3>
-            <p>Junte 10 carimbos e ganhe um pastel de graça à sua escolha (doce ou salgado)!</p>
+            <h3>Fidelidade - Pastéis Grandes</h3>
+            <p>Junte 10 carimbos e ganhe um pastel grande de graça!</p>
             {(() => {
-              const stampsCount = userData?.loyaltyStamps || 0;
+              const stampsCount = userData?.loyaltyStampsGrande !== undefined ? userData.loyaltyStampsGrande : (userData?.loyaltyStamps || 0);
               const stampsNeeded = storeConfig?.stampsNeeded || 10;
               const activeStamps = stampsCount % stampsNeeded;
               const rewardsCount = Math.floor(stampsCount / stampsNeeded);
@@ -2550,7 +2566,7 @@ export const ClientDashboard = ({
                       fontWeight: 600,
                       textAlign: 'center'
                     }}>
-                      🌟 Parabéns! Você tem <strong>{rewardsCount} pastel(éis) grátis</strong> para resgatar na sua próxima compra!
+                      🌟 Você tem <strong>{rewardsCount} pastel(éis) grandes grátis</strong>!
                     </div>
                   )}
 
@@ -2574,14 +2590,67 @@ export const ClientDashboard = ({
                   </div>
 
                   <div style={{ marginTop: '2rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                    Total de carimbos ativos: <strong>{activeStamps} de {stampsNeeded}</strong>.
-                    {stampsLeft > 0 
-                      ? ` Faltam ${stampsLeft} para o próximo pastel grátis!` 
-                      : ' Você completou o cartão! Pode resgatar seu pastel grátis.'
-                    }
-                    <br />
+                    Total: <strong>{activeStamps} de {stampsNeeded}</strong>.
                     <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.3)', display: 'block', marginTop: '0.4rem' }}>
-                      (Saldo total histórico: {stampsCount} carimbos)
+                      (Saldo histórico: {stampsCount})
+                    </span>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+
+          <div className="loyalty-card" style={{ padding: '2rem' }}>
+            <h3>Fidelidade - Pastéis Kids</h3>
+            <p>Junte 10 carimbos e ganhe um pastel kids de graça!</p>
+            {(() => {
+              const stampsCount = userData?.loyaltyStampsKids || 0;
+              const stampsNeeded = storeConfig?.stampsNeeded || 10;
+              const activeStamps = stampsCount % stampsNeeded;
+              const rewardsCount = Math.floor(stampsCount / stampsNeeded);
+              const stampsLeft = Math.max(0, stampsNeeded - activeStamps);
+
+              return (
+                <>
+                  {rewardsCount > 0 && (
+                    <div style={{
+                      background: 'rgba(59, 130, 246, 0.1)',
+                      border: '1px solid rgba(59, 130, 246, 0.2)',
+                      borderRadius: '8px',
+                      padding: '0.75rem',
+                      marginBottom: '1rem',
+                      color: '#60a5fa',
+                      fontSize: '0.88rem',
+                      fontWeight: 600,
+                      textAlign: 'center'
+                    }}>
+                      🌟 Você tem <strong>{rewardsCount} pastel(éis) kids grátis</strong>!
+                    </div>
+                  )}
+
+                  <div className="stamps-grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)', marginTop: '1.5rem', gap: '1rem' }}>
+                    {[...Array(stampsNeeded)].map((_, i) => {
+                      const isStamped = i < activeStamps;
+                      return (
+                        <div 
+                          key={i} 
+                          className={`stamp-slot ${isStamped ? 'stamped' : ''}`} 
+                          style={{ 
+                            padding: '0.5rem', 
+                            fontSize: isStamped ? '1.5rem' : '0.9rem',
+                            border: isStamped ? '2px solid #60a5fa' : '1px solid rgba(255,255,255,0.1)'
+                          }}
+                        >
+                          {isStamped ? '👧' : i + 1}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ marginTop: '2rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                    Total: <strong>{activeStamps} de {stampsNeeded}</strong>.
+                    <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.3)', display: 'block', marginTop: '0.4rem' }}>
+                      (Saldo histórico: {stampsCount})
                     </span>
                   </div>
                 </>
@@ -2952,8 +3021,8 @@ export const ClientDashboard = ({
               <strong>📢 Qualquer pastel grande deste cardápio custa apenas R$ 23,00 ou R$ 14,00 o pastel kids! 🍕⭐</strong>
               <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
                 {activeCategory === 'Pastéis Doces' 
-                  ? 'A borda de Kit-Kat é opcional (não é cobrada por fora) opções personalizáveis abaixo.'
-                  : 'A borda e o catupiry são opcionais (não são cobrados por fora) opções personalizáveis abaixo.'}
+                  ? 'A borda de Kit-Kat é opcional para pastéis grandes (não é cobrada por fora) opções personalizáveis abaixo.'
+                  : 'A borda (apenas para pastéis grandes) e o catupiry são opcionais (não são cobrados por fora) opções personalizáveis abaixo.'}
               </div>
             </div>
           )}
@@ -3781,8 +3850,8 @@ export const ClientDashboard = ({
                 </div>
               )}
 
-              {/* Opção de Resgate Fidelidade (10+ carimbos) */}
-              {stampsCount >= stampsNeeded && (
+              {/* Opção de Resgate Fidelidade Grande (10+ carimbos) */}
+              {stampsCountGrande >= stampsNeeded && (
                 <div style={{
                   marginTop: '0.85rem',
                   background: 'rgba(245, 158, 11, 0.04)',
@@ -3796,40 +3865,94 @@ export const ClientDashboard = ({
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
                     <input
                       type="checkbox"
-                      id="fidelity-rescue-check"
-                      checked={useFidelityRescue}
-                      disabled={!cartHasPastel}
-                      onChange={(e) => setUseFidelityRescue(e.target.checked)}
+                      id="fidelity-rescue-grande"
+                      checked={useFidelityRescueGrande}
+                      disabled={!cartHasPastelGrande}
+                      onChange={(e) => setUseFidelityRescueGrande(e.target.checked)}
                       style={{ 
                         width: '18px', 
                         height: '18px', 
                         accentColor: 'var(--primary-gold)', 
-                        cursor: cartHasPastel ? 'pointer' : 'not-allowed', 
+                        cursor: cartHasPastelGrande ? 'pointer' : 'not-allowed', 
                         marginTop: '2px' 
                       }}
                     />
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       <label 
-                        htmlFor="fidelity-rescue-check" 
+                        htmlFor="fidelity-rescue-grande" 
                         style={{ 
                           fontSize: '0.88rem', 
                           fontWeight: 700, 
-                          color: cartHasPastel ? '#fff' : 'var(--text-secondary)', 
-                          cursor: cartHasPastel ? 'pointer' : 'not-allowed', 
+                          color: cartHasPastelGrande ? '#fff' : 'var(--text-secondary)', 
+                          cursor: cartHasPastelGrande ? 'pointer' : 'not-allowed', 
                           userSelect: 'none' 
                         }}
                       >
-                        🎁 Resgatar Pastel Grátis!
+                        🎁 Resgatar Pastel Grande Grátis!
                       </label>
                       <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>
-                        Você acumulou {stampsCount} carimbos e pode resgatar 1 pastel (doce ou salgado) de graça neste pedido!
+                        Você acumulou {stampsCountGrande} carimbos e pode resgatar 1 pastel grande de graça!
                       </span>
                     </div>
                   </div>
 
-                  {!cartHasPastel && (
+                  {!cartHasPastelGrande && (
                     <span style={{ fontSize: '0.75rem', color: '#fca5a5', fontStyle: 'italic' }}>
-                      ⚠️ Adicione pelo menos um pastel (doce ou salgado) no carrinho para poder usar seu resgate.
+                      ⚠️ Adicione pelo menos um pastel grande no carrinho para usar seu resgate.
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Opção de Resgate Fidelidade Kids (10+ carimbos) */}
+              {stampsCountKids >= stampsNeeded && (
+                <div style={{
+                  marginTop: '0.85rem',
+                  background: 'rgba(59, 130, 246, 0.04)',
+                  border: '1px solid rgba(59, 130, 246, 0.2)',
+                  borderRadius: '12px',
+                  padding: '0.85rem 1rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
+                    <input
+                      type="checkbox"
+                      id="fidelity-rescue-kids"
+                      checked={useFidelityRescueKids}
+                      disabled={!cartHasPastelKids}
+                      onChange={(e) => setUseFidelityRescueKids(e.target.checked)}
+                      style={{ 
+                        width: '18px', 
+                        height: '18px', 
+                        accentColor: '#60a5fa', 
+                        cursor: cartHasPastelKids ? 'pointer' : 'not-allowed', 
+                        marginTop: '2px' 
+                      }}
+                    />
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label 
+                        htmlFor="fidelity-rescue-kids" 
+                        style={{ 
+                          fontSize: '0.88rem', 
+                          fontWeight: 700, 
+                          color: cartHasPastelKids ? '#fff' : 'var(--text-secondary)', 
+                          cursor: cartHasPastelKids ? 'pointer' : 'not-allowed', 
+                          userSelect: 'none' 
+                        }}
+                      >
+                        👧 Resgatar Pastel Kids Grátis!
+                      </label>
+                      <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>
+                        Você acumulou {stampsCountKids} carimbos e pode resgatar 1 pastel kids de graça!
+                      </span>
+                    </div>
+                  </div>
+
+                  {!cartHasPastelKids && (
+                    <span style={{ fontSize: '0.75rem', color: '#fca5a5', fontStyle: 'italic' }}>
+                      ⚠️ Adicione pelo menos um pastel kids no carrinho para usar seu resgate.
                     </span>
                   )}
                 </div>
@@ -5599,7 +5722,10 @@ export const ClientDashboard = ({
                   <input
                     type="checkbox"
                     checked={tempPastelSize === 'kids'}
-                    onChange={() => setTempPastelSize('kids')}
+                    onChange={() => {
+                      setTempPastelSize('kids');
+                      setTempWithBorda(false);
+                    }}
                     style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '16px', height: '16px' }}
                   />
                   Pastel Kids R$ 14,00
@@ -5636,7 +5762,7 @@ export const ClientDashboard = ({
             {/* Corpo / Opções */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {/* Borda de Queijo — acima dos opcionais */}
-              {customizingPastel.category === 'Pastéis Salgados' && (
+              {customizingPastel.category === 'Pastéis Salgados' && tempPastelSize !== 'kids' && (
                 <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
                     <input

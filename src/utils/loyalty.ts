@@ -29,14 +29,16 @@ export const processOrderLoyaltyStamps = async (orderId: string, orderData: any)
       const currentOrder = orderSnap.data();
       if (currentOrder.loyaltyProcessed || currentOrder.status !== 'completed') return;
 
-      const userSnap = await transaction.get(userDocRef);
-      let currentStamps = 0;
-      if (userSnap.exists()) {
-        currentStamps = userSnap.data().loyaltyStamps || 0;
-      }
+      const userData = userSnap.exists() ? userSnap.data() : {};
+      
+      // Fallback migration: if loyaltyStamps exists and loyaltyStampsGrande doesn't, migrate it.
+      let currentStampsGrande = userData.loyaltyStampsGrande !== undefined ? userData.loyaltyStampsGrande : (userData.loyaltyStamps || 0);
+      let currentStampsKids = userData.loyaltyStampsKids || 0;
 
       // Contabilizar pastéis doces e salgados no pedido
-      let totalPastels = 0;
+      let totalPastelsGrande = 0;
+      let totalPastelsKids = 0;
+      
       const items = currentOrder.items || [];
       items.forEach((item: any) => {
         const nameLower = (item.name || '').toLowerCase();
@@ -56,25 +58,45 @@ export const processOrderLoyaltyStamps = async (orderId: string, orderData: any)
           nameLower.includes('palmito');
 
         if (isPastel) {
-          totalPastels += (item.quantity || 1);
+          const isKid = item.size === 'kids' || nameLower.includes('kids');
+          if (isKid) {
+            totalPastelsKids += (item.quantity || 1);
+          } else {
+            totalPastelsGrande += (item.quantity || 1);
+          }
         }
       });
 
-      let stampsToAdd = totalPastels;
-      let stampsToSubtract = 0;
+      let stampsToAddGrande = totalPastelsGrande;
+      let stampsToAddKids = totalPastelsKids;
+      let stampsToSubtractGrande = 0;
+      let stampsToSubtractKids = 0;
 
+      // Legacy fallback
       if (currentOrder.usedFidelityRescue) {
-        // 1 pastel foi de graça (resgate), então não pontua
-        stampsToAdd = Math.max(0, totalPastels - 1);
-        // Consome 10 carimbos do cartão fidelidade do cliente
-        stampsToSubtract = 10;
+        stampsToAddGrande = Math.max(0, totalPastelsGrande - 1);
+        stampsToSubtractGrande = 10;
+      }
+      
+      if (currentOrder.usedFidelityRescueGrande) {
+        stampsToAddGrande = Math.max(0, totalPastelsGrande - 1);
+        stampsToSubtractGrande = 10;
       }
 
-      const newStamps = Math.max(0, currentStamps - stampsToSubtract + stampsToAdd);
+      if (currentOrder.usedFidelityRescueKids) {
+        stampsToAddKids = Math.max(0, totalPastelsKids - 1);
+        stampsToSubtractKids = 10;
+      }
+
+      const newStampsGrande = Math.max(0, currentStampsGrande - stampsToSubtractGrande + stampsToAddGrande);
+      const newStampsKids = Math.max(0, currentStampsKids - stampsToSubtractKids + stampsToAddKids);
 
       // 1. Atualizar o saldo de carimbos do usuário
       transaction.update(userDocRef, { 
-        loyaltyStamps: newStamps,
+        loyaltyStampsGrande: newStampsGrande,
+        loyaltyStampsKids: newStampsKids,
+        // Mantém a propriedade legacy apenas para não quebrar outras partes, se houver
+        loyaltyStamps: newStampsGrande,
         updatedAt: new Date().toISOString()
       });
 
