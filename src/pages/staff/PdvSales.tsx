@@ -27,6 +27,7 @@ export const PdvSales = () => {
   
   const [showFastRegister, setShowFastRegister] = useState(false);
   const [fastName, setFastName] = useState('');
+  const [fastPhone, setFastPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Carregar Clientes
@@ -68,11 +69,11 @@ export const PdvSales = () => {
         uid: newUid,
         email: generatedEmail,
         name: fastName,
+        phoneNumber: fastPhone,
         role: 'client',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        phoneNumber: '', // celular em branco, conforme solicitado
-        authEmail: generatedEmail // email como padrão cliente em branco (mas válido para auth)
+        authEmail: generatedEmail
       };
       
       await setDoc(doc(db, 'users', newUid), newUserDoc);
@@ -81,13 +82,14 @@ export const PdvSales = () => {
         uid: newUid,
         name: fastName,
         email: generatedEmail,
-        phoneNumber: ''
+        phoneNumber: fastPhone
       };
       
       setClients(prev => [...prev, newClient]);
       setSelectedClient(newClient);
       setShowFastRegister(false);
       setFastName('');
+      setFastPhone('');
       alert("Cliente cadastrado com sucesso!");
     } catch (err) {
       console.error("Erro no cadastro rápido:", err);
@@ -152,8 +154,7 @@ export const PdvSales = () => {
                     style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary-gold)' }}
                     onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(245, 158, 11, 0.1)'}
                     onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <Plus size={18} /> <strong>Cadastro Rápido (Apenas Nome)</strong>
+                    <Plus size={18} /> <strong>Cadastro Rápido (Nome e Telefone)</strong>
                   </div>
 
                   {filteredClients.length > 0 ? (
@@ -181,12 +182,19 @@ export const PdvSales = () => {
         {showFastRegister && !selectedClient && (
           <div style={{ background: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', marginBottom: '1rem', border: '1px solid var(--primary-gold)' }}>
             <h4>Cadastro Rápido</h4>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>Preencha apenas o nome. Uma conta será gerada em background.</p>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>Preencha o nome e o telefone (opcional). Uma conta será gerada em background.</p>
             <input 
               type="text" 
               placeholder="Nome do Cliente" 
               value={fastName}
               onChange={e => setFastName(e.target.value)}
+              style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.2)', color: '#fff', marginBottom: '1rem' }}
+            />
+            <input 
+              type="tel" 
+              placeholder="Celular (WhatsApp)" 
+              value={fastPhone}
+              onChange={e => setFastPhone(e.target.value)}
               style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.2)', color: '#fff', marginBottom: '1rem' }}
             />
             <div style={{ display: 'flex', gap: '1rem' }}>

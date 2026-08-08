@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { onAuthStateChanged, signInWithPopup, signInWithRedirect, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import type { User } from 'firebase/auth';
@@ -24,6 +24,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserDocument | null>(null);
   const [loading, setLoading] = useState(true);
+  const preRegAttemptedRef = useRef(false);
 
   useEffect(() => {
     let unsubscribeUserDoc: (() => void) | null = null;
@@ -92,6 +93,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (currentUser) {
+        preRegAttemptedRef.current = false;
         const userDocRef = doc(db, 'users', currentUser.uid);
         
         // Escuta o perfil do usuário em tempo real
@@ -113,6 +115,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
           } else {
             // Se o documento não existir no banco, busca pré-cadastro
+            if (preRegAttemptedRef.current) {
+              setUserData(prev => prev ? prev : null);
+              setLoading(false);
+              return;
+            }
+            preRegAttemptedRef.current = true;
             try {
               let foundPreRegistration = false;
               if (currentUser.email) {

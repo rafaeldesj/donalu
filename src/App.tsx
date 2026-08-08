@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import type { OrderItem } from './types/order';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AuthButton } from './components/common/AuthButton';
-import { ShieldCheck, ChefHat, CreditCard, Bell, ShoppingCart, Heart, FileText, Users, Navigation, CheckCircle, Clock, Map, Settings, Menu, ChevronDown, Grid, Boxes, MessageCircle, ShoppingBag } from 'lucide-react';
+import { ShieldCheck, ChefHat, CreditCard, Bell, ShoppingCart, Heart, FileText, Users, Navigation, CheckCircle, Clock, Map, Settings, Menu, ChevronDown, Grid, Boxes, MessageCircle, ShoppingBag, Monitor } from 'lucide-react';
 import logoDonalu from './assets/logo_donalu.png';
 import logoDonaluMobile from './assets/logo_donalu_mobile.png';
 import { doc, onSnapshot, collection, query, orderBy, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -32,6 +32,7 @@ const SupportPanel = lazy(() => import('./pages/staff/SupportPanel'));
 const RiderLocationMonitor = lazy(() => import('./pages/manager/RiderLocationMonitor'));
 const SystemLogs = lazy(() => import('./pages/manager/SystemLogs'));
 const PdvSales = lazy(() => import('./pages/staff/PdvSales'));
+const OrderDisplayScreen = lazy(() => import('./pages/staff/OrderDisplayScreen'));
 
 // Premium feedback state for lazy loading
 const ViewLoader = () => (
@@ -646,6 +647,7 @@ const MainLayout = () => {
         else if (userData.staffFunctions?.attendant) setActiveView('atendimento');
         else if (userData.staffFunctions?.cashier) setActiveView('caixa');
         else if (userData.staffFunctions?.delivery) setActiveView('entrega_andamento');
+        else if (userData.staffFunctions?.display) setActiveView('mostrador');
       } else if (['manager', 'owner', 'developer'].includes(userData.role)) {
         setActiveView('admin');
       } else {
@@ -709,11 +711,14 @@ const MainLayout = () => {
 
   // Lista dinâmica de botões de navegação conforme o nível de privilégio do usuário
   const menuItems: any[] = [];
-  const isOnlyDelivery = role === 'staff' && staff?.delivery;
+  const isOnlyDelivery = role === 'staff' && staff?.delivery && !staff?.cook && !staff?.attendant && !staff?.cashier && !staff?.display;
+  const isOnlyDisplay = role === 'staff' && staff?.display && !staff?.cook && !staff?.attendant && !staff?.cashier && !staff?.delivery;
 
   if (isOnlyDelivery) {
     menuItems.push({ id: 'entrega_andamento', label: 'Entrega em Andamento', icon: Navigation });
     menuItems.push({ id: 'entrega_finalizada', label: 'Entregas Finalizadas', icon: CheckCircle });
+  } else if (isOnlyDisplay) {
+    menuItems.push({ id: 'mostrador', label: 'Mostrador', icon: Monitor });
   } else {
     // Se for cliente, desenvolvedor, owner ou gerente
     if (['client', 'developer', 'owner', 'manager'].includes(role)) {
@@ -738,6 +743,11 @@ const MainLayout = () => {
     // Fila da cozinha (Cozinheiro, admin, owner, dev)
     if (role === 'developer' || role === 'owner' || role === 'manager' || (role === 'staff' && staff?.cook)) {
       menuItems.push({ id: 'cozinha', label: 'Fila Cozinha', icon: ChefHat });
+    }
+
+    // Mostrador
+    if (role === 'developer' || role === 'owner' || role === 'manager' || (role === 'staff' && staff?.display)) {
+      menuItems.push({ id: 'mostrador', label: 'Mostrador', icon: Monitor });
     }
 
     // Fila de atendimento (Atendente, admin, owner, dev)
@@ -802,7 +812,7 @@ const MainLayout = () => {
     { label: 'Cardápio / Cliente', ids: ['menu', 'tracking', 'fidelidade', 'suporte_virtual'] },
     { label: 'Operações de Venda', ids: ['pdv_vendas'] },
     { label: 'Operações de Entrega', ids: ['entrega_andamento', 'entrega_finalizada', 'teste_mapa'] },
-    { label: 'Painéis de Trabalho', ids: ['cozinha', 'atendimento', 'caixa', 'mapa_mesas', 'estoque', 'painel_atendimento', 'admin'] },
+    { label: 'Painéis de Trabalho', ids: ['cozinha', 'mostrador', 'atendimento', 'caixa', 'mapa_mesas', 'estoque', 'painel_atendimento', 'admin'] },
     { label: 'Configurações', ids: ['users', 'registros', 'configuracoes'] },
   ];
 const getRoleLabel = (r: string): React.ReactNode => {
@@ -821,6 +831,7 @@ const getRoleLabel = (r: string): React.ReactNode => {
         if (userData?.staffFunctions?.attendant) subroles.push('Atendimento');
         if (userData?.staffFunctions?.cashier) subroles.push('Caixa');
         if (userData?.staffFunctions?.delivery) subroles.push('Entrega');
+        if (userData?.staffFunctions?.display) subroles.push('Mostrador');
         return subroles.length > 0 ? `Colaborador [${subroles.join(', ')}]` : 'Colaborador';
       }
       case 'client':
@@ -936,6 +947,7 @@ const getRoleLabel = (r: string): React.ReactNode => {
             {activeView === 'tracking' && <OrderTracking />}
             {activeView === 'fidelidade' && <ClientDashboard showOnly="loyalty" isVisitor={isVisitor} onLoginRequired={() => setIsVisitor(false)} onNavigate={setActiveView} cart={cart} setCart={setCart} storeStatus={storeStatus} />}
             {activeView === 'cozinha' && <StaffDashboard filter="cook" />}
+            {activeView === 'mostrador' && <OrderDisplayScreen />}
             {activeView === 'atendimento' && <StaffDashboard filter="attendant" />}
             {activeView === 'caixa' && <StaffDashboard filter="cashier" />}
             {activeView === 'entrega_andamento' && (

@@ -5,6 +5,7 @@ export interface StaffFunctions {
   attendant: boolean;  // Atendente
   cashier: boolean;    // Caixa
   delivery?: boolean;  // Entregador
+  display?: boolean;   // Mostrador
 }
 
 export interface UserAddress {

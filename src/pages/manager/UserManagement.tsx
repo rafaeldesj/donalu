@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, query, onSnapshot, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, addDoc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
 import { db, auth } from '../../config/firebase';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth as getSecondaryAuth, createUserWithEmailAndPassword } from 'firebase/auth';
@@ -26,11 +26,16 @@ export const UserManagement = () => {
     try {
       const secondaryApp = initializeApp(firebaseConfig, appName);
       const secondaryAuth = getSecondaryAuth(secondaryApp);
-      await createUserWithEmailAndPassword(secondaryAuth, emailVal, passwordVal);
+      const cred = await createUserWithEmailAndPassword(secondaryAuth, emailVal, passwordVal);
       await deleteApp(secondaryApp);
       console.log("Secondary user account created in Firebase Auth successfully!");
-    } catch (err) {
+      return cred.user.uid;
+    } catch (err: any) {
       console.warn("Secondary user account check or error:", err);
+      if (err.code === 'auth/email-already-in-use') {
+        throw new Error("Este e-mail já está cadastrado. Por favor, utilize outro e-mail.");
+      }
+      throw err;
     }
   };
   const [users, setUsers] = useState<UserDocument[]>([]);
@@ -58,6 +63,7 @@ export const UserManagement = () => {
   const [attendant, setAttendant] = useState(false);
   const [cashier, setCashier] = useState(false);
   const [delivery, setDelivery] = useState(false);
+  const [display, setDisplay] = useState(false);
   const [initialPassword, setInitialPassword] = useState('');
   
   const [error, setError] = useState<string | null>(null);
@@ -125,6 +131,7 @@ export const UserManagement = () => {
     setAttendant(false);
     setCashier(false);
     setDelivery(false);
+    setDisplay(false);
     setPhoneNumber('');
     setInitialPassword('');
     setError(null);
@@ -141,6 +148,7 @@ export const UserManagement = () => {
     setAttendant(user.staffFunctions?.attendant || false);
     setCashier(user.staffFunctions?.cashier || false);
     setDelivery(user.staffFunctions?.delivery || false);
+    setDisplay(user.staffFunctions?.display || false);
     setPhoneNumber(formatPhone(user.phoneNumber || ''));
     setInitialPassword('');
     setError(null);
@@ -238,10 +246,12 @@ export const UserManagement = () => {
     setError(null);
     setSuccess(null);
 
-    if (!name || !email) {
-      setError('Preencha os campos obrigatórios (Nome e E-mail).');
+    if (!name) {
+      setError('Preencha os campos obrigatórios (Nome).');
       return;
     }
+
+    const safeEmail = email.trim() ? email.trim().toLowerCase() : `${name.trim().toLowerCase().replace(/[^a-z0-9]/g, '')}@donalupastelaria.com`;
 
     if (!editUser && (!initialPassword || initialPassword.trim().length < 6)) {
       setError('A senha inicial é obrigatória para novos cadastros e deve ter pelo menos 6 caracteres.');
@@ -254,12 +264,13 @@ export const UserManagement = () => {
       cook: role === 'staff' ? cook : false,
       attendant: role === 'staff' ? attendant : false,
       cashier: role === 'staff' ? cashier : false,
-      delivery: role === 'staff' ? delivery : false
+      delivery: role === 'staff' ? delivery : false,
+      display: role === 'staff' ? display : false
     };
 
     const payload: any = {
       name,
-      email: email.trim().toLowerCase(),
+      email: safeEmail,
       role,
       phoneNumber: phoneNumber.trim(),
       updatedAt: new Date().toISOString(),
@@ -272,7 +283,7 @@ export const UserManagement = () => {
 
     try {
       if (editUser) {
-        const isEmailChanged = email.trim().toLowerCase() !== editUser.email;
+        const isEmailChanged = safeEmail !== editUser.email;
 
         // Se o e-mail mudou, a gente apenas atualiza no Firestore.
         // A lógica de login e onSnapshot do app do cliente se encarrega de sincronizar o Auth
@@ -288,27 +299,32 @@ export const UserManagement = () => {
             actionType: 'UPDATE_USER',
             title: 'Edição de Usuário',
             description: isEmailChanged 
-              ? `O administrador alterou o e-mail do usuário "${editUser.name}" de "${editUser.email}" para "${email.trim().toLowerCase()}" (Nível: "${role}").`
-              : `O administrador atualizou os dados do usuário "${name}" (E-mail: "${email.trim().toLowerCase()}", Papel: "${role}").`,
+              ? `O administrador alterou o e-mail do usuário "${editUser.name}" de "${editUser.email}" para "${safeEmail}" (Nível: "${role}").`
+              : `O administrador atualizou os dados do usuário "${name}" (E-mail: "${safeEmail}", Papel: "${role}").`,
             userRole: userData?.role || 'admin',
             metadata: { targetUserId: editUser.uid, previousData: editUser, newData: payload, role }
           });
         }
       } else {
-        // Cria a conta de login no Auth secundário para que funcione de primeira
-        await createSecondaryAuthUser(email.trim().toLowerCase(), initialPassword.trim());
+        // Cria a conta de login no Auth secundário
+        let newAuthUid: string;
+        try {
+          newAuthUid = await createSecondaryAuthUser(safeEmail, initialPassword.trim());
+        } catch (authErr: any) {
+          setError(authErr.message || 'Erro ao criar conta de autenticação.');
+          setSubmitting(false);
+          return;
+        }
 
-        // Pré-cadastro do usuário (gerará um ID temporário aleatório no Firestore)
-        const docRef = await addDoc(collection(db, 'users'), {
+        // Cria o documento no Firestore APENAS com o UID real gerado
+        await setDoc(doc(db, 'users', newAuthUid), {
           ...payload,
-          authEmail: email.trim().toLowerCase(),
+          authEmail: safeEmail,
           tempPassword: initialPassword.trim(),
-          uid: '' // UID será preenchido quando o usuário fizer login
+          uid: newAuthUid
         });
         
-        // Atualiza o campo uid do documento com o próprio ID do documento para manter a consistência
-        await updateDoc(doc(db, 'users', docRef.id), { uid: docRef.id });
-        setSuccess('Usuário pré-cadastrado! Ele terá acesso ao fazer login com este e-mail.');
+        setSuccess('Usuário cadastrado com sucesso!');
         
         if (user) {
           await logAuditAction({
@@ -317,9 +333,9 @@ export const UserManagement = () => {
             userName: userData?.name || user.displayName || 'Administrador',
             actionType: 'CREATE_USER',
             title: 'Pré-cadastro de Usuário',
-            description: `O administrador pré-cadastrou o usuário "${name}" (E-mail: "${email.trim().toLowerCase()}", Papel: "${role}").`,
+            description: `O administrador cadastrou o usuário "${name}" (E-mail: "${safeEmail}", Papel: "${role}").`,
             userRole: userData?.role || 'admin',
-            metadata: { targetUserId: docRef.id, name, email: email.trim().toLowerCase(), role }
+            metadata: { targetUserId: newAuthUid, name, email: safeEmail, role }
           });
         }
       }
@@ -425,6 +441,7 @@ export const UserManagement = () => {
     if (u.staffFunctions.attendant) f.push('Balcão');
     if (u.staffFunctions.cashier) f.push('Caixa');
     if (u.staffFunctions.delivery) f.push('Entregador');
+    if (u.staffFunctions.display) f.push('Mostrador');
     return f.length > 0 ? f.join(', ') : 'Nenhuma';
   };
 
@@ -597,8 +614,8 @@ export const UserManagement = () => {
             </div>
 
             <div className="input-group">
-              <label>Endereço de E-mail</label>
-              <input type="email" placeholder="email@donalupastelaria.com" value={email} onChange={(e) => setEmail(normalizeEmail(e.target.value))} required style={{ padding: '0.6rem 1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', outline: 'none' }} />
+              <label>Endereço de E-mail (Opcional)</label>
+              <input type="email" placeholder="email@donalupastelaria.com" value={email} onChange={(e) => setEmail(normalizeEmail(e.target.value))} style={{ padding: '0.6rem 1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', outline: 'none' }} />
             </div>
 
             <div className="input-group">
@@ -643,6 +660,10 @@ export const UserManagement = () => {
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                     <input type="checkbox" checked={delivery} onChange={(e) => setDelivery(e.target.checked)} style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
                     Entregador
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={display} onChange={(e) => setDisplay(e.target.checked)} style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
+                    Mostrador
                   </label>
                 </div>
               </div>
@@ -716,6 +737,7 @@ export const UserManagement = () => {
                 <option value="attendant">Balcão</option>
                 <option value="cashier">Caixa</option>
                 <option value="delivery">Entregador</option>
+                <option value="display">Mostrador</option>
                 <option value="none">Nenhuma (-)</option>
               </select>
             </div>
