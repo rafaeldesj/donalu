@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { TrendingUp, Users, DollarSign, ShieldAlert, Cpu, Clock, X, ArrowLeft, AlertCircle, Search, Filter } from 'lucide-react';
 import { collection, query, onSnapshot, orderBy, doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -25,6 +25,7 @@ export const AdminDashboard = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string[]>([]);
   const [isPaymentMenuOpen, setIsPaymentMenuOpen] = useState(false);
+  const paymentFilterRef = useRef<HTMLDivElement>(null);
   const [sortBy, setSortBy] = useState('dateDesc');
   const [visibleCount, setVisibleCount] = useState(10);
 
@@ -136,6 +137,16 @@ export const AdminDashboard = () => {
   };
 
   // Escuta todos os pedidos para calcular métricas reais
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (paymentFilterRef.current && !paymentFilterRef.current.contains(e.target as Node)) {
+        setIsPaymentMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   useEffect(() => {
     const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
     
@@ -763,10 +774,10 @@ export const AdminDashboard = () => {
                 </div>
               </div>
 
-              <div className="input-group" style={{ margin: 0, position: 'relative' }}>
+              <div className="input-group" style={{ margin: 0, position: 'relative' }} ref={paymentFilterRef}>
                 <div 
                   className="input-wrapper" 
-                  style={{ background: 'rgba(255,255,255,0.03)', cursor: 'pointer', padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                  style={{ background: 'rgba(255,255,255,0.03)', cursor: 'pointer', padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', width: 'max-content' }}
                   onClick={() => setIsPaymentMenuOpen(!isPaymentMenuOpen)}
                 >
                   <DollarSign size={16} className="text-secondary" />
