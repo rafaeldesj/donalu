@@ -506,7 +506,7 @@ export const AdminDashboard = () => {
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Por: {order.refundedBy} em {new Date(order.refundedAt || '').toLocaleDateString('pt-BR')}</span>
                     </div>
                   )}
-                  {!order.refunded && order.status === 'cancelled' && (order.mercadoPagoPaymentId || order.mercadoPagoOrderId) && (
+                  {!order.refunded && (order.status === 'cancelled' || (order.status === 'completed' && userData?.role === 'developer')) && (order.mercadoPagoPaymentId || order.mercadoPagoOrderId) && (
                     <div style={{ gridColumn: 'span 2', marginTop: '0.75rem' }}>
                       <button
                         type="button"
