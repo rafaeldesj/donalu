@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import type { OrderItem } from './types/order';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AuthButton } from './components/common/AuthButton';
-import { ShieldCheck, ChefHat, CreditCard, Bell, ShoppingCart, Heart, FileText, Users, Navigation, CheckCircle, Clock, Map, Settings, Menu, ChevronDown, Grid, Boxes, MessageCircle, ShoppingBag, Monitor } from 'lucide-react';
+import { ShieldCheck, ChefHat, CreditCard, Bell, ShoppingCart, Heart, FileText, Users, Navigation, CheckCircle, Clock, Map, Settings, Menu, ChevronDown, Grid, Boxes, MessageCircle, ShoppingBag, Monitor, Star } from 'lucide-react';
 import logoDonalu from './assets/logo_donalu.png';
 import logoDonaluMobile from './assets/logo_donalu_mobile.png';
 import { doc, onSnapshot, collection, query, orderBy, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -20,6 +20,7 @@ import { ClientSupportChat } from './components/ClientSupportChat';
 const ClientDashboard = lazy(() => import('./pages/client/ClientDashboard'));
 const StaffDashboard = lazy(() => import('./pages/staff/StaffDashboard'));
 const AdminDashboard = lazy(() => import('./pages/manager/AdminDashboard'));
+const CustomerReviews = lazy(() => import('./pages/manager/CustomerReviews'));
 const UserManagement = lazy(() => import('./pages/manager/UserManagement'));
 const DeliveryActive = lazy(() => import('./pages/delivery/DeliveryActive'));
 const DeliveryHistory = lazy(() => import('./pages/delivery/DeliveryHistory'));
@@ -745,10 +746,7 @@ const MainLayout = () => {
       menuItems.push({ id: 'cozinha', label: 'Fila Cozinha', icon: ChefHat });
     }
 
-    // Mostrador
-    if (role === 'developer' || role === 'owner' || role === 'manager' || (role === 'staff' && staff?.display)) {
-      menuItems.push({ id: 'mostrador', label: 'Mostrador', icon: Monitor });
-    }
+
 
     // Fila de atendimento (Atendente, admin, owner, dev)
     if (role === 'developer' || role === 'owner' || role === 'manager' || (role === 'staff' && staff?.attendant)) {
@@ -797,6 +795,16 @@ const MainLayout = () => {
       menuItems.push({ id: 'estoque', label: 'Controle de Estoque', icon: Boxes });
     }
 
+    // Mostrador
+    if (role === 'developer' || role === 'owner' || role === 'manager' || (role === 'staff' && staff?.display)) {
+      menuItems.push({ id: 'mostrador', label: 'Mostrador', icon: Monitor });
+    }
+
+    // Avaliações dos Clientes
+    if (role === 'developer' || role === 'owner' || role === 'manager') {
+      menuItems.push({ id: 'avaliacoes', label: 'Avaliações dos clientes', icon: Star });
+    }
+
     // Painel de Atendimento (Suporte & I.A.) — visível a todos, menos clientes e entregadores
     if (role !== 'client' && !(role === 'staff' && staff?.delivery)) {
       menuItems.push({ id: 'painel_atendimento', label: 'Suporte & I.A.', icon: MessageCircle });
@@ -812,7 +820,7 @@ const MainLayout = () => {
     { label: 'Cardápio / Cliente', ids: ['menu', 'tracking', 'fidelidade', 'suporte_virtual'] },
     { label: 'Operações de Venda', ids: ['pdv_vendas'] },
     { label: 'Operações de Entrega', ids: ['entrega_andamento', 'entrega_finalizada', 'teste_mapa'] },
-    { label: 'Painéis de Trabalho', ids: ['cozinha', 'mostrador', 'atendimento', 'caixa', 'mapa_mesas', 'estoque', 'painel_atendimento', 'admin'] },
+    { label: 'Painéis de Trabalho', ids: ['cozinha', 'atendimento', 'caixa', 'mapa_mesas', 'estoque', 'mostrador', 'avaliacoes', 'painel_atendimento', 'admin'] },
     { label: 'Configurações', ids: ['users', 'registros', 'configuracoes'] },
   ];
 const getRoleLabel = (r: string): React.ReactNode => {
@@ -948,6 +956,7 @@ const getRoleLabel = (r: string): React.ReactNode => {
             {activeView === 'fidelidade' && <ClientDashboard showOnly="loyalty" isVisitor={isVisitor} onLoginRequired={() => setIsVisitor(false)} onNavigate={setActiveView} cart={cart} setCart={setCart} storeStatus={storeStatus} />}
             {activeView === 'cozinha' && <StaffDashboard filter="cook" />}
             {activeView === 'mostrador' && <OrderDisplayScreen />}
+            {activeView === 'avaliacoes' && <CustomerReviews />}
             {activeView === 'atendimento' && <StaffDashboard filter="attendant" />}
             {activeView === 'caixa' && <StaffDashboard filter="cashier" />}
             {activeView === 'entrega_andamento' && (
