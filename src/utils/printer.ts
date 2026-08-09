@@ -331,9 +331,8 @@ export function printOrderBrowser(order: OrderDocument, settings: PrinterSetting
       }
 
       const spacerHtml = `
-        <div style="height: 10em; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box;">
-          <div style="width: 100%; border-top: 1px dashed #000;"></div>
-        </div>
+        <div style="width: 100%; border-top: 1px dashed #000; margin: 10px 0;"></div>
+        <br><br><br><br><br><br><br><br><br><br>
       `;
 
       let itemsListHtml = '';
@@ -713,13 +712,15 @@ function encodeEscPos(order: OrderDocument, settings: PrinterSettings, summaryOn
     }
 
     slips.forEach(slip => {
-      // Print 10 lines of space with a dashed line on the 5th line BEFORE each item
-      for (let i = 0; i < 4; i++) {
-        buffer.push(...LINE_FEED);
-      }
+      // Print the cut line, then 10 empty lines BEFORE each item
       const maxChars = settings.paperSize === '80mm' ? 48 : 32;
       buffer.push(...ALIGN_CENTER);
       writeLine('- '.repeat(maxChars / 2).trim());
+      
+      for (let i = 0; i < 10; i++) {
+        buffer.push(...LINE_FEED);
+      }
+      
       buffer.push(...ALIGN_LEFT, ...BOLD_ON);
 
       writeLine('='.repeat(maxChars));
