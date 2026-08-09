@@ -3,7 +3,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import type { OrderDocument } from '../../types/order';
 import { Maximize, Minimize } from 'lucide-react';
-
+import logoMobile from '../../assets/logo_donalu_mobile.png';
 const OrderDisplayScreen: React.FC = () => {
   const [preparingOrders, setPreparingOrders] = useState<OrderDocument[]>([]);
   const [readyOrders, setReadyOrders] = useState<OrderDocument[]>([]);
@@ -116,6 +116,28 @@ const OrderDisplayScreen: React.FC = () => {
           ERRO: {errorMsg}
         </div>
       )}
+
+      {/* Imagem Central no Header */}
+      <div style={{
+        position: 'absolute',
+        top: '0.8rem',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 10,
+        backgroundColor: '#fff',
+        borderRadius: '50%',
+        padding: '0.5rem',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <img 
+          src={logoMobile} 
+          alt="Logo Dona Lu" 
+          style={{ width: '4vw', height: '4vw', minWidth: '50px', minHeight: '50px', objectFit: 'contain' }} 
+        />
+      </div>
 
       {/* Lado Esquerdo - Preparando */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: '4px solid #ddd' }}>
