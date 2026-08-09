@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { ShoppingCart, MapPin, Plus, Minus, Trash2, Edit2, Check, X, Upload, Camera, QrCode, CreditCard } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
@@ -199,13 +199,13 @@ export const ClientDashboard = ({
 }: ClientDashboardProps) => {
   const authContext = useAuth();
   
-  const user = isPdvMode && pdvClientOverride 
+  const user = useMemo(() => isPdvMode && pdvClientOverride 
     ? { ...authContext.user, uid: pdvClientOverride.uid, email: 'pdv@donalu.com', displayName: pdvClientOverride.name } 
-    : authContext.user;
+    : authContext.user, [isPdvMode, pdvClientOverride, authContext.user]);
     
-  const userData = isPdvMode && pdvClientOverride 
+  const userData = useMemo(() => isPdvMode && pdvClientOverride 
     ? { ...authContext.userData, uid: pdvClientOverride.uid, name: pdvClientOverride.name, role: 'client', phoneNumber: pdvClientOverride.phoneNumber } 
-    : authContext.userData;
+    : authContext.userData, [isPdvMode, pdvClientOverride, authContext.userData]);
     
   const updatePhoneNumber = authContext.updatePhoneNumber;
 

@@ -332,7 +332,6 @@ export function printOrderBrowser(order: OrderDocument, settings: PrinterSetting
 
       const spacerHtml = `
         <div style="width: 100%; border-top: 1px dashed #000; margin: 10px 0;"></div>
-        <br><br><br><br><br><br><br><br><br><br>
       `;
 
       let itemsListHtml = '';
@@ -348,6 +347,7 @@ export function printOrderBrowser(order: OrderDocument, settings: PrinterSetting
         ${spacerHtml}
         <div style="font-family: Arial, Helvetica, sans-serif; font-size: 12px; font-weight: 600;">
           <div class="bold">================================</div>
+          <br><br><br><br><br><br><br><br><br><br>
           <div><strong>PEDIDO:</strong> ${seq}</div>
           <div><strong>CLIENTE:</strong> ${order.clientName}</div>
           ${order.clientPhone ? `<div><strong>TEL:</strong> ${order.clientPhone}</div>` : ''}
@@ -712,18 +712,17 @@ function encodeEscPos(order: OrderDocument, settings: PrinterSettings, summaryOn
     }
 
     slips.forEach(slip => {
-      // Print the cut line, then 10 empty lines BEFORE each item
       const maxChars = settings.paperSize === '80mm' ? 48 : 32;
       buffer.push(...ALIGN_CENTER);
       writeLine('- '.repeat(maxChars / 2).trim());
       
+      buffer.push(...ALIGN_LEFT, ...BOLD_ON);
+
+      writeLine('='.repeat(maxChars));
       for (let i = 0; i < 10; i++) {
         buffer.push(...LINE_FEED);
       }
       
-      buffer.push(...ALIGN_LEFT, ...BOLD_ON);
-
-      writeLine('='.repeat(maxChars));
       writeLine(`PEDIDO: ${seq}`);
       writeLine(`CLIENTE: ${order.clientName}`);
       if (order.clientPhone) {
