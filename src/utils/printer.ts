@@ -271,12 +271,24 @@ export function printOrderBrowser(order: OrderDocument, settings: PrinterSetting
       </div>
     `;
 
-    if (item.withCatupiry || item.cheeseOption || item.withBorda || (item.ingredients && item.ingredients.length > 0)) {
+    if (item.withCatupiry || item.cheeseOption || item.withBorda || item.bordaType || item.sweetChocolateOption || item.sweetCheeseOption || (item.ingredients && item.ingredients.length > 0)) {
       itemsHtml += `<div class="item-details">`;
       if (item.cheeseOption === 'catupiry' || item.withCatupiry) itemsHtml += `<div>+ Catupiry</div>`;
       else if (item.cheeseOption === 'cheddar') itemsHtml += `<div>+ Cheddar</div>`;
       else if (item.cheeseOption === 'cream_cheese') itemsHtml += `<div>+ Cream Cheese</div>`;
-      if (item.withBorda) itemsHtml += `<div>+ Borda Recheada</div>`;
+
+      if (item.sweetChocolateOption === 'preto') itemsHtml += `<div>+ Chocolate Preto</div>`;
+      else if (item.sweetChocolateOption === 'branco') itemsHtml += `<div>+ Chocolate Branco</div>`;
+
+      if (item.sweetCheeseOption === 'minas') itemsHtml += `<div>+ Queijo Minas</div>`;
+      else if (item.sweetCheeseOption === 'mussarela') itemsHtml += `<div>+ Queijo Mussarela</div>`;
+
+      if (item.bordaType === 'queijo' || item.withBorda) itemsHtml += `<div>+ Borda de Queijo</div>`;
+      else if (item.bordaType === 'kitkat_preto') itemsHtml += `<div>+ Borda Kit-Kat Preto</div>`;
+      else if (item.bordaType === 'kitkat_branco') itemsHtml += `<div>+ Borda Kit-Kat Branco</div>`;
+      else if (item.bordaType === 'kitkat') itemsHtml += `<div>+ Borda Kit-Kat</div>`;
+      else if (item.bordaType === 'sem_borda') itemsHtml += `<div>+ Sem Borda</div>`;
+
       if (item.ingredients && item.ingredients.length > 0) {
         itemsHtml += `<div>Adicionais/Ingr: ${item.ingredients.join(', ')}</div>`;
       }
@@ -653,8 +665,23 @@ function encodeEscPos(order: OrderDocument, settings: PrinterSettings, summaryOn
     } else if (item.cheeseOption === 'cream_cheese') {
       writeLine('  + Cream Cheese');
     }
-    if (item.withBorda) {
-      writeLine('  + Borda Recheada');
+
+    if (item.sweetChocolateOption === 'preto') writeLine('  + Chocolate Preto');
+    else if (item.sweetChocolateOption === 'branco') writeLine('  + Chocolate Branco');
+
+    if (item.sweetCheeseOption === 'minas') writeLine('  + Queijo Minas');
+    else if (item.sweetCheeseOption === 'mussarela') writeLine('  + Queijo Mussarela');
+
+    if (item.bordaType === 'queijo' || item.withBorda) {
+      writeLine('  + Borda de Queijo');
+    } else if (item.bordaType === 'kitkat_preto') {
+      writeLine('  + Borda Kit-Kat Preto');
+    } else if (item.bordaType === 'kitkat_branco') {
+      writeLine('  + Borda Kit-Kat Branco');
+    } else if (item.bordaType === 'kitkat') {
+      writeLine('  + Borda Kit-Kat');
+    } else if (item.bordaType === 'sem_borda') {
+      writeLine('  + Sem Borda');
     }
     if (item.ingredients && item.ingredients.length > 0) {
       writeLine(`  Ingr: ${item.ingredients.join(', ')}`);
@@ -920,12 +947,24 @@ export async function printTableBill(tableNum: string, ordersList: OrderDocument
             <span>R$ ${((item.price ?? 0) * item.quantity).toFixed(2).replace('.', ',')}</span>
           </div>
         `;
-        if (item.withCatupiry || item.cheeseOption || item.withBorda || (item.ingredients && item.ingredients.length > 0)) {
+        if (item.withCatupiry || item.cheeseOption || item.withBorda || item.bordaType || item.sweetChocolateOption || item.sweetCheeseOption || (item.ingredients && item.ingredients.length > 0)) {
           let details = [];
           if (item.cheeseOption === 'catupiry' || item.withCatupiry) details.push('+ Catupiry');
           else if (item.cheeseOption === 'cheddar') details.push('+ Cheddar');
           else if (item.cheeseOption === 'cream_cheese') details.push('+ Cream Cheese');
-          if (item.withBorda) details.push('+ Borda Recheada');
+
+          if (item.sweetChocolateOption === 'preto') details.push('+ Chocolate Preto');
+          else if (item.sweetChocolateOption === 'branco') details.push('+ Chocolate Branco');
+
+          if (item.sweetCheeseOption === 'minas') details.push('+ Queijo Minas');
+          else if (item.sweetCheeseOption === 'mussarela') details.push('+ Queijo Mussarela');
+
+          if (item.bordaType === 'queijo' || item.withBorda) details.push('+ Borda de Queijo');
+          else if (item.bordaType === 'kitkat_preto') details.push('+ Borda Kit-Kat Preto');
+          else if (item.bordaType === 'kitkat_branco') details.push('+ Borda Kit-Kat Branco');
+          else if (item.bordaType === 'kitkat') details.push('+ Borda Kit-Kat');
+          else if (item.bordaType === 'sem_borda') details.push('+ Sem Borda');
+
           if (item.ingredients && item.ingredients.length > 0) details.push(`Ingr: ${item.ingredients.join(', ')}`);
           itemsHtml += `<div style="font-size: 10px; font-weight: bold; margin-left: 10px; margin-bottom: 4px;">${details.join(' | ')}</div>`;
         }

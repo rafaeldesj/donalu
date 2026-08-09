@@ -1609,6 +1609,7 @@ export const ClientDashboard = ({
           else if (item.bordaType === 'kitkat_preto') details.push('Borda de Kit-Kat Preto');
           else if (item.bordaType === 'kitkat_branco') details.push('Borda de Kit-Kat Branco');
           else if (item.bordaType === 'kitkat') details.push('Borda de Kit-Kat');
+          else if (item.bordaType === 'sem_borda') details.push('Sem Borda');
           if (item.ingredients && item.ingredients.length > 0) {
             details.push(`Adicionais: ${item.ingredients.join(', ')}`);
           }
@@ -1818,6 +1819,7 @@ export const ClientDashboard = ({
                 else if (item.bordaType === 'kitkat_preto') details.push('Borda de Kit-Kat Preto');
                 else if (item.bordaType === 'kitkat_branco') details.push('Borda de Kit-Kat Branco');
                 else if (item.bordaType === 'kitkat') details.push('Borda de Kit-Kat');
+                else if (item.bordaType === 'sem_borda') details.push('Sem Borda');
                 if (item.ingredients && item.ingredients.length > 0) {
                   details.push(`Adicionais: ${item.ingredients.join(', ')}`);
                 }
@@ -1965,6 +1967,7 @@ export const ClientDashboard = ({
             else if (item.bordaType === 'kitkat_preto') details.push('Borda de Kit-Kat Preto');
             else if (item.bordaType === 'kitkat_branco') details.push('Borda de Kit-Kat Branco');
             else if (item.bordaType === 'kitkat') details.push('Borda de Kit-Kat');
+            else if (item.bordaType === 'sem_borda') details.push('Sem Borda');
             if (item.ingredients && item.ingredients.length > 0) {
               details.push(`Adicionais: ${item.ingredients.join(', ')}`);
             }
@@ -2371,6 +2374,7 @@ export const ClientDashboard = ({
                 else if (item.bordaType === 'kitkat_preto') details.push('Borda de Kit-Kat Preto');
                 else if (item.bordaType === 'kitkat_branco') details.push('Borda de Kit-Kat Branco');
                 else if (item.bordaType === 'kitkat') details.push('Borda de Kit-Kat');
+                else if (item.bordaType === 'sem_borda') details.push('Sem Borda');
                 if (item.ingredients && item.ingredients.length > 0) {
                   details.push(`Adicionais: ${item.ingredients.join(', ')}`);
                 }
@@ -2529,6 +2533,7 @@ export const ClientDashboard = ({
             if (item.bordaType === 'queijo' || item.withBorda) details.push('Borda de Queijo');
             else if (item.bordaType === 'kitkat_preto') details.push('Borda de Kit-Kat Chocolate Preto');
             else if (item.bordaType === 'kitkat_branco') details.push('Borda de Kit-Kat Chocolate Branco');
+            else if (item.bordaType === 'sem_borda') details.push('Sem Borda');
             if (item.ingredients && item.ingredients.length > 0) {
               details.push(`Adicionais: ${item.ingredients.join(', ')}`);
             }
@@ -2542,6 +2547,7 @@ export const ClientDashboard = ({
             else if (item.bordaType === 'kitkat_preto') details.push('Borda de Kit-Kat Preto');
             else if (item.bordaType === 'kitkat_branco') details.push('Borda de Kit-Kat Branco');
             else if (item.bordaType === 'kitkat') details.push('Borda de Kit-Kat');
+            else if (item.bordaType === 'sem_borda') details.push('Sem Borda');
             if (item.ingredients && item.ingredients.length > 0) {
               details.push(`Adicionais: ${item.ingredients.join(', ')}`);
             }
