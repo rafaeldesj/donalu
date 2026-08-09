@@ -9,7 +9,7 @@ export interface OrderItem {
   size?: 'grande' | 'kids';
   withCatupiry?: boolean;
   withBorda?: boolean;
-  bordaType?: 'queijo' | 'kitkat_preto' | 'kitkat_branco' | 'kitkat' | null;
+  bordaType?: 'queijo' | 'kitkat_preto' | 'kitkat_branco' | 'kitkat' | 'sem_borda' | null;
   cheeseOption?: 'catupiry' | 'cheddar' | 'cream_cheese' | null;
   sweetChocolateOption?: 'preto' | 'branco' | null;
   sweetCheeseOption?: 'minas' | 'mussarela' | null;
