@@ -474,9 +474,15 @@ export function printOrderBrowser(order: OrderDocument, settings: PrinterSetting
         </div>
         <div class="divider">${dividerLine}</div>
 
-        <div class="center footer">
+        <div class="center footer" style="margin-top: 15px; line-height: 1.4;">
+          <div>donalu.web.app</div>
+          <div style="margin: 4px 0;"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAAAAAklEQVR4AewaftIAAANhSURBVO3BUU4sSRAEQfdU3//KsXyWSmiKnqWBl0oz84HRVjFaK0ZrxWitGK1dfELltyThLpWTJOxUTpJwl8pvScKqGK0Vo7VitHbxBUl4isorKrskPCEJJyqrJJwk4SkqrxSjtWK0VozWitHaxZtU7krCE5LwjiScqDxB5a4k3FWM1orRWjFau/gHqdyVhJ3KSRJWKv+SYrRWjNaK0VoxWrv445JworJLwl1J6KYYrRWjtWK0dvGmJPwWlbtUTlR2SXhCEn5CMVorRmvFaK0YrV18gcpvUdklYaXyjiSsVJ6g8luK0VoxWitGa+YDf5jKSRJ2KqskvEPllST8ZcVorRitFaO1i0+orJLwFJVVEk6ScJfKE1ROknCi8o4kvFKM1orRWjFaK0Zr5gPfQOUkCScq3yEJd6mcJOEulack4ZVitFaM1orR2sUnVH6KyitJ+ClJ2Km8orJLwioJJyq7JKxUdiqrJKyK0VoxWitGa8Vo7eILkrBTWSVhp7JS2SVhpbJSOUnCTuUkCSuVE5W7VHZJuCsJO5VXitFaMVorRmvmAwcqPyUJd6nskvAElVUSdionSfgOKqskrIrRWjFaK0ZrxWjt4hMqdyVhp3KShFdUdklYJeFEZZeElcpJEk6SsFL5Diq7JLxSjNaK0VoxWjMf2KiskvAUlVeSsFM5ScJ3ULkrCSuVdyRhpXKShFUxWitGa8VorRitXXwTlXckYaWyUtklYaVyorJLwkpll4QnJGGlslNZJWGn8koxWitGa8Vo7eJNKqsknKjsVFZJ+CkqJypPUFklYadykoRXitFaMVorRmvmA3+Yyi4JT1C5KwnvUFkl4QnFaK0YrRWjtWK0dvEJld+ShFUSvoPKO5KwUjlRWSXhKSqrJKyK0VoxWitGaxdfkISnqNylclcS3qFyVxJ+ShJeKUZrxWitGK0Vo7WLN6nclYTvkISVym9ReYrKXUlYFaO1YrRWjNYu/kEqJ0lYqbwjCSuVu5LwjiSsVO4qRmvFaK0YrRWjtYt/UBLuSsJO5f9KwndQOUnCTuWVYrRWjNaK0drFm5LwW1ROkrBSOUnCd1C5KwlPKEZrxWitGK0Vo7WLL1D5LSq7JJyo/BVJOFHZJeH/KkZrxWitGK2ZD4y2itFaMVorRmv/AQ1+Xh3q4NYlAAAAAElFTkSuQmCC" width="100" /></div>
+          <br>
           <div>Obrigado pela preferência!</div>
           <div class="bold">Dona Lu - Feito com Amor</div>
+          <br>
+          <div style="font-weight: bold;">Desenvolvedor Responsável</div>
+          <div style="font-weight: bold;">Rafael Jorge (21) 99565-5031 WPP</div>
         </div>
 
         <!-- Cupons Individuais de Cozinha -->
