@@ -120,7 +120,7 @@ const OrderDisplayScreen: React.FC = () => {
       {/* Imagem Central no Header */}
       <div style={{
         position: 'absolute',
-        top: '0.8rem',
+        top: '0.5rem',
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 10,
@@ -132,12 +132,13 @@ const OrderDisplayScreen: React.FC = () => {
           src={logoMobile} 
           alt="Logo Dona Lu" 
           style={{ 
-            width: '6vw', 
-            height: '6vw', 
-            minWidth: '70px', 
-            minHeight: '70px', 
+            width: '8vw', 
+            height: '8vw', 
+            minWidth: '100px', 
+            minHeight: '100px', 
             objectFit: 'contain',
-            filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.2))'
+            borderRadius: '50%',
+            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.4))'
           }} 
         />
       </div>
