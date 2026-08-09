@@ -333,7 +333,10 @@ export const ClientDashboard = ({
   // States para customização de pastel antes de adicionar ao carrinho
   const [customizingPastel, setCustomizingPastel] = useState<any | null>(null);
   const [tempWithBorda, setTempWithBorda] = useState(false);
+  const [tempBordaType, setTempBordaType] = useState<'queijo' | 'kitkat_preto' | 'kitkat_branco' | 'kitkat' | null>(null);
   const [tempCheeseOption, setTempCheeseOption] = useState<'catupiry' | 'cheddar' | 'cream_cheese' | null>(null);
+  const [tempSweetChocolateOption, setTempSweetChocolateOption] = useState<'preto' | 'branco' | null>(null);
+  const [tempSweetCheeseOption, setTempSweetCheeseOption] = useState<'minas' | 'mussarela' | null>(null);
   const [tempIngredients, setTempIngredients] = useState<string[]>([]);
   const [tempPastelSize, setTempPastelSize] = useState<'grande' | 'kids'>('grande');
   
@@ -1357,8 +1360,11 @@ export const ClientDashboard = ({
     // Se for pastel (doce ou salgado), abre a janela sobreposta de opcionais/adicionais
     if (item.category === 'Pastéis Doces' || item.category === 'Pastéis Salgados') {
       setCustomizingPastel(item);
+      setTempBordaType(null);
       setTempWithBorda(false);
       setTempCheeseOption(null);
+      setTempSweetChocolateOption(null);
+      setTempSweetCheeseOption(null);
       setTempIngredients([]);
       setTempPastelSize('grande');
       return;
@@ -1415,14 +1421,31 @@ export const ClientDashboard = ({
     } : item));
   };
 
+  const setCartItemBordaType = (idx: number, bordaType: 'queijo' | 'kitkat_preto' | 'kitkat_branco' | 'kitkat' | null) => {
+    setCart((prevCart) => prevCart.map((item, i) => i === idx ? {
+      ...item,
+      bordaType,
+      withBorda: bordaType === 'queijo' || (bordaType === 'kitkat' && item.category === 'Pastéis Doces')
+    } : item));
+  };
+
+  const setCartItemSweetChocolateOption = (idx: number, opt: 'preto' | 'branco' | null) => {
+    setCart((prevCart) => prevCart.map((item, i) => i === idx ? { ...item, sweetChocolateOption: opt } : item));
+  };
+
+  const setCartItemSweetCheeseOption = (idx: number, opt: 'minas' | 'mussarela' | null) => {
+    setCart((prevCart) => prevCart.map((item, i) => i === idx ? { ...item, sweetCheeseOption: opt } : item));
+  };
+
   const toggleCartItemIngredient = (idx: number, ing: string) => {
     setCart((prevCart) => prevCart.map((item, i) => {
       if (i !== idx) return item;
       const currentIngredients = item.ingredients || [];
+      const limit = item.category === 'Pastéis Doces' ? 3 : (storeConfig?.maxIngredientsLimit !== undefined ? storeConfig.maxIngredientsLimit : 5);
       let newIngs = [...currentIngredients];
       if (newIngs.includes(ing)) {
         newIngs = newIngs.filter(x => x !== ing);
-      } else if (newIngs.length < 5) {
+      } else if (newIngs.length < limit) {
         newIngs.push(ing);
       }
       return { ...item, ingredients: newIngs };
@@ -1578,7 +1601,17 @@ export const ClientDashboard = ({
           }
         }
         if (item.category === 'Pastéis Doces') {
-          if (item.withBorda) details.push('Borda de Kit-Kat');
+          if (item.sweetChocolateOption === 'preto') details.push('Chocolate Preto');
+          else if (item.sweetChocolateOption === 'branco') details.push('Chocolate Branco');
+          if (item.sweetCheeseOption === 'minas') details.push('Queijo Minas');
+          else if (item.sweetCheeseOption === 'mussarela') details.push('Queijo Mussarela');
+          if (item.bordaType === 'queijo' || item.withBorda) details.push('Borda de Queijo');
+          else if (item.bordaType === 'kitkat_preto') details.push('Borda de Kit-Kat Preto');
+          else if (item.bordaType === 'kitkat_branco') details.push('Borda de Kit-Kat Branco');
+          else if (item.bordaType === 'kitkat') details.push('Borda de Kit-Kat');
+          if (item.ingredients && item.ingredients.length > 0) {
+            details.push(`Adicionais: ${item.ingredients.join(', ')}`);
+          }
         }
         if (details.length > 0) {
           customSuffix = ` (${details.join(' + ')})`;
@@ -1777,7 +1810,17 @@ export const ClientDashboard = ({
                 }
               }
               if (item.category === 'Pastéis Doces') {
-                if (item.withBorda) details.push('Borda de Kit-Kat');
+                if (item.sweetChocolateOption === 'preto') details.push('Chocolate Preto');
+                else if (item.sweetChocolateOption === 'branco') details.push('Chocolate Branco');
+                if (item.sweetCheeseOption === 'minas') details.push('Queijo Minas');
+                else if (item.sweetCheeseOption === 'mussarela') details.push('Queijo Mussarela');
+                if (item.bordaType === 'queijo' || item.withBorda) details.push('Borda de Queijo');
+                else if (item.bordaType === 'kitkat_preto') details.push('Borda de Kit-Kat Preto');
+                else if (item.bordaType === 'kitkat_branco') details.push('Borda de Kit-Kat Branco');
+                else if (item.bordaType === 'kitkat') details.push('Borda de Kit-Kat');
+                if (item.ingredients && item.ingredients.length > 0) {
+                  details.push(`Adicionais: ${item.ingredients.join(', ')}`);
+                }
               }
               if (details.length > 0) {
                 customSuffix = ` (${details.join(' + ')})`;
@@ -1914,7 +1957,17 @@ export const ClientDashboard = ({
             }
           }
           if (item.category === 'Pastéis Doces') {
-            if (item.withBorda) details.push('Borda de Kit-Kat');
+            if (item.sweetChocolateOption === 'preto') details.push('Chocolate Preto');
+            else if (item.sweetChocolateOption === 'branco') details.push('Chocolate Branco');
+            if (item.sweetCheeseOption === 'minas') details.push('Queijo Minas');
+            else if (item.sweetCheeseOption === 'mussarela') details.push('Queijo Mussarela');
+            if (item.bordaType === 'queijo' || item.withBorda) details.push('Borda de Queijo');
+            else if (item.bordaType === 'kitkat_preto') details.push('Borda de Kit-Kat Preto');
+            else if (item.bordaType === 'kitkat_branco') details.push('Borda de Kit-Kat Branco');
+            else if (item.bordaType === 'kitkat') details.push('Borda de Kit-Kat');
+            if (item.ingredients && item.ingredients.length > 0) {
+              details.push(`Adicionais: ${item.ingredients.join(', ')}`);
+            }
           }
           if (details.length > 0) {
             customSuffix = ` (${details.join(' + ')})`;
@@ -2310,7 +2363,17 @@ export const ClientDashboard = ({
                   details.push(`Adicionais: ${item.ingredients.join(', ')}`);
               }
               if (item.category === 'Pastéis Doces') {
-                if (item.withBorda) details.push('Borda de Kit-Kat');
+                if (item.sweetChocolateOption === 'preto') details.push('Chocolate Preto');
+                else if (item.sweetChocolateOption === 'branco') details.push('Chocolate Branco');
+                if (item.sweetCheeseOption === 'minas') details.push('Queijo Minas');
+                else if (item.sweetCheeseOption === 'mussarela') details.push('Queijo Mussarela');
+                if (item.bordaType === 'queijo' || item.withBorda) details.push('Borda de Queijo');
+                else if (item.bordaType === 'kitkat_preto') details.push('Borda de Kit-Kat Preto');
+                else if (item.bordaType === 'kitkat_branco') details.push('Borda de Kit-Kat Branco');
+                else if (item.bordaType === 'kitkat') details.push('Borda de Kit-Kat');
+                if (item.ingredients && item.ingredients.length > 0) {
+                  details.push(`Adicionais: ${item.ingredients.join(', ')}`);
+                }
               }
               if (details.length > 0) customSuffix = ` (${details.join(' + ')})`;
               return {
@@ -2463,13 +2526,25 @@ export const ClientDashboard = ({
             if (item.cheeseOption === 'catupiry' || item.withCatupiry) details.push('Catupiry');
             else if (item.cheeseOption === 'cheddar') details.push('Cheddar');
             else if (item.cheeseOption === 'cream_cheese') details.push('Cream Cheese');
-            if (item.withBorda) details.push('Borda de Queijo');
+            if (item.bordaType === 'queijo' || item.withBorda) details.push('Borda de Queijo');
+            else if (item.bordaType === 'kitkat_preto') details.push('Borda de Kit-Kat Chocolate Preto');
+            else if (item.bordaType === 'kitkat_branco') details.push('Borda de Kit-Kat Chocolate Branco');
             if (item.ingredients && item.ingredients.length > 0) {
               details.push(`Adicionais: ${item.ingredients.join(', ')}`);
             }
           }
           if (item.category === 'Pastéis Doces') {
-            if (item.withBorda) details.push('Borda de Kit-Kat');
+            if (item.sweetChocolateOption === 'preto') details.push('Chocolate Preto');
+            else if (item.sweetChocolateOption === 'branco') details.push('Chocolate Branco');
+            if (item.sweetCheeseOption === 'minas') details.push('Queijo Minas');
+            else if (item.sweetCheeseOption === 'mussarela') details.push('Queijo Mussarela');
+            if (item.bordaType === 'queijo' || item.withBorda) details.push('Borda de Queijo');
+            else if (item.bordaType === 'kitkat_preto') details.push('Borda de Kit-Kat Preto');
+            else if (item.bordaType === 'kitkat_branco') details.push('Borda de Kit-Kat Branco');
+            else if (item.bordaType === 'kitkat') details.push('Borda de Kit-Kat');
+            if (item.ingredients && item.ingredients.length > 0) {
+              details.push(`Adicionais: ${item.ingredients.join(', ')}`);
+            }
           }
           if (details.length > 0) {
             customSuffix = ` (${details.join(' + ')})`;
@@ -3288,7 +3363,7 @@ export const ClientDashboard = ({
                               <span>·</span>
                               <span>Catupiry: {item.withCatupiry ? 'Sim ✅' : 'Não ❌'}</span>
                               <span>·</span>
-                              <span>Borda: {item.withBorda ? 'Sim ✅' : 'Não ❌'}</span>
+                              <span>Borda: {item.bordaType === 'queijo' ? 'Queijo' : item.bordaType === 'kitkat_preto' ? 'Kit-Kat Preto' : item.bordaType === 'kitkat_branco' ? 'Kit-Kat Branco' : (item.withBorda ? 'Sim ✅' : 'Não ❌')}</span>
                               {item.ingredients && item.ingredients.length > 0 && (
                                 <>
                                   <span>·</span>
@@ -3300,7 +3375,17 @@ export const ClientDashboard = ({
                           {item.category === 'Pastéis Doces' && (
                             <>
                               <span>·</span>
-                              <span>Borda Kit-Kat: {item.withBorda ? 'Sim ✅' : 'Não ❌'}</span>
+                              <span>Chocolate: {item.sweetChocolateOption === 'preto' ? 'Preto' : item.sweetChocolateOption === 'branco' ? 'Branco' : 'Não'}</span>
+                              <span>·</span>
+                              <span>Queijo: {item.sweetCheeseOption === 'minas' ? 'Minas' : item.sweetCheeseOption === 'mussarela' ? 'Mussarela' : 'Não'}</span>
+                              <span>·</span>
+                              <span>Borda: {item.bordaType === 'queijo' ? 'Queijo' : item.bordaType === 'kitkat_preto' ? 'Kit-Kat Preto' : item.bordaType === 'kitkat_branco' ? 'Kit-Kat Branco' : (item.bordaType === 'kitkat' || item.withBorda ? 'Kit-Kat' : 'Não ❌')}</span>
+                              {item.ingredients && item.ingredients.length > 0 && (
+                                <>
+                                  <span>·</span>
+                                  <span>Adicionais: {item.ingredients.join(', ')}</span>
+                                </>
+                              )}
                             </>
                           )}
                         </div>
@@ -4301,17 +4386,98 @@ export const ClientDashboard = ({
                     {/* Checkboxes de Customização do item doce no resumo do pedido */}
                     {item.category === 'Pastéis Doces' && (
                       <div className="pastel-customization-box" style={{ maxWidth: '100%', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', marginTop: '0.2rem', padding: '0.35rem 0.45rem' }}>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.4rem' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.4rem', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '0.15rem' }}>
                           <strong style={{ fontSize: '0.68rem', color: 'var(--primary-gold)' }}>Opcionais:</strong>
                           <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.68rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
                             <input
                               type="checkbox"
-                              checked={!!item.withBorda}
-                              onChange={() => toggleCartItemCustom(idx, 'withBorda')}
+                              checked={item.sweetChocolateOption === 'preto'}
+                              onChange={(e) => setCartItemSweetChocolateOption(idx, e.target.checked ? 'preto' : null)}
                               style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '11px', height: '11px' }}
                             />
-                            Borda de Kit-Kat
+                            Choc. Preto
                           </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.68rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
+                            <input
+                              type="checkbox"
+                              checked={item.sweetChocolateOption === 'branco'}
+                              onChange={(e) => setCartItemSweetChocolateOption(idx, e.target.checked ? 'branco' : null)}
+                              style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '11px', height: '11px' }}
+                            />
+                            Choc. Branco
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.68rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
+                            <input
+                              type="checkbox"
+                              checked={item.sweetCheeseOption === 'minas'}
+                              onChange={(e) => setCartItemSweetCheeseOption(idx, e.target.checked ? 'minas' : null)}
+                              style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '11px', height: '11px' }}
+                            />
+                            Q. Minas
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.68rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
+                            <input
+                              type="checkbox"
+                              checked={item.sweetCheeseOption === 'mussarela'}
+                              onChange={(e) => setCartItemSweetCheeseOption(idx, e.target.checked ? 'mussarela' : null)}
+                              style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '11px', height: '11px' }}
+                            />
+                            Q. Mussarela
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.68rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
+                            <input
+                              type="checkbox"
+                              checked={item.bordaType === 'queijo' || !!item.withBorda}
+                              onChange={(e) => setCartItemBordaType(idx, e.target.checked ? 'queijo' : null)}
+                              style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '11px', height: '11px' }}
+                            />
+                            B. Queijo
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.68rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
+                            <input
+                              type="checkbox"
+                              checked={item.bordaType === 'kitkat_preto'}
+                              onChange={(e) => setCartItemBordaType(idx, e.target.checked ? 'kitkat_preto' : null)}
+                              style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '11px', height: '11px' }}
+                            />
+                            B. Kit-Kat Preto
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.68rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
+                            <input
+                              type="checkbox"
+                              checked={item.bordaType === 'kitkat_branco'}
+                              onChange={(e) => setCartItemBordaType(idx, e.target.checked ? 'kitkat_branco' : null)}
+                              style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '11px', height: '11px' }}
+                            />
+                            B. Kit-Kat Branco
+                          </label>
+                        </div>
+                        
+                        {/* Adicionais Doces */}
+                        <div style={{ marginTop: '0.4rem' }}>
+                          <strong style={{ fontSize: '0.68rem', color: 'var(--primary-gold)', display: 'block', marginBottom: '0.1rem' }}>
+                            Adicionais (Escolha até 3):
+                          </strong>
+                          <div className="pastel-ingredients-grid">
+                            {(['Tira de KitKat Preto', 'Tira de KitKat Branco', 'Doce de Leite', 'M&M\'s', 'Morango', 'Leite Ninho', 'Nutella', 'Canela', 'Açúcar']).map((ing: string) => {
+                              const itemIngredients = item.ingredients || [];
+                              const isChecked = itemIngredients.includes(ing);
+                              const maxLimit = 3;
+                              const isDisabled = !isChecked && itemIngredients.length >= maxLimit;
+                              return (
+                                <label key={ing} style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.68rem', color: isDisabled ? '#4b5563' : '#fff', cursor: isDisabled ? 'not-allowed' : 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    disabled={isDisabled}
+                                    onChange={() => toggleCartItemIngredient(idx, ing)}
+                                    style={{ accentColor: 'var(--primary-gold)', cursor: isDisabled ? 'not-allowed' : 'pointer', width: '11px', height: '11px' }}
+                                  />
+                                  {ing}
+                                </label>
+                              );
+                            })}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -4334,11 +4500,29 @@ export const ClientDashboard = ({
                           <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.68rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
                             <input
                               type="checkbox"
-                              checked={!!item.withBorda}
-                              onChange={() => toggleCartItemCustom(idx, 'withBorda')}
+                              checked={item.bordaType === 'queijo' || !!item.withBorda}
+                              onChange={(e) => setCartItemBordaType(idx, e.target.checked ? 'queijo' : null)}
                               style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '11px', height: '11px' }}
                             />
                             Borda de Queijo
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.68rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
+                            <input
+                              type="checkbox"
+                              checked={item.bordaType === 'kitkat_preto'}
+                              onChange={(e) => setCartItemBordaType(idx, e.target.checked ? 'kitkat_preto' : null)}
+                              style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '11px', height: '11px' }}
+                            />
+                            Borda de Kit-Kat Preto
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.68rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
+                            <input
+                              type="checkbox"
+                              checked={item.bordaType === 'kitkat_branco'}
+                              onChange={(e) => setCartItemBordaType(idx, e.target.checked ? 'kitkat_branco' : null)}
+                              style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '11px', height: '11px' }}
+                            />
+                            Borda de Kit-Kat Branco
                           </label>
                         </div>
 
@@ -5723,6 +5907,7 @@ export const ClientDashboard = ({
                     onChange={() => {
                       setTempPastelSize('kids');
                       setTempWithBorda(false);
+                      setTempBordaType(null);
                     }}
                     style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '16px', height: '16px' }}
                   />
@@ -5759,17 +5944,47 @@ export const ClientDashboard = ({
 
             {/* Corpo / Opções */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {/* Borda de Queijo — acima dos opcionais */}
-              {customizingPastel.category === 'Pastéis Salgados' && tempPastelSize !== 'kids' && (
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
+              {/* Borda de Queijo/Kit-Kat — acima dos opcionais */}
+              {(customizingPastel.category === 'Pastéis Salgados' || customizingPastel.category === 'Pastéis Doces') && tempPastelSize !== 'kids' && (
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
                     <input
                       type="checkbox"
-                      checked={tempWithBorda}
-                      onChange={(e) => setTempWithBorda(e.target.checked)}
+                      checked={tempBordaType === 'queijo' || tempWithBorda}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setTempBordaType(checked ? 'queijo' : null);
+                        setTempWithBorda(checked);
+                      }}
                       style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '16px', height: '16px' }}
                     />
                     <span>🧀 Borda de Queijo <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>(Sem custo adicional)</span></span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
+                    <input
+                      type="checkbox"
+                      checked={tempBordaType === 'kitkat_preto'}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setTempBordaType(checked ? 'kitkat_preto' : null);
+                        setTempWithBorda(false);
+                      }}
+                      style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '16px', height: '16px' }}
+                    />
+                    <span>🍫 Borda de Kit-Kat Chocolate Preto <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>(Sem custo adicional)</span></span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
+                    <input
+                      type="checkbox"
+                      checked={tempBordaType === 'kitkat_branco'}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setTempBordaType(checked ? 'kitkat_branco' : null);
+                        setTempWithBorda(false);
+                      }}
+                      style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '16px', height: '16px' }}
+                    />
+                    <span>🍫 Borda de Kit-Kat Chocolate Branco <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>(Sem custo adicional)</span></span>
                   </label>
                 </div>
               )}
@@ -5805,15 +6020,43 @@ export const ClientDashboard = ({
               {customizingPastel.category === 'Pastéis Doces' && (
                 <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
                   <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', color: 'var(--primary-gold)' }}>Opcionais (Sem custo adicional):</h4>
-                  <div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
                       <input
                         type="checkbox"
-                        checked={tempWithBorda}
-                        onChange={(e) => setTempWithBorda(e.target.checked)}
+                        checked={tempSweetChocolateOption === 'preto'}
+                        onChange={() => setTempSweetChocolateOption(tempSweetChocolateOption === 'preto' ? null : 'preto')}
                         style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '16px', height: '16px' }}
                       />
-                      Borda de Kit-Kat
+                      Chocolate Preto
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
+                      <input
+                        type="checkbox"
+                        checked={tempSweetChocolateOption === 'branco'}
+                        onChange={() => setTempSweetChocolateOption(tempSweetChocolateOption === 'branco' ? null : 'branco')}
+                        style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '16px', height: '16px' }}
+                      />
+                      Chocolate Branco
+                    </label>
+                    <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)', margin: '0.2rem 0' }} />
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
+                      <input
+                        type="checkbox"
+                        checked={tempSweetCheeseOption === 'minas'}
+                        onChange={() => setTempSweetCheeseOption(tempSweetCheeseOption === 'minas' ? null : 'minas')}
+                        style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '16px', height: '16px' }}
+                      />
+                      Queijo Minas
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
+                      <input
+                        type="checkbox"
+                        checked={tempSweetCheeseOption === 'mussarela'}
+                        onChange={() => setTempSweetCheeseOption(tempSweetCheeseOption === 'mussarela' ? null : 'mussarela')}
+                        style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '16px', height: '16px' }}
+                      />
+                      Queijo Mussarela
                     </label>
                   </div>
                 </div>
@@ -5834,6 +6077,47 @@ export const ClientDashboard = ({
                     {(storeConfig?.availableIngredients || ['Palmito', 'Alho poró', 'Tomate', 'Cebola', 'Alho torrado', 'Ovo', 'Azeitona verde', 'Azeitona Preta', 'Milho', 'Ervilha', 'Orégano', 'Calabresa', 'Bacon']).map((ing: string) => {
                       const isChecked = tempIngredients.includes(ing);
                       const maxLimit = storeConfig?.maxIngredientsLimit !== undefined ? storeConfig.maxIngredientsLimit : 5;
+                      const isDisabled = !isChecked && tempIngredients.length >= maxLimit;
+                      
+                      const handleIngredientToggle = () => {
+                        if (isChecked) {
+                          setTempIngredients(prev => prev.filter(i => i !== ing));
+                        } else if (tempIngredients.length < maxLimit) {
+                          setTempIngredients(prev => [...prev, ing]);
+                        }
+                      };
+
+                      return (
+                        <label key={ing} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: isDisabled ? '#4b5563' : '#fff', cursor: isDisabled ? 'not-allowed' : 'pointer', userSelect: 'none', padding: '0.2rem' }}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            disabled={isDisabled}
+                            onChange={handleIngredientToggle}
+                            style={{ accentColor: 'var(--primary-gold)', cursor: isDisabled ? 'not-allowed' : 'pointer', width: '14px', height: '14px' }}
+                          />
+                          {ing}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Adicionais para Doces */}
+              {customizingPastel.category === 'Pastéis Doces' && (
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <h4 style={{ margin: 0, fontSize: '0.85rem', color: 'var(--primary-gold)' }}>Adicionais (Opcionais):</h4>
+                    <span style={{ fontSize: '0.75rem', color: tempIngredients.length >= 3 ? 'var(--primary-gold)' : 'var(--text-secondary)' }}>
+                      {tempIngredients.length}/3 selecionados
+                    </span>
+                  </div>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                    {(['Tira de KitKat Preto', 'Tira de KitKat Branco', 'Doce de Leite', 'M&M\'s', 'Morango', 'Leite Ninho', 'Nutella', 'Canela', 'Açúcar']).map((ing: string) => {
+                      const isChecked = tempIngredients.includes(ing);
+                      const maxLimit = 3;
                       const isDisabled = !isChecked && tempIngredients.length >= maxLimit;
                       
                       const handleIngredientToggle = () => {
@@ -5897,7 +6181,10 @@ export const ClientDashboard = ({
                       i.id === customizingPastel.id &&
                       i.size === tempPastelSize &&
                       i.cheeseOption === tempCheeseOption &&
+                      i.sweetChocolateOption === tempSweetChocolateOption &&
+                      i.sweetCheeseOption === tempSweetCheeseOption &&
                       i.withBorda === tempWithBorda &&
+                      i.bordaType === tempBordaType &&
                       JSON.stringify((i.ingredients || []).slice().sort()) === JSON.stringify(tempIngredients.slice().sort())
                     );
 
@@ -5914,7 +6201,10 @@ export const ClientDashboard = ({
                       category: customizingPastel.category || 'Pastéis Salgados',
                       withCatupiry: tempCheeseOption === 'catupiry',
                       cheeseOption: tempCheeseOption,
+                      sweetChocolateOption: tempSweetChocolateOption,
+                      sweetCheeseOption: tempSweetCheeseOption,
                       withBorda: tempWithBorda,
+                      bordaType: tempBordaType,
                       ingredients: tempIngredients
                     }];
                   });
