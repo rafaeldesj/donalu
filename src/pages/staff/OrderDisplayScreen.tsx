@@ -13,7 +13,7 @@ const OrderDisplayScreen: React.FC = () => {
 
   useEffect(() => {
     const ordersRef = collection(db, 'orders');
-    
+
     // Pegar pedidos de hoje
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -35,9 +35,9 @@ const OrderDisplayScreen: React.FC = () => {
       });
 
       const preparing = allActive.filter(o => o.status === 'preparing' || o.status === 'prepared')
-                                 .sort((a, b) => (a.dailySeq || 0) - (b.dailySeq || 0));
+        .sort((a, b) => (a.dailySeq || 0) - (b.dailySeq || 0));
       const ready = allActive.filter(o => o.status === 'ready')
-                             .sort((a, b) => new Date(b.kitchenFinishedAt || b.createdAt).getTime() - new Date(a.kitchenFinishedAt || a.createdAt).getTime());
+        .sort((a, b) => new Date(b.kitchenFinishedAt || b.createdAt).getTime() - new Date(a.kitchenFinishedAt || a.createdAt).getTime());
 
       setPreparingOrders(preparing);
       setReadyOrders(ready);
@@ -73,11 +73,11 @@ const OrderDisplayScreen: React.FC = () => {
   const otherReady = readyOrders.slice(1);
 
   return (
-    <div 
+    <div
       ref={containerRef}
-      style={{ 
-        display: 'flex', 
-        width: '100%', 
+      style={{
+        display: 'flex',
+        width: '100%',
         height: isFullscreen ? '100vh' : 'calc(100vh - 120px)', // adjust for padding if not fullscreen
         backgroundColor: '#fff',
         fontFamily: 'Inter, sans-serif',
@@ -87,7 +87,7 @@ const OrderDisplayScreen: React.FC = () => {
       }}
     >
       {/* Botão de Tela Cheia */}
-      <button 
+      <button
         onClick={toggleFullscreen}
         style={{
           position: 'absolute',
@@ -128,49 +128,49 @@ const OrderDisplayScreen: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        <img 
-          src={logoMobile} 
-          alt="Logo Dona Lu" 
-          style={{ 
-            width: '8vw', 
-            height: '8vw', 
-            minWidth: '100px', 
-            minHeight: '100px', 
+        <img
+          src={logoMobile}
+          alt="Logo Dona Lu"
+          style={{
+            width: '15vw',
+            height: '15vw',
+            minWidth: '100px',
+            minHeight: '100px',
             objectFit: 'contain',
             borderRadius: '50%',
-            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.4))'
-          }} 
+            boxShadow: '0 10px 25px rgba(0,0,0,0.6)'
+          }}
         />
       </div>
 
       {/* Lado Esquerdo - Preparando */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: '4px solid #ddd' }}>
-        <div style={{ 
+        <div style={{
           backgroundColor: '#9ca3af', // cinza chumbo / prateado
-          color: '#fff', 
-          padding: '1.5rem', 
-          textAlign: 'center', 
-          fontSize: '3vw', 
+          color: '#fff',
+          padding: '1.5rem',
+          textAlign: 'center',
+          fontSize: '3vw',
           fontWeight: 800,
           textTransform: 'uppercase',
           letterSpacing: '-1px'
         }}>
           Preparando
         </div>
-        <div style={{ 
-          flex: 1, 
-          padding: '2rem', 
-          display: 'flex', 
-          flexWrap: 'wrap', 
+        <div style={{
+          flex: 1,
+          padding: '2rem',
+          display: 'flex',
+          flexWrap: 'wrap',
           alignContent: 'flex-start',
           gap: '2rem',
           overflowY: 'auto'
         }}>
           {preparingOrders.map(order => (
-            <div key={order.id} style={{ 
-              fontSize: '4.5vw', 
-              fontWeight: 800, 
-              color: '#374151', 
+            <div key={order.id} style={{
+              fontSize: '4.5vw',
+              fontWeight: 800,
+              color: '#374151',
               width: '45%',
               textAlign: 'center'
             }}>
@@ -182,23 +182,23 @@ const OrderDisplayScreen: React.FC = () => {
 
       {/* Lado Direito - Pronto */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ 
+        <div style={{
           backgroundColor: '#ef4444', // vermelho bem forte
-          color: '#fff', 
-          padding: '1.5rem', 
-          textAlign: 'center', 
-          fontSize: '3vw', 
+          color: '#fff',
+          padding: '1.5rem',
+          textAlign: 'center',
+          fontSize: '3vw',
           fontWeight: 800,
           textTransform: 'uppercase',
           letterSpacing: '-1px'
         }}>
           Pronto
         </div>
-        
-        <div style={{ 
-          flex: 1, 
-          padding: '2rem', 
-          display: 'flex', 
+
+        <div style={{
+          flex: 1,
+          padding: '2rem',
+          display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           overflowY: 'auto'
@@ -220,17 +220,17 @@ const OrderDisplayScreen: React.FC = () => {
           )}
 
           {/* Lista dos demais prontos */}
-          <div style={{ 
-            display: 'flex', 
-            flexWrap: 'wrap', 
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
             justifyContent: 'center',
             gap: '2rem'
           }}>
             {otherReady.map(order => (
-              <div key={order.id} style={{ 
-                fontSize: '4.5vw', 
-                fontWeight: 800, 
-                color: '#4b5563', 
+              <div key={order.id} style={{
+                fontSize: '4.5vw',
+                fontWeight: 800,
+                color: '#4b5563',
                 textAlign: 'center'
               }}>
                 {order.dailySeq?.toString().padStart(3, '0') || '---'}
@@ -239,7 +239,7 @@ const OrderDisplayScreen: React.FC = () => {
           </div>
         </div>
       </div>
-      
+
       <style>{`
         @keyframes pulse {
           0% { transform: scale(1); }
