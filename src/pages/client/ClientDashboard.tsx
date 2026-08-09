@@ -5989,6 +5989,21 @@ export const ClientDashboard = ({
                     />
                     <span>🍫 Borda de Kit-Kat Chocolate Branco <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>(Sem custo adicional)</span></span>
                   </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
+                    <input
+                      type="checkbox"
+                      checked={tempBordaType === null && !tempWithBorda}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        if (checked) {
+                          setTempBordaType(null);
+                          setTempWithBorda(false);
+                        }
+                      }}
+                      style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '16px', height: '16px' }}
+                    />
+                    <span>🚫 Sem Borda</span>
+                  </label>
                 </div>
               )}
 
