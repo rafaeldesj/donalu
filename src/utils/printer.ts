@@ -482,13 +482,18 @@ export function printOrderBrowser(order: OrderDocument, settings: PrinterSetting
         <!-- Cupons Individuais de Cozinha -->
         ${individualSlipsHtml}
 
-        <!-- Texto final repetido 5 vezes para evitar que o corte corte o texto do pedido -->
+        <!-- Footer Personalizado -->
         <div style="display: block; clear: both; text-align: center; font-size: 11px; font-weight: bold; margin-top: 15px; line-height: 1.4;">
+          <div>donalu.web.app</div>
+          <div style="margin: 4px 0;"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAAAAAklEQVR4AewaftIAAANhSURBVO3BUU4sSRAEQfdU3//KsXyWSmiKnqWBl0oz84HRVjFaK0ZrxWitGK1dfELltyThLpWTJOxUTpJwl8pvScKqGK0Vo7VitHbxBUl4isorKrskPCEJJyqrJJwk4SkqrxSjtWK0VozWitHaxZtU7krCE5LwjiScqDxB5a4k3FWM1orRWjFau/gHqdyVhJ3KSRJWKv+SYrRWjNaK0VoxWrv445JworJLwl1J6KYYrRWjtWK0dvGmJPwWlbtUTlR2SXhCEn5CMVorRmvFaK0YrV18gcpvUdklYaXyjiSsVJ6g8luK0VoxWitGa+YDf5jKSRJ2KqskvEPllST8ZcVorRitFaO1i0+orJLwFJVVEk6ScJfKE1ROknCi8o4kvFKM1orRWjFaK0Zr5gPfQOUkCScq3yEJd6mcJOEulack4ZVitFaM1orR2sUnVH6KyitJ+ClJ2Km8orJLwioJJyq7JKxUdiqrJKyK0VoxWitGa8Vo7eILkrBTWSVhp7JS2SVhpbJSOUnCTuUkCSuVE5W7VHZJuCsJO5VXitFaMVorRmvmAwcqPyUJd6nskvAElVUSdionSfgOKqskrIrRWjFaK0ZrxWjt4hMqdyVhp3KShFdUdklYJeFEZZeElcpJEk6SsFL5Diq7JLxSjNaK0VoxWjMf2KiskvAUlVeSsFM5ScJ3ULkrCSuVdyRhpXKShFUxWitGa8VorRitXXwTlXckYaWyUtklYaVyorJLwkpll4QnJGGlslNZJWGn8koxWitGa8Vo7eJNKqsknKjsVFZJ+CkqJypPUFklYadykoRXitFaMVorRmvmA3+Yyi4JT1C5KwnvUFkl4QnFaK0YrRWjtWK0dvEJld+ShFUSvoPKO5KwUjlRWSXhKSqrJKyK0VoxWitGaxdfkISnqNylclcS3qFyVxJ+ShJeKUZrxWitGK0Vo7WLN6nclYTvkISVym9ReYrKXUlYFaO1YrRWjNYu/kEqJ0lYqbwjCSuVu5LwjiSsVO4qRmvFaK0YrRWjtYt/UBLuSsJO5f9KwndQOUnCTuWVYrRWjNaK0drFm5LwW1ROkrBSOUnCd1C5KwlPKEZrxWitGK0Vo7WLL1D5LSq7JJyo/BVJOFHZJeH/KkZrxWitGK2ZD4y2itFaMVorRmv/AQ1+Xh3q4NYlAAAAAElFTkSuQmCC" width="100" /></div>
+          <br>
+          <div>Obrigado pela preferência!</div>
           <div>Dona Lu - Feito com Amor</div>
-          <div>Dona Lu - Feito com Amor</div>
-          <div>Dona Lu - Feito com Amor</div>
-          <div>Dona Lu - Feito com Amor</div>
-          <div>Dona Lu - Feito com Amor</div>
+          <br>
+          <div>Desenvolvedor Responsável</div>
+          <div>Rafael Jorge (21) 99565-5031 WPP</div>
+          <br>
+          <div style="border-top: 1px dashed #000; margin-top: 5px;"></div>
         </div>
       </body>
     </html>
@@ -695,8 +700,30 @@ function encodeEscPos(order: OrderDocument, settings: PrinterSettings, summaryOn
   divider();
 
   // 8. Footer Feed
+  buffer.push(...ALIGN_CENTER);
+  writeLine('donalu.web.app');
+  
+  // Print QR Code
+  const qrUrl = 'https://donalu.web.app';
+  const urlBytes = encoder.encode(qrUrl);
+  const storeLen = urlBytes.length + 3;
+  const pL = storeLen % 256;
+  const pH = Math.floor(storeLen / 256);
+  buffer.push(0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00); // Model 2
+  buffer.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x06); // Size 6
+  buffer.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x30); // Error correction
+  buffer.push(0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30); // Store data
+  buffer.push(...Array.from(urlBytes));
+  buffer.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30); // Print QR
+  
+  writeLine('');
   writeLine('Obrigado pela preferencia!');
   writeLine('Dona Lu - Feito com Amor');
+  writeLine('');
+  writeLine('Desenvolvedor Responsavel');
+  writeLine('Rafael Jorge (21) 99565-5031 WPP');
+  writeLine('');
+  divider();
 
   // 9. Individual Item slips for Kitchen/Delivery
   if (!summaryOnly) {
