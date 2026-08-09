@@ -4243,7 +4243,10 @@ export const ClientDashboard = ({
                           number: deliveryAddress.number || '',
                           neighborhood: deliveryAddress.neighborhood || '',
                           city: deliveryAddress.city || 'Rio de Janeiro',
-                          zipCode: deliveryAddress.zipCode || ''
+                          zipCode: deliveryAddress.zipCode || '',
+                          complement: deliveryAddress.complement || '',
+                          lat: deliveryAddress.lat ?? null,
+                          lng: deliveryAddress.lng ?? null
                         } : null
                       };
                       await addDoc(collection(db, 'orders'), orderData);
