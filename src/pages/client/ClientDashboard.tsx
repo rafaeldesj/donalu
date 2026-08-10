@@ -332,6 +332,7 @@ export const ClientDashboard = ({
 
   // States para customização de pastel antes de adicionar ao carrinho
   const [customizingPastel, setCustomizingPastel] = useState<any | null>(null);
+  const [editingCartItemIndex, setEditingCartItemIndex] = useState<number | null>(null);
   const [tempWithBorda, setTempWithBorda] = useState(false);
   const [tempBordaType, setTempBordaType] = useState<'queijo' | 'kitkat_preto' | 'kitkat_branco' | 'kitkat' | null>(null);
   const [tempCheeseOption, setTempCheeseOption] = useState<'catupiry' | 'cheddar' | 'cream_cheese' | null>(null);
@@ -1359,6 +1360,7 @@ export const ClientDashboard = ({
 
     // Se for pastel (doce ou salgado), abre a janela sobreposta de opcionais/adicionais
     if (item.category === 'Pastéis Doces' || item.category === 'Pastéis Salgados') {
+      setEditingCartItemIndex(null);
       setCustomizingPastel(item);
       setTempBordaType(null);
       setTempWithBorda(false);
@@ -1435,6 +1437,22 @@ export const ClientDashboard = ({
 
   const setCartItemSweetCheeseOption = (idx: number, opt: 'minas' | 'mussarela' | null) => {
     setCart((prevCart) => prevCart.map((item, i) => i === idx ? { ...item, sweetCheeseOption: opt } : item));
+  };
+
+  const handleEditCartItem = (idx: number) => {
+    const cartItem = cart[idx];
+    const baseItem = menuItems.find(mi => mi.id === cartItem.id);
+    if (!baseItem) return;
+    
+    setEditingCartItemIndex(idx);
+    setCustomizingPastel(baseItem);
+    setTempPastelSize(cartItem.size || 'grande');
+    setTempWithBorda(cartItem.withBorda || false);
+    setTempBordaType(cartItem.bordaType || null);
+    setTempCheeseOption(cartItem.cheeseOption || null);
+    setTempSweetChocolateOption(cartItem.sweetChocolateOption || null);
+    setTempSweetCheeseOption(cartItem.sweetCheeseOption || null);
+    setTempIngredients([...(cartItem.ingredients || [])]);
   };
 
   const toggleCartItemIngredient = (idx: number, ing: string) => {
@@ -3356,7 +3374,10 @@ export const ClientDashboard = ({
                           <button type="button" onClick={() => updateQuantity(idx, -1)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><Minus size={14} /></button>
                           <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{item.quantity}</span>
                           <button type="button" onClick={() => updateQuantity(idx, 1)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><Plus size={14} /></button>
-                          <button type="button" onClick={() => removeFromCart(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', marginLeft: '0.5rem' }}><Trash2 size={14} /></button>
+                          {(item.category === 'Pastéis Salgados' || item.category === 'Pastéis Doces') && (
+                            <button type="button" onClick={() => handleEditCartItem(idx)} style={{ background: 'none', border: 'none', color: 'var(--primary-gold)', cursor: 'pointer', marginLeft: '0.2rem' }} title="Editar opções"><Edit2 size={14} /></button>
+                          )}
+                          <button type="button" onClick={() => removeFromCart(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', marginLeft: '0.2rem' }}><Trash2 size={14} /></button>
                         </div>
                       </div>
                       
@@ -5873,7 +5894,7 @@ export const ClientDashboard = ({
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)'
           }}
-          onClick={() => setCustomizingPastel(null)}
+          onClick={() => { setCustomizingPastel(null); setEditingCartItemIndex(null); }}
         >
           <div
             style={{
@@ -5928,7 +5949,7 @@ export const ClientDashboard = ({
             {/* Fechar */}
             <button
               type="button"
-              onClick={() => setCustomizingPastel(null)}
+              onClick={() => { setCustomizingPastel(null); setEditingCartItemIndex(null); }}
               style={{
                 position: 'absolute',
                 top: '1.25rem',
@@ -6174,7 +6195,7 @@ export const ClientDashboard = ({
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
               <button
                 type="button"
-                onClick={() => setCustomizingPastel(null)}
+                onClick={() => { setCustomizingPastel(null); setEditingCartItemIndex(null); }}
                 style={{
                   flex: 1,
                   padding: '0.75rem',
@@ -6201,6 +6222,24 @@ export const ClientDashboard = ({
                   }
                   setCart((prevCart) => {
                     const selectedPrice = tempPastelSize === 'kids' ? 14.00 : 23.00;
+                    
+                    if (editingCartItemIndex !== null) {
+                      const newCart = [...prevCart];
+                      newCart[editingCartItemIndex] = {
+                        ...newCart[editingCartItemIndex],
+                        price: selectedPrice,
+                        size: tempPastelSize,
+                        withCatupiry: tempCheeseOption === 'catupiry',
+                        cheeseOption: tempCheeseOption,
+                        sweetChocolateOption: tempSweetChocolateOption,
+                        sweetCheeseOption: tempSweetCheeseOption,
+                        withBorda: tempWithBorda,
+                        bordaType: tempBordaType,
+                        ingredients: tempIngredients
+                      };
+                      return newCart;
+                    }
+
                     const existingIdx = prevCart.findIndex(i =>
                       i.id === customizingPastel.id &&
                       i.size === tempPastelSize &&
@@ -6233,6 +6272,7 @@ export const ClientDashboard = ({
                     }];
                   });
                   setCustomizingPastel(null);
+                  setEditingCartItemIndex(null);
                 }}
                 style={{
                   flex: 2,
