@@ -1957,7 +1957,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                                 orders: tableOrders,
                                 total: tableOrders.reduce((sum, x) => sum + x.total, 0),
                                 createdAt: o.createdAt,
-                                id: \`table-\${o.tableNumber}\`
+                                id: `table-${o.tableNumber}`
                               });
                             }
                           } else {
