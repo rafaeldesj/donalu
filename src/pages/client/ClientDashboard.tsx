@@ -1441,7 +1441,7 @@ export const ClientDashboard = ({
 
   const handleEditCartItem = (idx: number) => {
     const cartItem = cart[idx];
-    const baseItem = menuItems.find(mi => mi.id === cartItem.id);
+    const baseItem = pastels.find(mi => mi.id === cartItem.id);
     if (!baseItem) return;
     
     setEditingCartItemIndex(idx);
