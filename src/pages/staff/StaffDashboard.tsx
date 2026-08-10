@@ -2092,21 +2092,22 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                         padding: '0.4rem 0.6rem', 
                         borderRadius: '8px', 
                         border: '1px solid rgba(255,255,255,0.1)', 
-                        background: 'rgba(255,255,255,0.05)', 
+                        background: '#0b0f19', 
                         color: '#fff', 
-                        fontSize: '0.85rem' 
+                        fontSize: '0.85rem',
+                        cursor: 'pointer'
                       }}
                     >
-                      <option value="all_day">Hoje (Dia todo)</option>
-                      <option value="yesterday">Ontem</option>
-                      <option value="1">Última 1 hora</option>
-                      <option value="2">Últimas 2 horas</option>
-                      <option value="3">Últimas 3 horas</option>
-                      <option value="4">Últimas 4 horas</option>
-                      <option value="3_days">Últimos 3 dias</option>
-                      <option value="7_days">Últimos 7 dias</option>
-                      <option value="30_days">Últimos 30 dias</option>
-                      <option value="specific_date">Data específica...</option>
+                      <option style={{ background: '#0b0f19' }} value="all_day">Hoje (Dia todo)</option>
+                      <option style={{ background: '#0b0f19' }} value="yesterday">Ontem</option>
+                      <option style={{ background: '#0b0f19' }} value="1">Última 1 hora</option>
+                      <option style={{ background: '#0b0f19' }} value="2">Últimas 2 horas</option>
+                      <option style={{ background: '#0b0f19' }} value="3">Últimas 3 horas</option>
+                      <option style={{ background: '#0b0f19' }} value="4">Últimas 4 horas</option>
+                      <option style={{ background: '#0b0f19' }} value="3_days">Últimos 3 dias</option>
+                      <option style={{ background: '#0b0f19' }} value="7_days">Últimos 7 dias</option>
+                      <option style={{ background: '#0b0f19' }} value="30_days">Últimos 30 dias</option>
+                      <option style={{ background: '#0b0f19' }} value="specific_date">Data específica...</option>
                     </select>
 
                     {timeFilterHours === 'specific_date' && (
