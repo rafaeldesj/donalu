@@ -6,7 +6,7 @@ import { db } from '../../config/firebase';
 import { logAuditAction } from '../../utils/audit';
 import { processOrderLoyaltyStamps } from '../../utils/loyalty';
 import type { OrderDocument } from '../../types/order';
-import { printOrder, getPrinterSettings, printTableBill } from '../../utils/printer';
+import { printOrder, getPrinterSettings, printTableBill, printPaymentReceipt } from '../../utils/printer';
 import { API_BASE_URL } from '../../config/api';
 
 interface StaffDashboardProps {
@@ -1962,17 +1962,17 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                             </span>
                           </div>
                           
-                          <div className="order-actions" style={{ marginTop: '1rem' }}>
+                          <div className="order-actions" style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                             <button 
                               type="button" 
-                              onClick={() => printOrder(order).catch(err => alert("Erro ao imprimir: " + err.message))} 
+                              onClick={() => printPaymentReceipt([order], false).catch(err => alert("Erro ao imprimir: " + err.message))} 
                               className="btn-small" 
                               style={{ 
                                 width: '100%', 
                                 padding: '0.6rem', 
-                                background: 'rgba(245, 158, 11, 0.1)', 
-                                color: 'var(--primary-gold)', 
-                                border: '1px solid rgba(245, 158, 11, 0.2)', 
+                                background: 'rgba(16, 185, 129, 0.1)', 
+                                color: 'var(--emerald-400, #34d399)', 
+                                border: '1px solid rgba(16, 185, 129, 0.2)', 
                                 borderRadius: '8px', 
                                 cursor: 'pointer', 
                                 fontWeight: 600,
@@ -1982,7 +1982,28 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                                 gap: '0.4rem'
                               }}
                             >
-                              <Printer size={14} /> Reimprimir Comprovante
+                              <CreditCard size={14} /> Via do Cliente (Cartão)
+                            </button>
+                            <button 
+                              type="button" 
+                              onClick={() => printOrder(order).catch(err => alert("Erro ao imprimir: " + err.message))} 
+                              className="btn-small" 
+                              style={{ 
+                                width: '100%', 
+                                padding: '0.6rem', 
+                                background: 'rgba(245, 158, 11, 0.05)', 
+                                color: 'var(--primary-gold)', 
+                                border: '1px solid rgba(245, 158, 11, 0.1)', 
+                                borderRadius: '8px', 
+                                cursor: 'pointer', 
+                                fontWeight: 600,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.4rem'
+                              }}
+                            >
+                              <Printer size={14} /> Reimprimir Pedido (Itens)
                             </button>
                           </div>
                         </div>
@@ -2133,17 +2154,17 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                             </span>
                           </div>
                           
-                          <div className="order-actions" style={{ marginTop: '1rem' }}>
+                          <div className="order-actions" style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                             <button 
                               type="button" 
-                              onClick={() => printTableBill(tableNum, tableData.orders)} 
+                              onClick={() => printPaymentReceipt(tableData.orders, true, tableNum)} 
                               className="btn-small" 
                               style={{ 
                                 width: '100%', 
                                 padding: '0.6rem', 
-                                background: 'rgba(245, 158, 11, 0.1)', 
-                                color: 'var(--primary-gold)', 
-                                border: '1px solid rgba(245, 158, 11, 0.2)', 
+                                background: 'rgba(16, 185, 129, 0.1)', 
+                                color: 'var(--emerald-400, #34d399)', 
+                                border: '1px solid rgba(16, 185, 129, 0.2)', 
                                 borderRadius: '8px', 
                                 cursor: 'pointer', 
                                 fontWeight: 600,
@@ -2153,7 +2174,28 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                                 gap: '0.4rem'
                               }}
                             >
-                              <Printer size={14} /> Reimprimir Conta da Mesa
+                              <CreditCard size={14} /> Via do Cliente (Cartão)
+                            </button>
+                            <button 
+                              type="button" 
+                              onClick={() => printTableBill(tableNum, tableData.orders)} 
+                              className="btn-small" 
+                              style={{ 
+                                width: '100%', 
+                                padding: '0.6rem', 
+                                background: 'rgba(245, 158, 11, 0.05)', 
+                                color: 'var(--primary-gold)', 
+                                border: '1px solid rgba(245, 158, 11, 0.1)', 
+                                borderRadius: '8px', 
+                                cursor: 'pointer', 
+                                fontWeight: 600,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.4rem'
+                              }}
+                            >
+                              <Printer size={14} /> Reimprimir Conta (Itens)
                             </button>
                           </div>
                         </div>
@@ -2191,17 +2233,17 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                             </span>
                           </div>
                           
-                          <div className="order-actions" style={{ marginTop: '1rem' }}>
+                          <div className="order-actions" style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                             <button 
                               type="button" 
-                              onClick={() => printOrder(order).catch(err => alert("Erro ao imprimir: " + err.message))} 
+                              onClick={() => printPaymentReceipt([order], false).catch(err => alert("Erro ao imprimir: " + err.message))} 
                               className="btn-small" 
                               style={{ 
                                 width: '100%', 
                                 padding: '0.6rem', 
-                                background: 'rgba(245, 158, 11, 0.1)', 
-                                color: 'var(--primary-gold)', 
-                                border: '1px solid rgba(245, 158, 11, 0.2)', 
+                                background: 'rgba(16, 185, 129, 0.1)', 
+                                color: 'var(--emerald-400, #34d399)', 
+                                border: '1px solid rgba(16, 185, 129, 0.2)', 
                                 borderRadius: '8px', 
                                 cursor: 'pointer', 
                                 fontWeight: 600,
@@ -2211,7 +2253,28 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                                 gap: '0.4rem'
                               }}
                             >
-                              <Printer size={14} /> Reimprimir Comprovante
+                              <CreditCard size={14} /> Via do Cliente (Cartão)
+                            </button>
+                            <button 
+                              type="button" 
+                              onClick={() => printOrder(order).catch(err => alert("Erro ao imprimir: " + err.message))} 
+                              className="btn-small" 
+                              style={{ 
+                                width: '100%', 
+                                padding: '0.6rem', 
+                                background: 'rgba(245, 158, 11, 0.05)', 
+                                color: 'var(--primary-gold)', 
+                                border: '1px solid rgba(245, 158, 11, 0.1)', 
+                                borderRadius: '8px', 
+                                cursor: 'pointer', 
+                                fontWeight: 600,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.4rem'
+                              }}
+                            >
+                              <Printer size={14} /> Reimprimir Pedido (Itens)
                             </button>
                           </div>
                         </div>

@@ -1147,3 +1147,108 @@ export async function printTableBill(tableNum: string, ordersList: OrderDocument
   }
 }
 
+export async function printPaymentReceipt(ordersList: OrderDocument[], isTable: boolean, tableNum?: string): Promise<void> {
+  const settings = getPrinterSettings();
+  if (!ordersList || ordersList.length === 0) return;
+
+  const paperWidth = settings.paperSize === '58mm' ? '56mm' : '78mm';
+  const dividerLine = '-'.repeat(settings.paperSize === '80mm' ? 48 : 32);
+
+  const grandTotal = ordersList.reduce((sum, o) => sum + o.total, 0);
+  
+  let latestDateStr = new Date().toLocaleString('pt-BR');
+  if (ordersList.length > 0) {
+    const sorted = [...ordersList].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    latestDateStr = new Date(sorted[0].createdAt).toLocaleString('pt-BR');
+  }
+
+  const paymentMethods = ordersList.map(o => o.paymentMethod).filter(Boolean);
+  let paymentMethod = paymentMethods.length > 0 ? paymentMethods[0] : 'NÃO INFORMADO';
+  if (paymentMethod === 'maq_debito' || paymentMethod === 'debito') paymentMethod = 'DÉBITO';
+  if (paymentMethod === 'maq_credito' || paymentMethod === 'credito') paymentMethod = 'CRÉDITO';
+  if (paymentMethod === 'maq_pix' || paymentMethod === 'pix') paymentMethod = 'PIX';
+  
+  const mercadoPagoId = ordersList.find(o => o.mercadoPagoPaymentId)?.mercadoPagoPaymentId;
+
+  if (settings.method === 'browser') {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0px';
+    iframe.style.height = '0px';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) return;
+
+    let html = `
+      <html>
+      <head>
+        <style>
+          @page { margin: 0; }
+          body { 
+            font-family: 'Courier New', Courier, monospace; 
+            width: ${paperWidth}; 
+            margin: 0; 
+            padding: 10px 0; 
+            font-size: 12px;
+            color: #000;
+          }
+          .center { text-align: center; }
+          .left { text-align: left; }
+          .right { text-align: right; }
+          .bold { font-weight: bold; }
+          .line { margin: 4px 0; text-align: center; }
+          .flex-between { display: flex; justify-content: space-between; }
+        </style>
+      </head>
+      <body>
+        <div class="center bold" style="font-size: 14px;">DONA LU PASTELARIA</div>
+        <div class="center" style="margin-top: 5px;">CNPJ: 54.499.712/0001-90</div>
+        <div class="line">${dividerLine}</div>
+        <div class="center bold" style="font-size: 14px; margin: 5px 0;">COMPROVANTE DE PAGAMENTO</div>
+        <div class="center bold" style="margin-bottom: 5px;">VIA DO CLIENTE</div>
+        <div class="line">${dividerLine}</div>
+        
+        <div class="left" style="margin-top: 5px;">
+          ${isTable ? `<div><span class="bold">REF:</span> CONTA DA MESA ${tableNum}</div>` : `<div><span class="bold">REF:</span> PEDIDO #${ordersList[0].dailySeq ? String(ordersList[0].dailySeq).padStart(2, '0') : (ordersList[0].id?.substring(0,6) || 'NEW')}</div>`}
+          <div><span class="bold">DATA/HORA:</span> ${latestDateStr}</div>
+        </div>
+        
+        <div class="line">${dividerLine}</div>
+        
+        <div class="flex-between bold" style="font-size: 15px; margin: 10px 0;">
+          <span>VALOR TOTAL:</span>
+          <span>R$ ${grandTotal.toFixed(2).replace('.', ',')}</span>
+        </div>
+        
+        <div class="line">${dividerLine}</div>
+        
+        <div class="left" style="margin-top: 10px;">
+          <div><span class="bold">FORMA DE PAGTO:</span> ${paymentMethod?.toUpperCase()}</div>
+          ${mercadoPagoId ? `<div><span class="bold">TRANS. MP:</span> ${mercadoPagoId}</div>` : ''}
+          <div style="margin-top: 4px;"><span class="bold">STATUS:</span> TRANSAÇÃO APROVADA</div>
+        </div>
+        
+        <div class="line" style="margin-top: 15px;">${dividerLine}</div>
+        <div class="center bold" style="margin-top: 10px;">
+          Obrigado pela preferência!
+        </div>
+        <div class="center" style="margin-bottom: 30px;">.</div>
+      </body>
+      </html>
+    `;
+
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(() => document.body.removeChild(iframe), 500);
+    }, 250);
+  } else {
+    alert("Reimpressão de comprovante por bluetooth/serial requer o método 'browser' nas configurações.");
+  }
+}
