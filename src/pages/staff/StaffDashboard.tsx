@@ -1319,6 +1319,11 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
             // Lógica de filtragem por tempo estendido / específico
             if (timeFilterHours === 'all_day') {
               todayOrders = todayOrders.filter(o => getBusinessDay(o.createdAt) === todayStr);
+            } else if (timeFilterHours === 'yesterday') {
+              const yesterday = new Date();
+              yesterday.setDate(yesterday.getDate() - 1);
+              const yesterdayStr = getBusinessDay(yesterday.toISOString());
+              todayOrders = todayOrders.filter(o => getBusinessDay(o.createdAt) === yesterdayStr);
             } else if (['1', '2', '3', '4'].includes(timeFilterHours)) {
               const hours = parseInt(timeFilterHours);
               const cutoffTime = Date.now() - hours * 60 * 60 * 1000;
@@ -1416,6 +1421,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                           }}
                         >
                           <option value="all_day">Hoje (Todo o dia)</option>
+                          <option value="yesterday">Ontem</option>
                           <option value="1">Última 1 hora</option>
                           <option value="2">Últimas 2 horas</option>
                           <option value="3">Últimas 3 horas</option>
@@ -1996,6 +2002,11 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
 
             if (timeFilterHours === 'all_day') {
               todayOrders = todayOrders.filter(o => getBusinessDay(o.createdAt) === todayStr);
+            } else if (timeFilterHours === 'yesterday') {
+              const yesterday = new Date();
+              yesterday.setDate(yesterday.getDate() - 1);
+              const yesterdayStr = getBusinessDay(yesterday.toISOString());
+              todayOrders = todayOrders.filter(o => getBusinessDay(o.createdAt) === yesterdayStr);
             } else if (['1', '2', '3', '4'].includes(timeFilterHours)) {
               const hours = parseInt(timeFilterHours);
               const cutoffTime = Date.now() - hours * 60 * 60 * 1000;
@@ -2066,6 +2077,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                       }}
                     >
                       <option value="all_day">Hoje (Dia todo)</option>
+                      <option value="yesterday">Ontem</option>
                       <option value="1">Última 1 hora</option>
                       <option value="2">Últimas 2 horas</option>
                       <option value="3">Últimas 3 horas</option>
@@ -3259,6 +3271,11 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
         // Aplicar a mesma lógica de filtros temporais
         if (timeFilterHours === 'all_day') {
           filteredOrders = filteredOrders.filter(o => getBusinessDay(o.createdAt) === todayStr);
+        } else if (timeFilterHours === 'yesterday') {
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          const yesterdayStr = getBusinessDay(yesterday.toISOString());
+          filteredOrders = filteredOrders.filter(o => getBusinessDay(o.createdAt) === yesterdayStr);
         } else if (['1', '2', '3', '4'].includes(timeFilterHours)) {
           const hours = parseInt(timeFilterHours);
           const cutoffTime = Date.now() - hours * 60 * 60 * 1000;
