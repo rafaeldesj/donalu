@@ -836,7 +836,7 @@ const MainLayout = () => {
     { label: 'Cardápio / Cliente', ids: ['menu', 'tracking', 'fidelidade', 'suporte_virtual'] },
     { label: 'Operações de Venda', ids: ['pdv_vendas'] },
     { label: 'Operações de Entrega', ids: ['entrega_andamento', 'entrega_finalizada', 'teste_mapa'] },
-    { label: 'Painéis de Trabalho', ids: ['cozinha', 'atendimento', 'caixa', 'mapa_mesas', 'estoque', 'mostrador', 'avaliacoes', 'painel_atendimento', 'admin'] },
+    { label: 'Painéis de Trabalho', ids: ['cozinha', 'atendimento', 'caixa', 'admin', 'mapa_mesas', 'mercadopago_transacoes', 'estoque', 'mostrador', 'avaliacoes', 'painel_atendimento'] },
     { label: 'Configurações', ids: ['users', 'registros', 'configuracoes'] },
   ];
 const getRoleLabel = (r: string): React.ReactNode => {
