@@ -1924,6 +1924,67 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                   </div>
                 </div>
 
+                {/* Seção 3: Últimas Vendas Realizadas (Reimpressão) */}
+                <div className="staff-section cashier-card" style={{ border: 'none', background: 'transparent', padding: 0, marginTop: '2rem' }}>
+                  <div className="section-title">
+                    <CheckCircle className="section-icon text-emerald" size={24} />
+                    <h3 style={{ fontSize: '1.4rem' }}>Últimas Vendas Realizadas (Reimprimir)</h3>
+                  </div>
+                  <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', margin: '0.25rem 0 1rem 0' }}>
+                    Histórico dos pedidos aprovados recentemente. Utilize para reimprimir o comprovante caso a bobina da maquininha tenha acabado ou ocorrido erro de impressão.
+                  </p>
+                  <div className="orders-queue" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
+                    {paidTodayOrders.length === 0 ? (
+                      <p style={{ color: 'var(--text-secondary)', padding: '1.5rem', gridColumn: '1 / -1', textAlign: 'center', background: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.05)', borderRadius: '12px' }}>
+                        Nenhuma venda aprovada hoje ainda.
+                      </p>
+                    ) : (
+                      paidTodayOrders.slice(0, 20).map((order) => (
+                        <div key={order.id} className="order-item" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '1.25rem', borderRadius: '16px' }}>
+                          <div className="order-meta" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                              <strong style={{ fontSize: '1.15rem' }}>{formatOrderHeader(order)}</strong>
+                              <span style={{ fontWeight: 700, color: 'var(--primary-gold)', fontSize: '1.1rem' }}>
+                                R$ {order.total.toFixed(2).replace('.', ',')}
+                              </span>
+                            </div>
+                            <span style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                              {order.clientName}
+                            </span>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>
+                              {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Pagamento: {order.paymentMethod === 'dinheiro' ? 'Dinheiro' : order.paymentMethod === 'debito' ? 'Débito' : order.paymentMethod === 'credito' ? 'Crédito' : order.paymentMethod === 'pix' ? 'PIX' : order.paymentMethod}
+                            </span>
+                          </div>
+                          
+                          <div className="order-actions" style={{ marginTop: '1rem' }}>
+                            <button 
+                              type="button" 
+                              onClick={() => printOrder(order).catch(err => alert("Erro ao imprimir: " + err.message))} 
+                              className="btn-small" 
+                              style={{ 
+                                width: '100%', 
+                                padding: '0.6rem', 
+                                background: 'rgba(245, 158, 11, 0.1)', 
+                                color: 'var(--primary-gold)', 
+                                border: '1px solid rgba(245, 158, 11, 0.2)', 
+                                borderRadius: '8px', 
+                                cursor: 'pointer', 
+                                fontWeight: 600,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.4rem'
+                              }}
+                            >
+                              <Printer size={14} /> Reimprimir Comprovante
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
               </div>
             );
           })()}
