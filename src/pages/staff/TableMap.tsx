@@ -736,7 +736,7 @@ export const TableMap = () => {
           <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Ajuste os filtros ou o intervalo das mesas.</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '1.2rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.2rem' }}>
           {filteredTables.map((table) => {
             const ordersCount = table.orders.length;
 
@@ -838,7 +838,7 @@ export const TableMap = () => {
                       whiteSpace: 'nowrap', 
                       overflow: 'hidden', 
                       textOverflow: 'ellipsis',
-                      maxWidth: '120px'
+                      maxWidth: '100%'
                     }}>
                       🔒 {table.reservation?.clientName || 'Reservado'}
                     </div>
@@ -880,7 +880,7 @@ export const TableMap = () => {
                                   whiteSpace: 'nowrap', 
                                   overflow: 'hidden', 
                                   textOverflow: 'ellipsis',
-                                  maxWidth: '120px',
+                                  maxWidth: '100%',
                                   display: 'flex',
                                   alignItems: 'center',
                                   gap: '3px',
@@ -1045,7 +1045,7 @@ export const TableMap = () => {
                                   whiteSpace: 'nowrap', 
                                   overflow: 'hidden', 
                                   textOverflow: 'ellipsis',
-                                  maxWidth: '120px',
+                                  maxWidth: '100%',
                                   cursor: 'pointer',
                                   padding: '2px 6px',
                                   borderRadius: '6px',
