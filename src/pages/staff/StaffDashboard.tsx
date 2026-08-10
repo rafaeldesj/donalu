@@ -1945,69 +1945,170 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                         Nenhuma venda aprovada hoje ainda.
                       </p>
                     ) : (
-                      paidTodayOrders.slice(0, 20).map((order) => (
-                        <div key={order.id} className="order-item" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '1.25rem', borderRadius: '16px' }}>
-                          <div className="order-meta" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                              <strong style={{ fontSize: '1.15rem' }}>{formatOrderHeader(order)}</strong>
-                              <span style={{ fontWeight: 700, color: 'var(--primary-gold)', fontSize: '1.1rem' }}>
-                                R$ {order.total.toFixed(2).replace('.', ',')}
-                              </span>
-                            </div>
-                            <span style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-                              {order.clientName}
-                            </span>
-                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>
-                              {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Pagamento: {order.paymentMethod === 'dinheiro' ? 'Dinheiro' : order.paymentMethod === 'debito' ? 'Débito' : order.paymentMethod === 'credito' ? 'Crédito' : order.paymentMethod === 'pix' ? 'PIX' : order.paymentMethod}
-                            </span>
-                          </div>
-                          
-                          <div className="order-actions" style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            <button 
-                              type="button" 
-                              onClick={() => printPaymentReceipt([order], false).catch(err => alert("Erro ao imprimir: " + err.message))} 
-                              className="btn-small" 
-                              style={{ 
-                                width: '100%', 
-                                padding: '0.6rem', 
-                                background: 'rgba(16, 185, 129, 0.1)', 
-                                color: 'var(--emerald-400, #34d399)', 
-                                border: '1px solid rgba(16, 185, 129, 0.2)', 
-                                borderRadius: '8px', 
-                                cursor: 'pointer', 
-                                fontWeight: 600,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '0.4rem'
-                              }}
-                            >
-                              <CreditCard size={14} /> Via do Cliente (Cartão)
-                            </button>
-                            <button 
-                              type="button" 
-                              onClick={() => printOrder(order).catch(err => alert("Erro ao imprimir: " + err.message))} 
-                              className="btn-small" 
-                              style={{ 
-                                width: '100%', 
-                                padding: '0.6rem', 
-                                background: 'rgba(245, 158, 11, 0.05)', 
-                                color: 'var(--primary-gold)', 
-                                border: '1px solid rgba(245, 158, 11, 0.1)', 
-                                borderRadius: '8px', 
-                                cursor: 'pointer', 
-                                fontWeight: 600,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '0.4rem'
-                              }}
-                            >
-                              <Printer size={14} /> Reimprimir Pedido (Itens)
-                            </button>
-                          </div>
-                        </div>
-                      ))
+                      (() => {
+                        const caixaGroupedItems: any[] = [];
+                        paidTodayOrders.forEach(o => {
+                          if (o.orderType === 'dine_in_table' && o.tableNumber) {
+                            if (!caixaGroupedItems.find(g => g.type === 'table' && g.tableNumber === o.tableNumber)) {
+                              const tableOrders = paidTodayOrders.filter(x => x.orderType === 'dine_in_table' && x.tableNumber === o.tableNumber);
+                              caixaGroupedItems.push({
+                                type: 'table',
+                                tableNumber: o.tableNumber,
+                                orders: tableOrders,
+                                total: tableOrders.reduce((sum, x) => sum + x.total, 0),
+                                createdAt: o.createdAt,
+                                id: \`table-\${o.tableNumber}\`
+                              });
+                            }
+                          } else {
+                            caixaGroupedItems.push({
+                              type: 'standalone',
+                              order: o,
+                              createdAt: o.createdAt,
+                              id: o.id
+                            });
+                          }
+                        });
+
+                        return caixaGroupedItems.slice(0, 20).map((item) => {
+                          if (item.type === 'table') {
+                            const tOrders = item.orders;
+                            const firstOrder = tOrders[0];
+                            return (
+                              <div key={item.id} className="order-item" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '1.25rem', borderRadius: '16px' }}>
+                                <div className="order-meta" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                                    <strong style={{ fontSize: '1.15rem' }}>Conta da Mesa {item.tableNumber}</strong>
+                                    <span style={{ fontWeight: 700, color: 'var(--primary-gold)', fontSize: '1.1rem' }}>
+                                      R$ {item.total.toFixed(2).replace('.', ',')}
+                                    </span>
+                                  </div>
+                                  <span style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                                    {tOrders.length} pedido(s) unificados
+                                  </span>
+                                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>
+                                    {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Pagamento(s): {
+                                      [...new Set(tOrders.flatMap((o: any) => o.payments ? o.payments.map((p: any) => p.method) : [o.paymentMethod]).filter(Boolean))]
+                                      .map(m => m === 'dinheiro' ? 'Dinheiro' : m === 'debito' ? 'Débito' : m === 'credito' ? 'Crédito' : m === 'pix' ? 'PIX' : m)
+                                      .join(', ')
+                                    }
+                                  </span>
+                                </div>
+                                
+                                <div className="order-actions" style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                  <button 
+                                    type="button" 
+                                    onClick={() => printPaymentReceipt(tOrders, true, item.tableNumber).catch(err => alert("Erro ao imprimir: " + err.message))} 
+                                    className="btn-small" 
+                                    style={{ 
+                                      width: '100%', 
+                                      padding: '0.6rem', 
+                                      background: 'rgba(16, 185, 129, 0.1)', 
+                                      color: 'var(--emerald-400, #34d399)', 
+                                      border: '1px solid rgba(16, 185, 129, 0.2)', 
+                                      borderRadius: '8px', 
+                                      cursor: 'pointer', 
+                                      fontWeight: 600,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '0.4rem'
+                                    }}
+                                  >
+                                    <CreditCard size={14} /> Via do Cliente (Cartão)
+                                  </button>
+                                  <button 
+                                    type="button" 
+                                    onClick={() => printTableBill(item.tableNumber, tOrders).catch(err => alert("Erro ao imprimir: " + err.message))} 
+                                    className="btn-small" 
+                                    style={{ 
+                                      width: '100%', 
+                                      padding: '0.6rem', 
+                                      background: 'rgba(245, 158, 11, 0.05)', 
+                                      color: 'var(--primary-gold)', 
+                                      border: '1px solid rgba(245, 158, 11, 0.1)', 
+                                      borderRadius: '8px', 
+                                      cursor: 'pointer', 
+                                      fontWeight: 600,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '0.4rem'
+                                    }}
+                                  >
+                                    <Printer size={14} /> Reimprimir Conta (Itens)
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          } else {
+                            const order = item.order;
+                            return (
+                              <div key={order.id} className="order-item" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '1.25rem', borderRadius: '16px' }}>
+                                <div className="order-meta" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                                    <strong style={{ fontSize: '1.15rem' }}>{formatOrderHeader(order)}</strong>
+                                    <span style={{ fontWeight: 700, color: 'var(--primary-gold)', fontSize: '1.1rem' }}>
+                                      R$ {order.total.toFixed(2).replace('.', ',')}
+                                    </span>
+                                  </div>
+                                  <span style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                                    {order.clientName}
+                                  </span>
+                                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>
+                                    {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Pagamento: {order.paymentMethod === 'dinheiro' ? 'Dinheiro' : order.paymentMethod === 'debito' ? 'Débito' : order.paymentMethod === 'credito' ? 'Crédito' : order.paymentMethod === 'pix' ? 'PIX' : order.paymentMethod}
+                                  </span>
+                                </div>
+                                
+                                <div className="order-actions" style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                  <button 
+                                    type="button" 
+                                    onClick={() => printPaymentReceipt([order], false).catch(err => alert("Erro ao imprimir: " + err.message))} 
+                                    className="btn-small" 
+                                    style={{ 
+                                      width: '100%', 
+                                      padding: '0.6rem', 
+                                      background: 'rgba(16, 185, 129, 0.1)', 
+                                      color: 'var(--emerald-400, #34d399)', 
+                                      border: '1px solid rgba(16, 185, 129, 0.2)', 
+                                      borderRadius: '8px', 
+                                      cursor: 'pointer', 
+                                      fontWeight: 600,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '0.4rem'
+                                    }}
+                                  >
+                                    <CreditCard size={14} /> Via do Cliente (Cartão)
+                                  </button>
+                                  <button 
+                                    type="button" 
+                                    onClick={() => printOrder(order).catch(err => alert("Erro ao imprimir: " + err.message))} 
+                                    className="btn-small" 
+                                    style={{ 
+                                      width: '100%', 
+                                      padding: '0.6rem', 
+                                      background: 'rgba(245, 158, 11, 0.05)', 
+                                      color: 'var(--primary-gold)', 
+                                      border: '1px solid rgba(245, 158, 11, 0.1)', 
+                                      borderRadius: '8px', 
+                                      cursor: 'pointer', 
+                                      fontWeight: 600,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '0.4rem'
+                                    }}
+                                  >
+                                    <Printer size={14} /> Reimprimir Pedido (Itens)
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          }
+                        });
+                      })()
                     )}
                   </div>
                 </div>
