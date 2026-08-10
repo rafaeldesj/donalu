@@ -259,18 +259,7 @@ export const ClientDashboard = ({
   const isStoreClosed = storeStatus?.status === 'closed';
   const isClosedForUser = isStoreClosed && !canEdit;
 
-  const [localCart, setLocalCart] = useState<OrderItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('donalu_cart');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    localStorage.setItem('donalu_cart', JSON.stringify(localCart));
-  }, [localCart]);
+  const [localCart, setLocalCart] = useState<OrderItem[]>([]);
   const cart = externalCart !== undefined ? externalCart : localCart;
   const setCart = externalSetCart !== undefined ? externalSetCart : setLocalCart;
   const [orderPlaced, setOrderPlaced] = useState(false);

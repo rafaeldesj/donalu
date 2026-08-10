@@ -47,7 +47,18 @@ const MainLayout = () => {
   const { user, userData, logout } = useAuth();
   const [activeView, setActiveView] = useState<string>('menu');
   const [isVisitor, setIsVisitor] = useState<boolean>(false);
-  const [cart, setCart] = useState<OrderItem[]>([]);
+  const [cart, setCart] = useState<OrderItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('donalu_cart');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('donalu_cart', JSON.stringify(cart));
+  }, [cart]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
   const [pulseKitchenMenu, setPulseKitchenMenu] = useState(false);
