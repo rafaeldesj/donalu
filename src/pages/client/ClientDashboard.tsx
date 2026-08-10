@@ -259,7 +259,18 @@ export const ClientDashboard = ({
   const isStoreClosed = storeStatus?.status === 'closed';
   const isClosedForUser = isStoreClosed && !canEdit;
 
-  const [localCart, setLocalCart] = useState<OrderItem[]>([]);
+  const [localCart, setLocalCart] = useState<OrderItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('donalu_cart');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('donalu_cart', JSON.stringify(localCart));
+  }, [localCart]);
   const cart = externalCart !== undefined ? externalCart : localCart;
   const setCart = externalSetCart !== undefined ? externalSetCart : setLocalCart;
   const [orderPlaced, setOrderPlaced] = useState(false);
@@ -1468,6 +1479,14 @@ export const ClientDashboard = ({
       }
       return { ...item, ingredients: newIngs };
     }));
+  };
+
+  const handleClearCart = () => {
+    if (cart.length > 0) {
+      if (window.confirm("Tem certeza que deseja limpar o carrinho? Todos os itens serão removidos.")) {
+        setCart([]);
+      }
+    }
   };
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -3357,7 +3376,31 @@ export const ClientDashboard = ({
         {/* Carrinho e Endereço */}
         <div className="profile-section" id="cart-section">
           <div className="loyalty-card">
-            <h3>Carrinho de Compras</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3>Carrinho de Compras</h3>
+              {cart.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearCart}
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    color: '#ef4444',
+                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                    padding: '0.4rem 0.8rem',
+                    borderRadius: '6px',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem'
+                  }}
+                >
+                  <Trash2 size={14} />
+                  Limpar Carrinho
+                </button>
+              )}
+            </div>
             {cart.length === 0 ? (
               <p style={{ color: 'var(--text-secondary)', textAlign: 'center', margin: '2rem 0' }}>Seu carrinho está vazio.</p>
             ) : (
