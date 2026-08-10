@@ -334,7 +334,7 @@ export const ClientDashboard = ({
   const [customizingPastel, setCustomizingPastel] = useState<any | null>(null);
   const [editingCartItemIndex, setEditingCartItemIndex] = useState<number | null>(null);
   const [tempWithBorda, setTempWithBorda] = useState(false);
-  const [tempBordaType, setTempBordaType] = useState<'queijo' | 'kitkat_preto' | 'kitkat_branco' | 'kitkat' | null>(null);
+  const [tempBordaType, setTempBordaType] = useState<'queijo' | 'kitkat_preto' | 'kitkat_branco' | 'kitkat' | 'sem_borda' | null>(null);
   const [tempCheeseOption, setTempCheeseOption] = useState<'catupiry' | 'cheddar' | 'cream_cheese' | null>(null);
   const [tempSweetChocolateOption, setTempSweetChocolateOption] = useState<'preto' | 'branco' | null>(null);
   const [tempSweetCheeseOption, setTempSweetCheeseOption] = useState<'minas' | 'mussarela' | null>(null);
@@ -1423,7 +1423,7 @@ export const ClientDashboard = ({
     } : item));
   };
 
-  const setCartItemBordaType = (idx: number, bordaType: 'queijo' | 'kitkat_preto' | 'kitkat_branco' | 'kitkat' | null) => {
+  const setCartItemBordaType = (idx: number, bordaType: 'queijo' | 'kitkat_preto' | 'kitkat_branco' | 'kitkat' | 'sem_borda' | null) => {
     setCart((prevCart) => prevCart.map((item, i) => i === idx ? {
       ...item,
       bordaType,
