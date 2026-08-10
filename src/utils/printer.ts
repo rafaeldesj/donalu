@@ -1174,7 +1174,7 @@ export async function printPaymentReceipt(ordersList: OrderDocument[], isTable: 
     ? ordersList[0].payments 
     : [{ method: paymentMethod, amount: grandTotal }];
 
-  const formatMethod = (m: string) => {
+  const formatMethod = (m: string | null | undefined) => {
     if (m === 'maq_debito' || m === 'debito') return 'DÉBITO';
     if (m === 'maq_credito' || m === 'credito') return 'CRÉDITO';
     if (m === 'maq_pix' || m === 'pix') return 'PIX';
@@ -1193,35 +1193,35 @@ export async function printPaymentReceipt(ordersList: OrderDocument[], isTable: 
     if (!doc) return;
 
     const receiptsHtml = paymentsList.map((payment, idx) => `
-      <div style="\${idx > 0 ? 'page-break-before: always; margin-top: 30px;' : ''}">
+      <div style="${idx > 0 ? 'page-break-before: always; margin-top: 30px;' : ''}">
         <div class="center bold" style="font-size: 14px;">DONA LU PASTELARIA</div>
         <div class="center" style="margin-top: 5px;">CNPJ: 54.499.712/0001-90</div>
-        <div class="line">\${dividerLine}</div>
+        <div class="line">${dividerLine}</div>
         <div class="center bold" style="font-size: 14px; margin: 5px 0;">COMPROVANTE DE PAGAMENTO</div>
         <div class="center bold" style="margin-bottom: 5px;">VIA DO CLIENTE</div>
-        <div class="line">\${dividerLine}</div>
+        <div class="line">${dividerLine}</div>
         
         <div class="left" style="margin-top: 5px;">
-          \${isTable ? \`<div><span class="bold">REF:</span> CONTA DA MESA \${tableNum} \${paymentsList.length > 1 ? \`(Parte \${idx+1}/\${paymentsList.length})\` : ''}</div>\` : \`<div><span class="bold">REF:</span> PEDIDO #\${ordersList[0].dailySeq ? String(ordersList[0].dailySeq).padStart(2, '0') : (ordersList[0].id?.substring(0,6) || 'NEW')}</div>\`}
-          <div><span class="bold">DATA/HORA:</span> \${latestDateStr}</div>
+          ${isTable ? `<div><span class="bold">REF:</span> CONTA DA MESA ${tableNum} ${paymentsList.length > 1 ? `(Parte ${idx+1}/${paymentsList.length})` : ''}</div>` : `<div><span class="bold">REF:</span> PEDIDO #${ordersList[0].dailySeq ? String(ordersList[0].dailySeq).padStart(2, '0') : (ordersList[0].id?.substring(0,6) || 'NEW')}</div>`}
+          <div><span class="bold">DATA/HORA:</span> ${latestDateStr}</div>
         </div>
         
-        <div class="line">\${dividerLine}</div>
+        <div class="line">${dividerLine}</div>
         
         <div class="flex-between bold" style="font-size: 15px; margin: 10px 0;">
           <span>VALOR PAGO:</span>
-          <span>R$ \${Number(payment.amount).toFixed(2).replace('.', ',')}</span>
+          <span>R$ ${Number(payment.amount).toFixed(2).replace('.', ',')}</span>
         </div>
         
-        <div class="line">\${dividerLine}</div>
+        <div class="line">${dividerLine}</div>
         
         <div class="left" style="margin-top: 10px;">
-          <div><span class="bold">FORMA DE PAGTO:</span> \${formatMethod(payment.method)}</div>
-          \${mercadoPagoId ? \`<div><span class="bold">TRANS. MP:</span> \${mercadoPagoId}</div>\` : ''}
+          <div><span class="bold">FORMA DE PAGTO:</span> ${formatMethod(payment.method)}</div>
+          ${mercadoPagoId ? `<div><span class="bold">TRANS. MP:</span> ${mercadoPagoId}</div>` : ''}
           <div style="margin-top: 4px;"><span class="bold">STATUS:</span> TRANSAÇÃO APROVADA</div>
         </div>
         
-        <div class="line" style="margin-top: 15px;">\${dividerLine}</div>
+        <div class="line" style="margin-top: 15px;">${dividerLine}</div>
         <div class="center bold" style="margin-top: 10px;">
           Obrigado pela preferência!
         </div>
@@ -1251,7 +1251,7 @@ export async function printPaymentReceipt(ordersList: OrderDocument[], isTable: 
         </style>
       </head>
       <body>
-        \${receiptsHtml}
+        ${receiptsHtml}
       </body>
       </html>
     `;

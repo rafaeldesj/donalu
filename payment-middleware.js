@@ -273,7 +273,8 @@ export const createPixMiddleware = async (req, res) => {
       const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
-        'X-Idempotency-Key': 'PIX_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6)
+        'X-Idempotency-Key': 'PIX_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+        'x-integrator-id': 'dev_392b160994e811f1b905e222616df356'
       };
       
       const firstName = name.split(' ')[0] || 'Cliente';
@@ -316,6 +317,9 @@ export const createPixMiddleware = async (req, res) => {
         const fee = parseFloat((transactionAmount * devPercentage / 100).toFixed(2));
         if (fee >= 0.01) {
           payload.application_fee = fee;
+          if (process.env.VITE_MP_SPONSOR_ID) {
+            payload.sponsor_id = Number(process.env.VITE_MP_SPONSOR_ID);
+          }
           console.log(`[Mercado Pago Pix] Split: application_fee = R$${fee.toFixed(2)} (${devPercentage}%)`);
         }
       }
@@ -478,13 +482,15 @@ export const createPointOrderMiddleware = async (req, res) => {
       const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
-        'X-Idempotency-Key': `create_${devIdStr}_${Date.now()}`
+        'X-Idempotency-Key': `create_${devIdStr}_${Date.now()}`,
+        'x-integrator-id': 'dev_392b160994e811f1b905e222616df356'
       };
 
       const payload = {
         type: 'point',
         external_reference: externalReference || 'PED_' + Date.now(),
         description: 'Pedido Dona Lu Pastelaria',
+        sponsor_id: process.env.VITE_MP_SPONSOR_ID ? Number(process.env.VITE_MP_SPONSOR_ID) : undefined,
         transactions: {
           payments: [
             {

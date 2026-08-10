@@ -7,12 +7,13 @@ interface MercadoPagoCardFormProps {
   accessToken: string;
   payer: { email: string; name: string; cpf: string; };
   items?: Array<{ title: string; unit_price: number; quantity: number }>;
-  onSuccess: (orderId: string) => void;
+  onSuccess: (orderId: string, status: string) => void;
   onError: (message: string) => void;
+  devPercentage?: number;
 }
 
 export function MercadoPagoCardForm({
-  amount, publicKey, accessToken, payer, items, onSuccess, onError
+  amount, publicKey, accessToken, payer, items, onSuccess, onError, devPercentage
 }: MercadoPagoCardFormProps) {
   const [cardNumber, setCardNumber] = useState("");
   const [cardHolder, setCardHolder] = useState("");
@@ -74,7 +75,8 @@ export function MercadoPagoCardForm({
           cpf: payer.cpf,
           installments: installments,
           deviceSessionId: deviceSessionId,
-          items: items
+          items: items,
+          devPercentage: devPercentage
         })
       });
       const result = await resp.json();
@@ -85,7 +87,7 @@ export function MercadoPagoCardForm({
         const detail = result.transactions?.payments?.[0]?.status_detail || result.status_detail || "Motivo desconhecido";
         throw new Error(`Pagamento recusado (${detail}). Tente outro cartao.`);
       }
-      onSuccess(result.orderId || result.id);
+      onSuccess(result.orderId || result.id, paymentStatus);
     } catch (err: any) {
       const msg = err?.message || "Erro ao processar pagamento.";
       setError(msg);

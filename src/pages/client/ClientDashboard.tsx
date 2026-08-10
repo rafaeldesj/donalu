@@ -4267,6 +4267,7 @@ export const ClientDashboard = ({
                     unit_price: item.price,
                     quantity: item.quantity
                   }))}
+                  devPercentage={storeConfig?.developerPercentage || 0}
                   onSuccess={async (orderId) => {
                     try {
                       const now = new Date();

@@ -51,7 +51,7 @@ export default async function handler(req, res) {
   try {
     const {
       token: bodyToken, cardToken, amount, email, name, cpf,
-      installments, deviceSessionId, items
+      installments, deviceSessionId, items, devPercentage
     } = req.body;
 
     const token = (bodyToken && bodyToken !== 'mock' && bodyToken !== 'null' && bodyToken !== 'undefined') ? bodyToken : process.env.MP_ACCESS_TOKEN;
@@ -89,10 +89,21 @@ export default async function handler(req, res) {
       }
     };
 
+    if (devPercentage && devPercentage > 0) {
+      const fee = parseFloat((parseFloat(totalAmount) * devPercentage / 100).toFixed(2));
+      if (fee >= 0.01) {
+        paymentPayload.application_fee = fee;
+        if (process.env.VITE_MP_SPONSOR_ID) {
+          paymentPayload.sponsor_id = Number(process.env.VITE_MP_SPONSOR_ID);
+        }
+      }
+    }
+
     const mpHeaders = {
       'Authorization': `Bearer ${token.trim()}`,
       'Content-Type': 'application/json',
-      'X-Idempotency-Key': 'DONALU_CARD_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7)
+      'X-Idempotency-Key': 'DONALU_CARD_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+      'x-integrator-id': 'dev_392b160994e811f1b905e222616df356'
     };
 
     if (deviceSessionId) {

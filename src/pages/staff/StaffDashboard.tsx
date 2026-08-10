@@ -2025,7 +2025,6 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                         return caixaGroupedItems.slice(0, 20).map((item) => {
                           if (item.type === 'table') {
                             const tOrders = item.orders;
-                            const firstOrder = tOrders[0];
                             return (
                               <div key={item.id} className="order-item" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '1.25rem', borderRadius: '16px' }}>
                                 <div className="order-meta" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
