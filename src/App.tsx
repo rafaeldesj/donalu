@@ -791,6 +791,11 @@ const MainLayout = () => {
       menuItems.push({ id: 'mapa_mesas', label: 'Mapa de Mesas', icon: Grid });
     }
 
+    // Transações Mercado Pago (admin, owner, dev)
+    if (['developer', 'owner', 'manager'].includes(role)) {
+      menuItems.push({ id: 'mercadopago_transacoes', label: 'Transações MP', icon: CreditCard });
+    }
+
     // Painel de Gestão de Usuários (admin, owner, dev)
     if (['developer', 'owner', 'manager'].includes(role)) {
       menuItems.push({ id: 'users', label: 'Usuários', icon: Users });
@@ -986,6 +991,7 @@ const getRoleLabel = (r: string): React.ReactNode => {
             {activeView === 'registros' && <SystemLogs />}
             {activeView === 'configuracoes' && <SettingsPage />}
             {activeView === 'mapa_mesas' && <TableMap />}
+            {activeView === 'mercadopago_transacoes' && <StaffDashboard filter="mercadopago" />}
             {activeView === 'teste_mapa' && <RiderLocationMonitor />}
             {activeView === 'pdv_vendas' && <PdvSales />}
           </Suspense>

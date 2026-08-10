@@ -10,7 +10,7 @@ import { printOrder, getPrinterSettings, printTableBill } from '../../utils/prin
 import { API_BASE_URL } from '../../config/api';
 
 interface StaffDashboardProps {
-  filter?: 'cook' | 'attendant' | 'cashier' | 'delivery';
+  filter?: 'cook' | 'attendant' | 'cashier' | 'delivery' | 'mercadopago';
 }
 
 export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
@@ -1940,6 +1940,161 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                       </p>
                     ) : (
                       paidTodayOrders.slice(0, 20).map((order) => (
+                        <div key={order.id} className="order-item" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '1.25rem', borderRadius: '16px' }}>
+                          <div className="order-meta" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                              <strong style={{ fontSize: '1.15rem' }}>{formatOrderHeader(order)}</strong>
+                              <span style={{ fontWeight: 700, color: 'var(--primary-gold)', fontSize: '1.1rem' }}>
+                                R$ {order.total.toFixed(2).replace('.', ',')}
+                              </span>
+                            </div>
+                            <span style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                              {order.clientName}
+                            </span>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>
+                              {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Pagamento: {order.paymentMethod === 'dinheiro' ? 'Dinheiro' : order.paymentMethod === 'debito' ? 'Débito' : order.paymentMethod === 'credito' ? 'Crédito' : order.paymentMethod === 'pix' ? 'PIX' : order.paymentMethod}
+                            </span>
+                          </div>
+                          
+                          <div className="order-actions" style={{ marginTop: '1rem' }}>
+                            <button 
+                              type="button" 
+                              onClick={() => printOrder(order).catch(err => alert("Erro ao imprimir: " + err.message))} 
+                              className="btn-small" 
+                              style={{ 
+                                width: '100%', 
+                                padding: '0.6rem', 
+                                background: 'rgba(245, 158, 11, 0.1)', 
+                                color: 'var(--primary-gold)', 
+                                border: '1px solid rgba(245, 158, 11, 0.2)', 
+                                borderRadius: '8px', 
+                                cursor: 'pointer', 
+                                fontWeight: 600,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.4rem'
+                              }}
+                            >
+                              <Printer size={14} /> Reimprimir Comprovante
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+              </div>
+            );
+          })()}
+
+          {/* Transações Mercado Pago */}
+          {filter === 'mercadopago' && (() => {
+            const todayStr = getBusinessDay(new Date().toISOString());
+            let todayOrders = orders.filter(o => o.status !== 'cancelled');
+
+            // Filtro simplificado apenas de hoje por enquanto, como o caixa
+            todayOrders = todayOrders.filter(o => getBusinessDay(o.createdAt) === todayStr);
+
+            // Pedidos pagos de hoje (tanto finalizados quanto ativos pagos online)
+            const paidTodayOrders = todayOrders.filter(o => 
+              o.status === 'completed' || 
+              ['pix', 'credito', 'debito', 'maq_pix', 'maq_credito', 'maq_debito', 'google_pay'].includes(o.paymentMethod || '')
+            );
+
+            // Agrupar mesas fechadas
+            const closedTablesMap: { [table: string]: { total: number; orderIds: string[]; orders: any[] } } = {};
+            const standaloneOrders: any[] = [];
+
+            paidTodayOrders.forEach(o => {
+              if (o.orderType === 'dine_in_table' && o.tableNumber && o.status === 'completed') {
+                if (!closedTablesMap[o.tableNumber]) {
+                  closedTablesMap[o.tableNumber] = { total: 0, orderIds: [], orders: [] };
+                }
+                closedTablesMap[o.tableNumber].total += o.total;
+                closedTablesMap[o.tableNumber].orderIds.push(o.id || '');
+                closedTablesMap[o.tableNumber].orders.push(o);
+              } else {
+                standaloneOrders.push(o);
+              }
+            });
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%', padding: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                  <CreditCard size={28} className="text-gold" style={{ color: 'var(--primary-gold)' }} />
+                  <h2 style={{ fontSize: '1.8rem', margin: 0, color: '#fff' }}>Transações Mercado Pago</h2>
+                </div>
+
+                {/* Mesas Fechadas Hoje */}
+                <div className="staff-section" style={{ border: 'none', background: 'transparent', padding: 0 }}>
+                  <div className="section-title">
+                    <CheckCircle className="section-icon text-emerald" size={24} />
+                    <h3 style={{ fontSize: '1.4rem' }}>Contas de Mesas Fechadas (Hoje)</h3>
+                  </div>
+                  <div className="orders-queue" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
+                    {Object.keys(closedTablesMap).length === 0 ? (
+                      <p style={{ color: 'var(--text-secondary)', padding: '1.5rem', gridColumn: '1 / -1', textAlign: 'center', background: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.05)', borderRadius: '12px' }}>
+                        Nenhuma mesa foi fechada/paga hoje ainda.
+                      </p>
+                    ) : (
+                      Object.entries(closedTablesMap).map(([tableNum, tableData]) => (
+                        <div key={tableNum} className="order-item" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '1.25rem', borderRadius: '16px' }}>
+                          <div className="order-meta" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                              <strong style={{ fontSize: '1.2rem', color: '#fff' }}>Mesa {tableNum}</strong>
+                              <span style={{ fontWeight: 700, color: 'var(--primary-gold)', fontSize: '1.2rem' }}>
+                                R$ {tableData.total.toFixed(2).replace('.', ',')}
+                              </span>
+                            </div>
+                            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                              {tableData.orders.length} pedidos vinculados
+                            </span>
+                          </div>
+                          
+                          <div className="order-actions" style={{ marginTop: '1rem' }}>
+                            <button 
+                              type="button" 
+                              onClick={() => printTableBill(tableNum, tableData.orders)} 
+                              className="btn-small" 
+                              style={{ 
+                                width: '100%', 
+                                padding: '0.6rem', 
+                                background: 'rgba(245, 158, 11, 0.1)', 
+                                color: 'var(--primary-gold)', 
+                                border: '1px solid rgba(245, 158, 11, 0.2)', 
+                                borderRadius: '8px', 
+                                cursor: 'pointer', 
+                                fontWeight: 600,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.4rem'
+                              }}
+                            >
+                              <Printer size={14} /> Reimprimir Conta da Mesa
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Vendas Avulsas (Balcão / Delivery) */}
+                <div className="staff-section" style={{ border: 'none', background: 'transparent', padding: 0, marginTop: '2rem' }}>
+                  <div className="section-title">
+                    <CheckCircle className="section-icon text-emerald" size={24} />
+                    <h3 style={{ fontSize: '1.4rem' }}>Vendas Avulsas Pagas (Hoje)</h3>
+                  </div>
+                  <div className="orders-queue" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
+                    {standaloneOrders.length === 0 ? (
+                      <p style={{ color: 'var(--text-secondary)', padding: '1.5rem', gridColumn: '1 / -1', textAlign: 'center', background: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.05)', borderRadius: '12px' }}>
+                        Nenhuma venda avulsa paga hoje ainda.
+                      </p>
+                    ) : (
+                      standaloneOrders.slice(0, 30).map((order) => (
                         <div key={order.id} className="order-item" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '1.25rem', borderRadius: '16px' }}>
                           <div className="order-meta" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
