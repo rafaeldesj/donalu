@@ -1994,11 +1994,34 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
             const todayStr = getBusinessDay(new Date().toISOString());
             let todayOrders = orders.filter(o => o.status !== 'cancelled');
 
-            // Filtro simplificado apenas de hoje por enquanto, como o caixa
-            todayOrders = todayOrders.filter(o => getBusinessDay(o.createdAt) === todayStr);
+            if (timeFilterHours === 'all_day') {
+              todayOrders = todayOrders.filter(o => getBusinessDay(o.createdAt) === todayStr);
+            } else if (['1', '2', '3', '4'].includes(timeFilterHours)) {
+              const hours = parseInt(timeFilterHours);
+              const cutoffTime = Date.now() - hours * 60 * 60 * 1000;
+              todayOrders = todayOrders.filter(o => 
+                getBusinessDay(o.createdAt) === todayStr && 
+                new Date(o.createdAt).getTime() >= cutoffTime
+              );
+            } else if (timeFilterHours === '3_days') {
+              const cutoffTime = Date.now() - 3 * 24 * 60 * 60 * 1000;
+              todayOrders = todayOrders.filter(o => new Date(o.createdAt).getTime() >= cutoffTime);
+            } else if (timeFilterHours === '7_days') {
+              const cutoffTime = Date.now() - 7 * 24 * 60 * 60 * 1000;
+              todayOrders = todayOrders.filter(o => new Date(o.createdAt).getTime() >= cutoffTime);
+            } else if (timeFilterHours === '30_days') {
+              const cutoffTime = Date.now() - 30 * 24 * 60 * 60 * 1000;
+              todayOrders = todayOrders.filter(o => new Date(o.createdAt).getTime() >= cutoffTime);
+            } else if (timeFilterHours === 'specific_date') {
+              if (specificDateValue) {
+                todayOrders = todayOrders.filter(o => getBusinessDay(o.createdAt) === specificDateValue);
+              } else {
+                todayOrders = [];
+              }
+            }
 
-            // Pedidos pagos de hoje (tanto finalizados quanto ativos pagos online)
-            const paidTodayOrders = todayOrders.filter(o => 
+            // Pedidos pagos (tanto finalizados quanto ativos pagos online)
+            const paidOrders = todayOrders.filter(o => 
               o.status === 'completed' || 
               ['pix', 'credito', 'debito', 'maq_pix', 'maq_credito', 'maq_debito', 'google_pay'].includes(o.paymentMethod || '')
             );
@@ -2007,7 +2030,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
             const closedTablesMap: { [table: string]: { total: number; orderIds: string[]; orders: any[] } } = {};
             const standaloneOrders: any[] = [];
 
-            paidTodayOrders.forEach(o => {
+            paidOrders.forEach(o => {
               if (o.orderType === 'dine_in_table' && o.tableNumber && o.status === 'completed') {
                 if (!closedTablesMap[o.tableNumber]) {
                   closedTablesMap[o.tableNumber] = { total: 0, orderIds: [], orders: [] };
@@ -2022,21 +2045,66 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
 
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%', padding: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                  <CreditCard size={28} className="text-gold" style={{ color: 'var(--primary-gold)' }} />
-                  <h2 style={{ fontSize: '1.8rem', margin: 0, color: '#fff' }}>Transações Mercado Pago</h2>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <CreditCard size={28} className="text-gold" style={{ color: 'var(--primary-gold)' }} />
+                    <h2 style={{ fontSize: '1.8rem', margin: 0, color: '#fff' }}>Transações Mercado Pago</h2>
+                  </div>
+                  
+                  {/* Filtro de Tempo */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <select
+                      value={timeFilterHours}
+                      onChange={(e) => setTimeFilterHours(e.target.value)}
+                      style={{ 
+                        padding: '0.4rem 0.6rem', 
+                        borderRadius: '8px', 
+                        border: '1px solid rgba(255,255,255,0.1)', 
+                        background: 'rgba(255,255,255,0.05)', 
+                        color: '#fff', 
+                        fontSize: '0.85rem' 
+                      }}
+                    >
+                      <option value="all_day">Hoje (Dia todo)</option>
+                      <option value="1">Última 1 hora</option>
+                      <option value="2">Últimas 2 horas</option>
+                      <option value="3">Últimas 3 horas</option>
+                      <option value="4">Últimas 4 horas</option>
+                      <option value="3_days">Últimos 3 dias</option>
+                      <option value="7_days">Últimos 7 dias</option>
+                      <option value="30_days">Últimos 30 dias</option>
+                      <option value="specific_date">Data específica...</option>
+                    </select>
+
+                    {timeFilterHours === 'specific_date' && (
+                      <input
+                        type="date"
+                        value={specificDateValue}
+                        onChange={(e) => setSpecificDateValue(e.target.value)}
+                        style={{
+                          padding: '0.4rem 0.6rem',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          background: 'rgba(255,255,255,0.05)',
+                          color: '#fff',
+                          fontSize: '0.85rem',
+                          outline: 'none'
+                        }}
+                      />
+                    )}
+                  </div>
                 </div>
 
-                {/* Mesas Fechadas Hoje */}
+                {/* Mesas Fechadas */}
                 <div className="staff-section" style={{ border: 'none', background: 'transparent', padding: 0 }}>
                   <div className="section-title">
                     <CheckCircle className="section-icon text-emerald" size={24} />
-                    <h3 style={{ fontSize: '1.4rem' }}>Contas de Mesas Fechadas (Hoje)</h3>
+                    <h3 style={{ fontSize: '1.4rem' }}>Contas de Mesas Fechadas</h3>
                   </div>
                   <div className="orders-queue" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
                     {Object.keys(closedTablesMap).length === 0 ? (
                       <p style={{ color: 'var(--text-secondary)', padding: '1.5rem', gridColumn: '1 / -1', textAlign: 'center', background: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.05)', borderRadius: '12px' }}>
-                        Nenhuma mesa foi fechada/paga hoje ainda.
+                        Nenhuma mesa foi fechada/paga no período selecionado.
                       </p>
                     ) : (
                       Object.entries(closedTablesMap).map(([tableNum, tableData]) => (
@@ -2086,12 +2154,12 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                 <div className="staff-section" style={{ border: 'none', background: 'transparent', padding: 0, marginTop: '2rem' }}>
                   <div className="section-title">
                     <CheckCircle className="section-icon text-emerald" size={24} />
-                    <h3 style={{ fontSize: '1.4rem' }}>Vendas Avulsas Pagas (Hoje)</h3>
+                    <h3 style={{ fontSize: '1.4rem' }}>Vendas Avulsas Pagas</h3>
                   </div>
                   <div className="orders-queue" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
                     {standaloneOrders.length === 0 ? (
                       <p style={{ color: 'var(--text-secondary)', padding: '1.5rem', gridColumn: '1 / -1', textAlign: 'center', background: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.05)', borderRadius: '12px' }}>
-                        Nenhuma venda avulsa paga hoje ainda.
+                        Nenhuma venda avulsa paga no período selecionado.
                       </p>
                     ) : (
                       standaloneOrders.slice(0, 30).map((order) => (
