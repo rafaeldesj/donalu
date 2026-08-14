@@ -8,6 +8,7 @@ import { processOrderLoyaltyStamps } from '../../utils/loyalty';
 import type { OrderDocument } from '../../types/order';
 import { printOrder, getPrinterSettings, printTableBill, printPaymentReceipt } from '../../utils/printer';
 import { API_BASE_URL } from '../../config/api';
+import { FeeBreakdown } from '../../components/FeeBreakdown';
 
 interface StaffDashboardProps {
   filter?: 'cook' | 'attendant' | 'cashier' | 'delivery' | 'mercadopago';
@@ -2313,16 +2314,16 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                         return (
                         <div key={tableNum} className="order-item" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '1.25rem', borderRadius: '16px' }}>
                           <div className="order-meta" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'flex-start', gap: '1rem' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', minWidth: 0, flex: 1 }}>
                                 <strong style={{ fontSize: '1.2rem', color: '#fff' }}>Mesa {tableNum}</strong>
                                 {transactionId && (
-                                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Transação: {transactionId}</span>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', wordBreak: 'break-all' }}>Transação: {transactionId}</span>
                                 )}
                               </div>
                               <button 
                                 onClick={() => setViewingReceiptDetails({ title: `Detalhes da Conta (Mesa ${tableNum})`, orders: tableData.orders })} 
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline', textDecorationColor: 'var(--primary-gold)' }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline', textDecorationColor: 'var(--primary-gold)', flexShrink: 0 }}
                                 title="Clique para ver os detalhes dos pedidos"
                               >
                                 <span style={{ fontWeight: 700, color: 'var(--primary-gold)', fontSize: '1.2rem' }}>
@@ -2378,6 +2379,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                             >
                               <Printer size={14} /> Reimprimir Conta (Itens)
                             </button>
+                            {transactionId && <FeeBreakdown transactionId={transactionId} />}
                           </div>
                         </div>
                       )})
@@ -2400,18 +2402,18 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                       standaloneOrders.slice(0, 30).map((order) => (
                         <div key={order.id} className="order-item" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '1.25rem', borderRadius: '16px' }}>
                           <div className="order-meta" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'flex-start', gap: '1rem' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', minWidth: 0, flex: 1 }}>
                                 <strong style={{ fontSize: '1.15rem' }}>{formatOrderHeader(order)}</strong>
                                 {(order.pointPaymentIntentId || order.mercadoPagoPaymentId || order.mercadoPagoOrderId) && (
-                                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', wordBreak: 'break-all' }}>
                                     Transação: {order.pointPaymentIntentId || order.mercadoPagoPaymentId || order.mercadoPagoOrderId}
                                   </span>
                                 )}
                               </div>
                               <button 
                                 onClick={() => setViewingReceiptDetails({ title: `Detalhes do Pedido ${order.dailySeq ? `#${order.dailySeq}` : ''}`, orders: [order] })} 
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline', textDecorationColor: 'var(--primary-gold)' }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline', textDecorationColor: 'var(--primary-gold)', flexShrink: 0 }}
                                 title="Clique para ver os detalhes do pedido"
                               >
                                 <span style={{ fontWeight: 700, color: 'var(--primary-gold)', fontSize: '1.1rem' }}>
@@ -2470,6 +2472,9 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                             >
                               <Printer size={14} /> Reimprimir Pedido (Itens)
                             </button>
+                            {(order.pointPaymentIntentId || order.mercadoPagoPaymentId || order.mercadoPagoOrderId) && (
+                              <FeeBreakdown transactionId={order.pointPaymentIntentId || order.mercadoPagoPaymentId || order.mercadoPagoOrderId} />
+                            )}
                           </div>
                         </div>
                       ))
