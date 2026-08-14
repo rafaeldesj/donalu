@@ -2379,7 +2379,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                             >
                               <Printer size={14} /> Reimprimir Conta (Itens)
                             </button>
-                            {transactionId && <FeeBreakdown transactionId={transactionId} />}
+                            {transactionId && <FeeBreakdown transactionId={transactionId} token={storeConfig?.storeOwnerAccessToken || storeConfig?.devAccessToken || 'mock'} />}
                           </div>
                         </div>
                       )})
@@ -2473,7 +2473,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                               <Printer size={14} /> Reimprimir Pedido (Itens)
                             </button>
                             {(order.pointPaymentIntentId || order.mercadoPagoPaymentId || order.mercadoPagoOrderId) && (
-                              <FeeBreakdown transactionId={order.pointPaymentIntentId || order.mercadoPagoPaymentId || order.mercadoPagoOrderId} />
+                              <FeeBreakdown transactionId={order.pointPaymentIntentId || order.mercadoPagoPaymentId || order.mercadoPagoOrderId} token={storeConfig?.storeOwnerAccessToken || storeConfig?.devAccessToken || 'mock'} />
                             )}
                           </div>
                         </div>

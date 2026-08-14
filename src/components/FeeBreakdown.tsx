@@ -1,23 +1,22 @@
 import React, { useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
+
 import { API_BASE_URL } from '../config/api';
 
 interface FeeBreakdownProps {
   transactionId: string | null;
+  token?: string;
 }
 
-export const FeeBreakdown: React.FC<FeeBreakdownProps> = ({ transactionId }) => {
+export const FeeBreakdown: React.FC<FeeBreakdownProps> = ({ transactionId, token = 'mock' }) => {
   const [fees, setFees] = useState<{ mpFee: number; devFee: number; netAmount: number; grossAmount: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { storeConfig } = useAuth();
 
   const loadFees = async () => {
     if (!transactionId) return;
     setLoading(true);
     setError('');
     try {
-      const token = storeConfig?.storeOwnerAccessToken || storeConfig?.devAccessToken || 'mock';
       const res = await fetch(`${API_BASE_URL}/api/pagamentos/get-payment-fees?transactionId=${transactionId}&token=${token}`);
       const data = await res.json();
       if (data.success) {
