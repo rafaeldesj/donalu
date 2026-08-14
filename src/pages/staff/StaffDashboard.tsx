@@ -1597,56 +1597,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
 
                   </div>
 
-                  {/* Lightbox de Detalhes do Recibo (Itens do Pedido) */}
-      {viewingReceiptDetails && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backdropFilter: 'blur(4px)' }}>
-          <div style={{ background: '#0b0f19', borderRadius: '16px', width: '100%', maxWidth: '500px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
-            <div style={{ padding: '1.25rem', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#fff' }}>{viewingReceiptDetails.title}</h3>
-              <button 
-                onClick={() => setViewingReceiptDetails(null)}
-                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '1.5rem', lineHeight: 1 }}
-              >
-                &times;
-              </button>
-            </div>
-            
-            <div style={{ padding: '1.25rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {viewingReceiptDetails.orders.map((order, idx) => (
-                <div key={order.id || idx} style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ fontWeight: 600, color: 'var(--primary-gold)', marginBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.25rem' }}>
-                    {order.orderType === 'dine_in_table' ? `Pedido na Mesa (Hora: ${new Date(order.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})})` : `Pedido ${order.dailySeq ? `#${order.dailySeq}` : ''}`}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.9rem' }}>
-                    {order.items.map((item, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: '#ccc' }}>
-                        <span>{item.quantity}x {item.name}</span>
-                        <span>R$ {((item.price || 0) * item.quantity).toFixed(2).replace('.', ',')}</span>
-                      </div>
-                    ))}
-                    {(order.deliveryFee ?? 0) > 0 && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ccc' }}>
-                        <span>Taxa de Entrega</span>
-                        <span>R$ {order.deliveryFee?.toFixed(2).replace('.', ',')}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ marginTop: '0.75rem', paddingTop: '0.5rem', borderTop: '1px dashed rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'flex-end', fontWeight: 600, color: '#fff' }}>
-                    Subtotal: R$ {order.total.toFixed(2).replace('.', ',')}
-                  </div>
-                </div>
-              ))}
-              
-              <div style={{ marginTop: '0.5rem', padding: '1rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                <span style={{ fontWeight: 600, color: 'var(--emerald-400, #34d399)' }}>Total Pago:</span>
-                <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--emerald-400, #34d399)' }}>
-                  R$ {viewingReceiptDetails.orders.reduce((sum, o) => sum + o.total, 0).toFixed(2).replace('.', ',')}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
 
                   {/* Detalhamento de Saldos Não Pagos */}
                   {totalUnpaidTodayValue > 0 && (
@@ -3524,6 +3475,57 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
           </div>
         );
       })()}
+
+      {/* Lightbox de Detalhes do Recibo (Itens do Pedido) */}
+      {viewingReceiptDetails && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backdropFilter: 'blur(4px)' }}>
+          <div style={{ background: '#0b0f19', borderRadius: '16px', width: '100%', maxWidth: '500px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
+            <div style={{ padding: '1.25rem', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#fff' }}>{viewingReceiptDetails.title}</h3>
+              <button 
+                onClick={() => setViewingReceiptDetails(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '1.5rem', lineHeight: 1 }}
+              >
+                &times;
+              </button>
+            </div>
+            
+            <div style={{ padding: '1.25rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {viewingReceiptDetails.orders.map((order, idx) => (
+                <div key={order.id || idx} style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ fontWeight: 600, color: 'var(--primary-gold)', marginBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.25rem' }}>
+                    {order.orderType === 'dine_in_table' ? `Pedido na Mesa (Hora: ${new Date(order.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})})` : `Pedido ${order.dailySeq ? `#${order.dailySeq}` : ''}`}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.9rem' }}>
+                    {order.items.map((item, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: '#ccc' }}>
+                        <span>{item.quantity}x {item.name}</span>
+                        <span>R$ {((item.price || 0) * item.quantity).toFixed(2).replace('.', ',')}</span>
+                      </div>
+                    ))}
+                    {(order.deliveryFee ?? 0) > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ccc' }}>
+                        <span>Taxa de Entrega</span>
+                        <span>R$ {order.deliveryFee?.toFixed(2).replace('.', ',')}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ marginTop: '0.75rem', paddingTop: '0.5rem', borderTop: '1px dashed rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'flex-end', fontWeight: 600, color: '#fff' }}>
+                    Subtotal: R$ {order.total.toFixed(2).replace('.', ',')}
+                  </div>
+                </div>
+              ))}
+              
+              <div style={{ marginTop: '0.5rem', padding: '1rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                <span style={{ fontWeight: 600, color: 'var(--emerald-400, #34d399)' }}>Total Pago:</span>
+                <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--emerald-400, #34d399)' }}>
+                  R$ {viewingReceiptDetails.orders.reduce((sum, o) => sum + o.total, 0).toFixed(2).replace('.', ',')}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Lightbox do Detalhamento das Estatísticas de Pedidos */}
       {viewingStatsDetailType && (() => {
