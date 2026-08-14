@@ -84,10 +84,16 @@ export default async function handler(req, res) {
         if (foundPaymentId) {
           paymentId = foundPaymentId;
         } else {
-          return res.status(404).json({ success: false, message: 'Ordem sem pagamentos atrelados ainda.', details: orderRes.json });
+          // Fallback: Tenta buscar os pagamentos associados a essa ordem pela API de busca de pagamentos
+          const searchRes = await nativeRequest(`https://api.mercadopago.com/v1/payments/search?order.id=${transactionId}`, 'GET', headers);
+          if (searchRes.ok && searchRes.json?.results?.length > 0) {
+            paymentId = searchRes.json.results[0].id;
+          } else {
+            return res.status(404).json({ success: false, message: 'Nenhum pagamento atrelado a essa ordem no Mercado Pago.', details: orderRes.json });
+          }
         }
       } else {
-        return res.status(404).json({ success: false, message: 'Ordem não encontrada.', details: orderRes.json });
+        return res.status(404).json({ success: false, message: 'Ordem não encontrada no Mercado Pago.', details: orderRes.json });
       }
     }
 
