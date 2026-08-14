@@ -66,12 +66,23 @@ export default async function handler(req, res) {
     if (isNaN(Number(transactionId))) {
       const orderRes = await nativeRequest(`https://api.mercadopago.com/v1/orders/${transactionId}`, 'GET', headers);
       if (orderRes.ok) {
+        let foundPaymentId = null;
         if (orderRes.json?.payments?.length > 0) {
-          paymentId = orderRes.json.payments[0].id;
+          foundPaymentId = orderRes.json.payments[0].id;
         } else if (orderRes.json?.transactions?.length > 0) {
-          paymentId = orderRes.json.transactions[0].transaction_id || orderRes.json.transactions[0].id;
+          if (orderRes.json.transactions[0].payments?.length > 0) {
+            foundPaymentId = orderRes.json.transactions[0].payments[0].id;
+          } else if (orderRes.json.transactions[0].transaction_id) {
+            foundPaymentId = orderRes.json.transactions[0].transaction_id;
+          } else if (orderRes.json.transactions[0].id) {
+            foundPaymentId = orderRes.json.transactions[0].id;
+          }
         } else if (orderRes.json?.payment?.id) {
-          paymentId = orderRes.json.payment.id;
+          foundPaymentId = orderRes.json.payment.id;
+        }
+
+        if (foundPaymentId) {
+          paymentId = foundPaymentId;
         } else {
           return res.status(404).json({ success: false, message: 'Ordem sem pagamentos atrelados ainda.', details: orderRes.json });
         }
