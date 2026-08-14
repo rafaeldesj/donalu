@@ -67,7 +67,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { token, deviceId, posId, amount, paymentType, externalReference } = req.body || {};
+    const { token, deviceId, posId, amount, paymentType, externalReference, devPercentage } = req.body || {};
 
     const devIdStr = deviceId ? String(deviceId) : '';
     // terminal_id para a Orders API é o ID do dispositivo (ex: NEWLAND_N950__N950NCC603892853)
@@ -130,7 +130,8 @@ export default async function handler(req, res) {
     const headers = {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
-      'X-Idempotency-Key': `create_${devIdStr}_${Date.now()}`
+      'X-Idempotency-Key': `create_${devIdStr}_${Date.now()}`,
+      'x-integrator-id': 'dev_392b160994e811f1b905e222616df356'
     };
 
     let pType = 'debit_card';
@@ -155,6 +156,13 @@ export default async function handler(req, res) {
         }
       }
     };
+
+    if (devPercentage && devPercentage > 0) {
+      if (process.env.VITE_MP_SPONSOR_ID) {
+        payload.sponsor_id = Number(process.env.VITE_MP_SPONSOR_ID);
+        console.log(`[Mercado Pago Point] Split configurado com sponsor_id: ${payload.sponsor_id}`);
+      }
+    }
 
     console.log('[Mercado Pago Point Orders API] URL:', mpUrl);
     console.log('[Mercado Pago Point Orders API] terminal_id:', terminalId, '| deviceId:', devIdStr);

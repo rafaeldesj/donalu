@@ -66,6 +66,10 @@ export interface OrderDocument {
   refundedBy?: string;
   mercadoPagoPaymentId?: string;
   mercadoPagoOrderId?: string;
+  pointPaymentIntentId?: string;
+  pointPaymentStatus?: string;
+  pixPaymentStatus?: string;
+  paymentStatus?: string;
   satisfactionRating?: number;
   satisfactionFeedback?: string;
 }

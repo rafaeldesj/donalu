@@ -2216,11 +2216,12 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
               }
             }
 
-            // Pedidos pagos (tanto finalizados quanto ativos pagos online)
-            const paidOrders = todayOrders.filter(o => 
-              o.status === 'completed' || 
-              ['pix', 'credito', 'debito', 'maq_pix', 'maq_credito', 'maq_debito', 'google_pay'].includes(o.paymentMethod || '')
-            );
+            // Pedidos processados via integração Mercado Pago (Maquininha ou Online)
+            const paidOrders = todayOrders.filter(o => {
+              const isFinishedOrApproved = o.status === 'completed' || o.pointPaymentStatus === 'approved';
+              const isMpIntegration = ['pix', 'credito', 'debito', 'maq_pix', 'maq_credito', 'maq_debito', 'google_pay'].includes(o.paymentMethod || '');
+              return isFinishedOrApproved && isMpIntegration;
+            });
 
             // Agrupar mesas fechadas
             const closedTablesMap: { [table: string]: { total: number; orderIds: string[]; orders: any[] } } = {};
@@ -2305,11 +2306,20 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                         Nenhuma mesa foi fechada/paga no período selecionado.
                       </p>
                     ) : (
-                      Object.entries(closedTablesMap).map(([tableNum, tableData]) => (
+                      Object.entries(closedTablesMap).map(([tableNum, tableData]) => {
+                        const mpIdOrder = tableData.orders.find(o => o.pointPaymentIntentId || o.mercadoPagoPaymentId || o.mercadoPagoOrderId);
+                        const transactionId = mpIdOrder ? (mpIdOrder.pointPaymentIntentId || mpIdOrder.mercadoPagoPaymentId || mpIdOrder.mercadoPagoOrderId) : null;
+                        
+                        return (
                         <div key={tableNum} className="order-item" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '1.25rem', borderRadius: '16px' }}>
                           <div className="order-meta" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                              <strong style={{ fontSize: '1.2rem', color: '#fff' }}>Mesa {tableNum}</strong>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+                                <strong style={{ fontSize: '1.2rem', color: '#fff' }}>Mesa {tableNum}</strong>
+                                {transactionId && (
+                                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Transação: {transactionId}</span>
+                                )}
+                              </div>
                               <button 
                                 onClick={() => setViewingReceiptDetails({ title: `Detalhes da Conta (Mesa ${tableNum})`, orders: tableData.orders })} 
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline', textDecorationColor: 'var(--primary-gold)' }}
@@ -2370,7 +2380,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                             </button>
                           </div>
                         </div>
-                      ))
+                      )})
                     )}
                   </div>
                 </div>
@@ -2391,7 +2401,14 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                         <div key={order.id} className="order-item" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '1.25rem', borderRadius: '16px' }}>
                           <div className="order-meta" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                              <strong style={{ fontSize: '1.15rem' }}>{formatOrderHeader(order)}</strong>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+                                <strong style={{ fontSize: '1.15rem' }}>{formatOrderHeader(order)}</strong>
+                                {(order.pointPaymentIntentId || order.mercadoPagoPaymentId || order.mercadoPagoOrderId) && (
+                                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                    Transação: {order.pointPaymentIntentId || order.mercadoPagoPaymentId || order.mercadoPagoOrderId}
+                                  </span>
+                                )}
+                              </div>
                               <button 
                                 onClick={() => setViewingReceiptDetails({ title: `Detalhes do Pedido ${order.dailySeq ? `#${order.dailySeq}` : ''}`, orders: [order] })} 
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline', textDecorationColor: 'var(--primary-gold)' }}
