@@ -1168,7 +1168,8 @@ export async function printPaymentReceipt(ordersList: OrderDocument[], isTable: 
   if (paymentMethod === 'maq_credito' || paymentMethod === 'credito') paymentMethod = 'CRÉDITO';
   if (paymentMethod === 'maq_pix' || paymentMethod === 'pix') paymentMethod = 'PIX';
   
-  const mercadoPagoId = ordersList.find(o => o.mercadoPagoPaymentId)?.mercadoPagoPaymentId;
+  const mpTransactionOrder = ordersList.find(o => o.pointPaymentIntentId || o.mercadoPagoPaymentId || o.mercadoPagoOrderId);
+  const mpTransactionId = mpTransactionOrder ? (mpTransactionOrder.pointPaymentIntentId || mpTransactionOrder.mercadoPagoPaymentId || mpTransactionOrder.mercadoPagoOrderId) : null;
 
   const paymentsList = ordersList[0].payments && ordersList[0].payments.length > 0 
     ? ordersList[0].payments 
@@ -1217,8 +1218,8 @@ export async function printPaymentReceipt(ordersList: OrderDocument[], isTable: 
         
         <div class="left" style="margin-top: 10px;">
           <div><span class="bold">FORMA DE PAGTO:</span> ${formatMethod(payment.method)}</div>
-          ${mercadoPagoId ? `<div><span class="bold">TRANS. MP:</span> ${mercadoPagoId}</div>` : ''}
           <div style="margin-top: 4px;"><span class="bold">STATUS:</span> TRANSAÇÃO APROVADA</div>
+          ${mpTransactionId ? `<div style="margin-top: 4px; word-break: break-all;"><span class="bold">TRANS. MP:</span> ${mpTransactionId}</div>` : ''}
         </div>
         
         <div class="line" style="margin-top: 15px;">${dividerLine}</div>
