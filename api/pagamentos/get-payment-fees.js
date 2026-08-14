@@ -65,10 +65,18 @@ export default async function handler(req, res) {
     // Se o transactionId parece um OrderID do Point (geralmente começa com letras, ex: ORD...)
     if (isNaN(Number(transactionId))) {
       const orderRes = await nativeRequest(`https://api.mercadopago.com/v1/orders/${transactionId}`, 'GET', headers);
-      if (orderRes.ok && orderRes.json?.payments?.length > 0) {
-        paymentId = orderRes.json.payments[0].id;
+      if (orderRes.ok) {
+        if (orderRes.json?.payments?.length > 0) {
+          paymentId = orderRes.json.payments[0].id;
+        } else if (orderRes.json?.transactions?.length > 0) {
+          paymentId = orderRes.json.transactions[0].transaction_id || orderRes.json.transactions[0].id;
+        } else if (orderRes.json?.payment?.id) {
+          paymentId = orderRes.json.payment.id;
+        } else {
+          return res.status(404).json({ success: false, message: 'Ordem sem pagamentos atrelados ainda.', details: orderRes.json });
+        }
       } else {
-        return res.status(404).json({ success: false, message: 'Ordem não encontrada ou sem pagamentos.', details: orderRes.json });
+        return res.status(404).json({ success: false, message: 'Ordem não encontrada.', details: orderRes.json });
       }
     }
 

@@ -22,7 +22,8 @@ export const FeeBreakdown: React.FC<FeeBreakdownProps> = ({ transactionId, token
       if (data.success) {
         setFees(data.fees);
       } else {
-        setError(data.message || 'Erro ao carregar taxas.');
+        const detailsStr = data.details ? ` (${JSON.stringify(data.details).substring(0, 50)}...)` : '';
+        setError((data.message || 'Erro ao carregar taxas.') + detailsStr);
       }
     } catch (e: any) {
       setError('Erro de conexão ao carregar taxas.');
