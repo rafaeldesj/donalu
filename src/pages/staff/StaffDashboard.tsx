@@ -1316,7 +1316,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
           {/* Fila do Caixa */}
           {filter === 'cashier' && isAuthorized('cashier') && (() => {
             const todayStr = getBusinessDay(new Date().toISOString());
-            let todayOrders = orders.filter(o => o.status !== 'cancelled');
+            let todayOrders = orders.filter(o => o.status !== 'cancelled' && o.status !== 'awaiting_payment' && !(!o.paymentMethod && !o.paymentVerificationToken));
 
             // Lógica de filtragem por tempo estendido / específico
             if (timeFilterHours === 'all_day') {
@@ -1353,14 +1353,14 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
             // Pedidos pagos de hoje (tanto finalizados quanto ativos pagos online)
             const paidTodayOrders = todayOrders.filter(o => 
               o.status === 'completed' || 
-              ['pix', 'credito', 'google_pay'].includes(o.paymentMethod || '')
+              ['pix', 'credito', 'credito_mp', 'google_pay'].includes(o.paymentMethod || '')
             );
             const totalPaidTodayValue = paidTodayOrders.reduce((sum, o) => sum + o.total, 0);
 
             // Pedidos não pagos de hoje (ativos com métodos físicos ou pagar no final)
             const unpaidTodayOrders = todayOrders.filter(o => 
               o.status !== 'completed' && 
-              !['pix', 'credito', 'google_pay'].includes(o.paymentMethod || '')
+              !['pix', 'credito', 'credito_mp', 'google_pay'].includes(o.paymentMethod || '')
             );
             const totalUnpaidTodayValue = unpaidTodayOrders.reduce((sum, o) => sum + o.total, 0);
             
@@ -2135,7 +2135,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
           {/* Transações Mercado Pago */}
           {filter === 'mercadopago' && (() => {
             const todayStr = getBusinessDay(new Date().toISOString());
-            let todayOrders = orders.filter(o => o.status !== 'cancelled');
+            let todayOrders = orders.filter(o => o.status !== 'cancelled' && o.status !== 'awaiting_payment' && !(!o.paymentMethod && !o.paymentVerificationToken));
 
             if (timeFilterHours === 'all_day') {
               todayOrders = todayOrders.filter(o => getBusinessDay(o.createdAt) === todayStr);
@@ -3530,7 +3530,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
       {/* Lightbox do Detalhamento das Estatísticas de Pedidos */}
       {viewingStatsDetailType && (() => {
         const todayStr = getBusinessDay(new Date().toISOString());
-        let filteredOrders = orders.filter(o => o.status !== 'cancelled');
+        let filteredOrders = orders.filter(o => o.status !== 'cancelled' && o.status !== 'awaiting_payment' && !(!o.paymentMethod && !o.paymentVerificationToken));
 
         // Aplicar a mesma lógica de filtros temporais
         if (timeFilterHours === 'all_day') {
@@ -3568,12 +3568,12 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
         if (viewingStatsDetailType === 'paid') {
           filteredOrders = filteredOrders.filter(o => 
             o.status === 'completed' || 
-            ['pix', 'credito', 'google_pay'].includes(o.paymentMethod || '')
+            ['pix', 'credito', 'credito_mp', 'google_pay'].includes(o.paymentMethod || '')
           );
         } else if (viewingStatsDetailType === 'unpaid') {
           filteredOrders = filteredOrders.filter(o => 
             o.status !== 'completed' && 
-            !['pix', 'credito', 'google_pay'].includes(o.paymentMethod || '')
+            !['pix', 'credito', 'credito_mp', 'google_pay'].includes(o.paymentMethod || '')
           );
         }
 
@@ -3702,7 +3702,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                           <span>•</span>
                           <span>Tipo: <strong style={{ color: '#fff' }}>{getOrderTypeLabel(order)}</strong></span>
                           <span>•</span>
-                          <span>Pagamento: <strong style={{ color: '#fff' }}>{order.paymentMethod === 'dinheiro' ? '💵 Dinheiro' : order.paymentMethod === 'debito' ? '💳 Débito' : order.paymentMethod === 'credito' ? '💳 Crédito' : order.paymentMethod === 'pagar_final' ? '🍽️ Pagar no Final' : order.paymentMethod === 'cartao' ? '💳 Cartões ou Pix' : order.paymentMethod || 'Não definido'}</strong></span>
+                          <span>Pagamento: <strong style={{ color: '#fff' }}>{order.paymentMethod === 'dinheiro' ? '💵 Dinheiro' : order.paymentMethod === 'debito' ? '💳 Débito' : order.paymentMethod === 'credito' ? '💳 Crédito' : order.paymentMethod === 'pagar_final' ? '🍽️ Pagar no Final' : order.paymentMethod === 'cartao' ? '💳 Cartões ou Pix' : order.paymentMethod === 'pix' ? '🟢 Pix' : '🟢 Pix (Automático)'}</strong></span>
                         </div>
 
                         {/* Itens */}

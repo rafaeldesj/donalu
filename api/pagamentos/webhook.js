@@ -96,14 +96,24 @@ export default async function handler(req, res) {
         console.log('[Webhook] Rodando em modo MOCK ou sem credenciais de produção. Ignorando.');
         return res.status(200).json({ success: true, message: 'Modo mock ativado.' });
       }
+      const mpAccessToken = await getMercadoPagoToken();
+      if (!mpAccessToken || mpAccessToken === 'mock') {
+        console.error('[Webhook] Access token do Mercado Pago não encontrado ou mockado.');
+        return res.status(200).json({ success: true, message: 'Simulado/Ignorado.' });
+      }
 
-      // Consulta os detalhes do pagamento no Mercado Pago para garantir autenticidade
-      const mpUrl = `https://api.mercadopago.com/v1/payments/${resourceId}`;
-      const mpRes = await nativeRequest(mpUrl, 'GET', { 'Authorization': `Bearer ${token}` });
+      if (!resourceId) {
+        return res.status(400).json({ success: false, message: 'ID do pagamento não fornecido.' });
+      }
+
+      // Consulta a API do MP para confirmar o status atual e obter metadata
+      const mpRes = await nativeRequest(`https://api.mercadopago.com/v1/payments/${resourceId}`, 'GET', {
+        'Authorization': `Bearer ${mpAccessToken}`
+      });
 
       if (!mpRes.ok) {
-        console.error(`[Webhook] Erro ao obter detalhes do pagamento ${resourceId} no Mercado Pago:`, mpRes.json || mpRes.text);
-        return res.status(400).json({ success: false, message: 'Erro ao validar pagamento no Mercado Pago.' });
+        console.error(`[Webhook] Erro ao buscar pagamento ${resourceId}:`, mpRes.json || mpRes.text);
+        return res.status(200).json({ success: true, message: 'Pagamento não encontrado na API do MP, ignorando.' });
       }
 
       const payment = mpRes.json;
@@ -114,17 +124,18 @@ export default async function handler(req, res) {
       console.log(`[Webhook] Detalhes Pagamento - OrderID: ${orderId}, Status: ${status}, Token: ${paymentVerificationToken}`);
 
       if (orderId && paymentVerificationToken && status === 'approved') {
-        // Atualiza o Firestore usando a REST API com o token de verificação
-        const firestoreUrl = `https://firestore.googleapis.com/v1/projects/dona-lu-4242d/databases/(default)/documents/orders/${orderId}?updateMask.fieldPaths=status&updateMask.fieldPaths=paymentVerificationToken`;
+        // Atualiza o Firestore usando a REST API com o token de verificação e insere na cozinha
+        const firestoreUrl = `https://firestore.googleapis.com/v1/projects/dona-lu-4242d/databases/(default)/documents/orders/${orderId}?updateMask.fieldPaths=status&updateMask.fieldPaths=paymentVerificationToken&updateMask.fieldPaths=kitchenEnteredAt`;
         
         const updatePayload = {
           fields: {
             status: { stringValue: 'pending' },
-            paymentVerificationToken: { stringValue: paymentVerificationToken }
+            paymentVerificationToken: { stringValue: paymentVerificationToken },
+            kitchenEnteredAt: { stringValue: new Date().toISOString() }
           }
         };
 
-        const firestoreRes = await nativeRequest(firestoreUrl, 'PATCH', {}, updatePayload);
+        const firestoreRes = await nativeRequest(firestoreUrl, 'PATCH', { 'Content-Type': 'application/json' }, updatePayload);
 
         if (!firestoreRes.ok) {
           console.error(`[Webhook] Falha ao atualizar pedido ${orderId} no Firestore:`, firestoreRes.json || firestoreRes.text);
@@ -146,7 +157,7 @@ export default async function handler(req, res) {
               userRole: { stringValue: 'system' }
             }
           };
-          await nativeRequest(auditUrl, 'POST', {}, auditPayload);
+          await nativeRequest(auditUrl, 'POST', { 'Content-Type': 'application/json' }, auditPayload);
         } catch (auditErr) {
           console.error('[Webhook] Erro ao registrar log de auditoria:', auditErr);
         }

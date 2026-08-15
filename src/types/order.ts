@@ -70,6 +70,7 @@ export interface OrderDocument {
   pointPaymentStatus?: string;
   pixPaymentStatus?: string;
   paymentStatus?: string;
+  paymentVerificationToken?: string;
   satisfactionRating?: number;
   satisfactionFeedback?: string;
 }
