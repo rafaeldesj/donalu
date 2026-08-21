@@ -277,7 +277,7 @@ export const ClientDashboard = ({
   const [packForTakeout, setPackForTakeout] = useState<boolean>(false);
   const [eatAtCounter, setEatAtCounter] = useState<boolean>(false);
   const [tableNumber, setTableNumber] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credito' | 'credito_mp' | 'debito' | 'dinheiro' | 'pagar_final' | 'google_pay' | 'debito_point' | 'credito_point' | 'pix_point' | 'cartao'>('pix');
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credito' | 'credito_mp' | 'debito' | 'dinheiro' | 'pagar_final' | 'google_pay' | 'debito_point' | 'credito_point' | 'pix_point' | 'pix_stone' | 'credito_stone' | 'pos_stone' | 'cartao'>('pix');
   const [changeFor, setChangeFor] = useState('');
   const [noChangeNeeded, setNoChangeNeeded] = useState(false);
   const [showOrderSummary, setShowOrderSummary] = useState(false);
@@ -324,7 +324,7 @@ export const ClientDashboard = ({
   const [showCloseBillModal, setShowCloseBillModal] = useState(false);
   const [tableOrders, setTableOrders] = useState<any[]>([]);
   const [loadingBill, setLoadingBill] = useState(false);
-  const [billPaymentMethod, setBillPaymentMethod] = useState<'pix' | 'credito' | 'dinheiro' | 'debito' | 'google_pay' | 'debito_point' | 'credito_point' | 'pix_point' | 'cartao'>('pix');
+  const [billPaymentMethod, setBillPaymentMethod] = useState<'pix' | 'credito' | 'dinheiro' | 'debito' | 'google_pay' | 'debito_point' | 'credito_point' | 'pix_point' | 'pix_stone' | 'credito_stone' | 'pos_stone' | 'cartao'>('pix');
   const [billChangeFor, setBillChangeFor] = useState('');
   const [billNoChangeNeeded, setBillNoChangeNeeded] = useState(false);
   const [billSubmitting, setBillSubmitting] = useState(false);
@@ -411,7 +411,7 @@ export const ClientDashboard = ({
 
     const interval = setInterval(async () => {
       try {
-        const isStone = billPixPaymentId.startsWith('STONE_PIX_MOCK_');
+        const isStone = String(billPixPaymentId).startsWith('STONE_PIX_MOCK_');
         const res = await fetch(`${API_BASE_URL}/api/pagamentos/${isStone ? 'stone/' : ''}check-pix?paymentId=${billPixPaymentId}&token=${token}`);
         const result = await res.json();
         if (result.status === 'approved') {
@@ -2153,7 +2153,7 @@ export const ClientDashboard = ({
       
       interval = setInterval(async () => {
         try {
-          const isStone = pixPaymentId.startsWith('STONE_PIX_MOCK_');
+          const isStone = String(pixPaymentId).startsWith('STONE_PIX_MOCK_');
           const res = await fetch(`${API_BASE_URL}/api/pagamentos/${isStone ? 'stone/' : ''}check-pix?paymentId=${pixPaymentId}&token=${token}`);
           const data = await res.json();
           console.log('[DEBUG PIX POLL]', data);
