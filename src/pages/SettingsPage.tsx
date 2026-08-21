@@ -40,6 +40,10 @@ interface StoreConfig {
   storeOwnerEmail?: string;
   storeOwnerId?: string;
   mpPublicKey?: string;
+  stoneEnabled?: boolean;
+  stoneAccessToken?: string;
+  stoneWebhookSecret?: string;
+  stoneTerminalId?: string;
   pointSmart2Id?: string;
   pointSmart2PosId?: string;
   pointPro3Id?: string;
@@ -1401,6 +1405,9 @@ export const SettingsPage = () => {
                     { id: 'debito_point', name: 'Débito Maquininha', desc: 'Débito presencial via maquininha Point.', label: 'Débito Maquininha 💴' },
                     { id: 'credito_point', name: 'Crédito Maquininha', desc: 'Crédito presencial via maquininha Point.', label: 'Crédito Maquininha 💳' },
                     { id: 'pix_point', name: 'Pix Maquininha', desc: 'Pagamento via Pix direto na maquininha Point (QR Code na tela da máquina).', label: 'Pix Maquininha 🟢' },
+                    { id: 'pix_stone', name: 'Pix Stone', desc: 'Pagamento via Pix Stone (Mock).', label: 'Pix Stone 🟢' },
+                    { id: 'credito_stone', name: 'Crédito / Débito Stone', desc: 'Cartão online via Stone (Mock).', label: 'Crédito / Débito Stone 💳' },
+                    { id: 'pos_stone', name: 'Maquininha Stone', desc: 'Comunicação direta com o terminal Stone (Mock).', label: 'Maquininha Stone 💴' },
                     { id: 'dinheiro', name: 'Dinheiro', desc: 'Pagamento em dinheiro vivo.', label: 'Dinheiro 💵' },
                     { id: 'cartao', name: 'Cartões ou Pix', desc: 'Pagamento presencial via cartão ou Pix com baixa manual pelo operador.', label: 'Cartões ou Pix 💳' },
                     { id: 'pagar_final', name: 'Pagar no Final', desc: 'Permitir que o cliente pague ao final do atendimento na mesa.', label: 'Pagar no Final 🍽️' }
@@ -2935,6 +2942,58 @@ export const SettingsPage = () => {
                   </div>
                 )}
 
+              </div>
+
+              {/* 4. Configuração Stone */}
+              <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '12px', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', color: '#10b981' }}>
+                    Configurações Stone (Mock Mode)
+                  </label>
+                  <label className="toggle-switch">
+                    <input
+                      type="checkbox"
+                      checked={storeConfig.stoneEnabled || false}
+                      onChange={(e) => setStoreConfig(prev => ({ ...prev, stoneEnabled: e.target.checked }))}
+                    />
+                    <span className="slider"></span>
+                  </label>
+                </div>
+                
+                {storeConfig.stoneEnabled && (
+                  <div className="responsive-grid-2">
+                    <div className="input-group">
+                      <label>Stone Secret Key (Access Token)</label>
+                      <input
+                        type="password"
+                        className="pastel-edit-input"
+                        placeholder="Ex: sk_test_... (Mock)"
+                        value={storeConfig.stoneAccessToken || ''}
+                        onChange={(e) => setStoreConfig(prev => ({ ...prev, stoneAccessToken: e.target.value }))}
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label>Webhook Secret</label>
+                      <input
+                        type="password"
+                        className="pastel-edit-input"
+                        placeholder="Usado para validar retornos"
+                        value={storeConfig.stoneWebhookSecret || ''}
+                        onChange={(e) => setStoreConfig(prev => ({ ...prev, stoneWebhookSecret: e.target.value }))}
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label>Terminal ID (Maquininha Stone)</label>
+                      <input
+                        type="text"
+                        className="pastel-edit-input"
+                        placeholder="Ex: 00000000"
+                        value={storeConfig.stoneTerminalId || ''}
+                        onChange={(e) => setStoreConfig(prev => ({ ...prev, stoneTerminalId: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

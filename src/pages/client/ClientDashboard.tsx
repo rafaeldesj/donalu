@@ -411,7 +411,8 @@ export const ClientDashboard = ({
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/pagamentos/check-pix?paymentId=${billPixPaymentId}&token=${token}`);
+        const isStone = billPixPaymentId.startsWith('STONE_PIX_MOCK_');
+        const res = await fetch(`${API_BASE_URL}/api/pagamentos/${isStone ? 'stone/' : ''}check-pix?paymentId=${billPixPaymentId}&token=${token}`);
         const result = await res.json();
         if (result.status === 'approved') {
           setBillPixPaymentStatus('approved');
@@ -647,7 +648,11 @@ export const ClientDashboard = ({
         token = 'mock';
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/pagamentos/create-pix`, {
+      const endpoint = billPaymentMethod === 'pix_stone' 
+        ? `${API_BASE_URL}/api/pagamentos/stone/create-pix` 
+        : `${API_BASE_URL}/api/pagamentos/create-pix`;
+        
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1536,6 +1541,9 @@ export const ClientDashboard = ({
     debito_point: 'Débito Maquininha 💳',
     pix_point: 'Pix Maquininha 💳',
     credito_point: 'Crédito Maquininha 💳',
+    pix_stone: 'Pix Stone 🟢',
+    credito_stone: 'Crédito/Débito Stone 💳',
+    pos_stone: 'Maquininha Stone 💳',
     cartao: 'Cartão 💳',
   };
 
@@ -2145,7 +2153,8 @@ export const ClientDashboard = ({
       
       interval = setInterval(async () => {
         try {
-          const res = await fetch(`${API_BASE_URL}/api/pagamentos/check-pix?paymentId=${pixPaymentId}&token=${token}`);
+          const isStone = pixPaymentId.startsWith('STONE_PIX_MOCK_');
+          const res = await fetch(`${API_BASE_URL}/api/pagamentos/${isStone ? 'stone/' : ''}check-pix?paymentId=${pixPaymentId}&token=${token}`);
           const data = await res.json();
           console.log('[DEBUG PIX POLL]', data);
           if (data.success && data.status === 'approved') {
@@ -2311,10 +2320,16 @@ export const ClientDashboard = ({
           console.error("Erro no Google Pay:", err);
           throw new Error(err.message || 'Falha ao processar o pagamento com Google Pay. Tente novamente.');
         }
-      } else if (paymentMethod === 'debito_point' || paymentMethod === 'credito_point' || paymentMethod === 'pix_point') {
-        await handleTriggerPointPaymentFlow(finalTotal, paymentMethod === 'pix_point' ? 'pix' : (paymentMethod === 'debito_point' ? 'debito' : 'credito'), 'place_order');
-        return;
-      } else if (paymentMethod === 'pix') {
+      } else if (paymentMethod === 'debito_point' || paymentMethod === 'credito_point' || paymentMethod === 'pix_point' || paymentMethod === 'pos_stone') {
+        if (paymentMethod === 'pos_stone') {
+          alert("Aguardando processamento na maquininha Stone (MOCK)...");
+          setSubmitting(false);
+          return;
+        } else {
+          await handleTriggerPointPaymentFlow(finalTotal, paymentMethod === 'pix_point' ? 'pix' : (paymentMethod === 'debito_point' ? 'debito' : 'credito'), 'place_order');
+          return;
+        }
+      } else if (paymentMethod === 'pix' || paymentMethod === 'pix_stone') {
         let token = storeConfig?.storeOwnerAccessToken || storeConfig?.devAccessToken || 'mock';
         const isStoreOwnerConnected = storeConfig?.storeOwnerAccessToken && 
                                       !storeConfig.storeOwnerAccessToken.includes('MOCK') &&
@@ -2331,7 +2346,11 @@ export const ClientDashboard = ({
         const generatedOrderId = generatedOrderRef.id;
         const secureToken = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
         
-        const response = await fetch(`${API_BASE_URL}/api/pagamentos/create-pix`, {
+        const endpoint = paymentMethod === 'pix_stone' 
+          ? `${API_BASE_URL}/api/pagamentos/stone/create-pix` 
+          : `${API_BASE_URL}/api/pagamentos/create-pix`;
+          
+        const response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2462,12 +2481,12 @@ export const ClientDashboard = ({
           const requiresApproval = storeConfig?.requireCashierApproval === true;
           finalStatus = requiresApproval ? 'aguardando_caixa' : 'pending';
         }
-      } else if (paymentMethod === 'credito') {
-        // FLUXO DE PAGAMENTO ONLINE DO PAGBANK
+      } else if (paymentMethod === 'credito' || paymentMethod === 'credito_stone') {
+        // FLUXO DE PAGAMENTO ONLINE DO PAGBANK / STONE
         const isUsingSavedCard = useSavedCard && !!userData?.pagbank_card_token;
         let encryptedCardToken = '';
 
-        if (!isUsingSavedCard) {
+        if (!isUsingSavedCard && paymentMethod !== 'credito_stone') {
           if (!(window as any).PagSeguro) {
             throw new Error('O SDK do PagBank não pôde ser carregado. Por favor, recarregue a página.');
           }
@@ -2503,7 +2522,11 @@ export const ClientDashboard = ({
           encryptedCardToken = encryptionResult.encryptedCard;
         }
 
-        const response = await fetch(`${API_BASE_URL}/api/pagamentos/process-payment`, {
+        const endpoint = paymentMethod === 'credito_stone'
+          ? `${API_BASE_URL}/api/pagamentos/stone/create-card`
+          : `${API_BASE_URL}/api/pagamentos/process-payment`;
+
+        const response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -3843,6 +3866,9 @@ export const ClientDashboard = ({
                       ['pix', 'Pix 🟡'],
                       ...(hasMpToken ? [['credito_mp', 'Crédito / Débito MP 💳']] : [['credito', 'Crédito Online 💳']]),
                       ['google_pay', 'Google Pay 📱'],
+                      ['pix_stone', 'Pix Stone 🟢'],
+                      ['credito_stone', 'Crédito/Débito Stone 💳'],
+                      ['pos_stone', 'Maquininha Stone 💳'],
                       ['pix_point', 'Pix Maquininha 💳'],
                       ['debito_point', 'Débito Maquininha 💳'],
                       ['credito_point', 'Crédito Maquininha 💳'],
@@ -3855,6 +3881,9 @@ export const ClientDashboard = ({
                       ['pix', 'Pix 🟡'],
                       ...(hasMpToken ? [['credito_mp', 'Crédito / Débito MP 💳']] : [['credito', 'Crédito Online 💳']]),
                       ['google_pay', 'Google Pay 📱'],
+                      ['pix_stone', 'Pix Stone 🟢'],
+                      ['credito_stone', 'Crédito/Débito Stone 💳'],
+                      ['pos_stone', 'Maquininha Stone 💳'],
                       ['pix_point', 'Pix Maquininha 💳'],
                       ['debito_point', 'Débito Maquininha 💳'],
                       ['credito_point', 'Crédito Maquininha 💳'],
@@ -3940,6 +3969,9 @@ export const ClientDashboard = ({
                   debito_point: 'Débito presencial via maquininha Point.',
                   credito_point: 'Crédito presencial via maquininha Point.',
                   pix_point: 'Pagamento via Pix direto na maquininha Point (QR Code na tela da máquina).',
+                  pix_stone: 'Pagamento via Pix Stone (Mock).',
+                  credito_stone: 'Cartão online via Stone (Mock).',
+                  pos_stone: 'Comunicação direta com o terminal Stone (Mock).',
                   dinheiro: 'Pagamento em dinheiro vivo.',
                   cartao: 'Pagamento presencial via cartão ou Pix com baixa manual pelo operador.',
                   pagar_final: 'Permitir que o cliente pague ao final do atendimento na mesa.',
