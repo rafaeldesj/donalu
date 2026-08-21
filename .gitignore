@@ -39,5 +39,6 @@ get_*.js
 check_*.js
 *.js
 !vite.config.ts
+!stone-middleware.js
 !api/**/*.js
 transcript.txt
