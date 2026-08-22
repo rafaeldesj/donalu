@@ -7,6 +7,9 @@
       "hosting": {
         "donalu-site": [
           "donalu"
+        ],
+        "donalu-test-site": [
+          "donalutest"
         ]
       }
     }

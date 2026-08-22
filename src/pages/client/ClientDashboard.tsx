@@ -19,6 +19,7 @@ import pastelRefri from '../../assets/pastel_refri.png';
 import pastelCombo from '../../assets/pastel_combo.png';
 import { API_BASE_URL } from '../../config/api';
 import { MercadoPagoCardForm } from '../../components/MercadoPagoCardForm';
+import { StoneCardForm } from '../../components/StoneCardForm';
 
 const DONA_LU_COORDS: [number, number] = [-22.9112951, -43.5602961];
 
@@ -2330,7 +2331,10 @@ export const ClientDashboard = ({
           return;
         }
       } else if (paymentMethod === 'pix' || paymentMethod === 'pix_stone') {
-        let token = storeConfig?.storeOwnerAccessToken || storeConfig?.devAccessToken || 'mock';
+        let token = paymentMethod === 'pix_stone' 
+          ? (storeConfig?.stoneAccessToken || 'mock')
+          : (storeConfig?.storeOwnerAccessToken || storeConfig?.devAccessToken || 'mock');
+
         const isStoreOwnerConnected = storeConfig?.storeOwnerAccessToken && 
                                       !storeConfig.storeOwnerAccessToken.includes('MOCK') &&
                                       storeConfig.storeOwnerAccessToken !== 'mock';
@@ -2341,13 +2345,13 @@ export const ClientDashboard = ({
           token = 'mock';
         }
 
-        // Gera o ID do pedido e o token de verificação antecipadamente para vincular ao webhook do Mercado Pago
+        // Gera o ID do pedido e o token de verificação antecipadamente para vincular ao webhook
         const generatedOrderRef = doc(collection(db, 'orders'));
         const generatedOrderId = generatedOrderRef.id;
         const secureToken = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
         
         const endpoint = paymentMethod === 'pix_stone' 
-          ? `${API_BASE_URL}/api/pagamentos/stone/create-pix` 
+          ? `${API_BASE_URL}/api/pagamentos/stone-create-pix` 
           : `${API_BASE_URL}/api/pagamentos/create-pix`;
           
         const response = await fetch(endpoint, {
@@ -2367,7 +2371,7 @@ export const ClientDashboard = ({
 
         const result = await response.json();
         if (!response.ok || !result.success) {
-          throw new Error(result.message || 'Erro ao gerar Pix no Mercado Pago.');
+          throw new Error(result.message || `Erro ao gerar Pix no ${paymentMethod === 'pix_stone' ? 'Stone' : 'Mercado Pago'}.`);
         }
 
         // ─── REGISTRO ANTECIPADO DO PEDIDO ───────────────────────────────────────
@@ -4351,6 +4355,76 @@ export const ClientDashboard = ({
                   onError={(msg) => setError(msg)}
                 />
               )}
+
+              {paymentMethod === 'credito_stone' && (
+                <StoneCardForm
+                  amount={finalTotal}
+                  accessToken={storeConfig?.stoneAccessToken || 'mock'}
+                  payer={{
+                    email: user?.email || 'cliente@email.com',
+                    name: user?.displayName || user?.email || 'Cliente Dona Lu',
+                    cpf: userData?.cpf || ''
+                  }}
+                  items={cart.map(item => ({
+                    title: item.name,
+                    unit_price: item.price,
+                    quantity: item.quantity
+                  }))}
+                  stoneRecipientId={storeConfig?.stoneRecipientId}
+                  devPercentage={storeConfig?.devPercentage}
+                  onSuccess={async (orderId) => {
+                    try {
+                      const now = new Date();
+                      const businessStart = new Date(now);
+                      if (now.getHours() < 6) businessStart.setDate(now.getDate() - 1);
+                      businessStart.setHours(6, 0, 0, 0);
+                      let dailySeq = 1;
+                        try {
+                          const qDaily = query(collection(db, 'orders'), where('createdAt', '>=', businessStart.toISOString()), where('clientUid', '==', user?.uid || ''));
+                          const dailySnap = await getDocs(qDaily);
+                          dailySeq = dailySnap.size + 1;
+                        } catch (errSeq) {
+                          console.warn('Erro dailySeq:', errSeq);
+                          dailySeq = Math.floor(Math.random() * 900) + 100;
+                        }
+                      
+                      const orderData: any = {
+                        clientUid: user?.uid || '',
+                        clientName: user?.displayName || user?.email || 'Cliente',
+                        clientPhone: userData?.phoneNumber || '',
+                        items: cart.map(item => ({ id: item.id, name: item.name, price: item.price, quantity: item.quantity, category: item.category, size: item.size || null })),
+                        total: finalTotal,
+                        deliveryFee: orderType === 'delivery' ? deliveryFee : 0,
+                        status: 'pending',
+                        createdAt: now.toISOString(),
+                        orderType,
+                        packForTakeout: orderType === 'dine_in' && isPdvMode ? packForTakeout : false,
+                        tableNumber: (orderType === 'dine_in_table' || (orderType === 'dine_in' && isPdvMode && eatAtCounter)) ? tableNumber : null,
+                        paymentMethod: 'credito_stone',
+                        stonePaymentId: orderId,
+                        dailySeq,
+                        address: orderType === 'delivery' && deliveryAddress ? {
+                          street: deliveryAddress.street,
+                          number: deliveryAddress.number || '',
+                          neighborhood: deliveryAddress.neighborhood || '',
+                          city: deliveryAddress.city || 'Rio de Janeiro',
+                          zipCode: deliveryAddress.zipCode || '',
+                          complement: deliveryAddress.complement || '',
+                          lat: deliveryAddress.lat ?? null,
+                          lng: deliveryAddress.lng ?? null
+                        } : null
+                      };
+                      
+                      await addDoc(collection(db, 'orders'), orderData);
+                      setCart([]);
+                      alert('✅ Pagamento aprovado na Stone! Seu pedido foi registrado com sucesso.');
+                    } catch (err) {
+                      console.error('Erro ao registrar pedido Stone:', err);
+                    }
+                  }}
+                  onError={(msg) => setError(msg)}
+                />
+              )}
             </div>
 
             {paymentMethod === 'dinheiro' && !noChangeNeeded && changeFor.trim() === '' && (
@@ -4359,7 +4433,7 @@ export const ClientDashboard = ({
               </div>
             )}
 
-            {paymentMethod !== 'credito_mp' && (
+            {paymentMethod !== 'credito_mp' && paymentMethod !== 'credito_stone' && (
               <button
                 type="submit"
                 disabled={

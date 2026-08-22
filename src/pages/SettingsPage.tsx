@@ -42,8 +42,10 @@ interface StoreConfig {
   mpPublicKey?: string;
   stoneEnabled?: boolean;
   stoneAccessToken?: string;
+  stonePublicKey?: string;
   stoneWebhookSecret?: string;
   stoneTerminalId?: string;
+  stoneRecipientId?: string;
   pointSmart2Id?: string;
   pointSmart2PosId?: string;
   pointPro3Id?: string;
@@ -236,6 +238,17 @@ export const SettingsPage = () => {
   const [mpUserId, setMpUserId] = useState<string>('');
   const [creatingStorePos, setCreatingStorePos] = useState(false);
 
+  // Stone Onboarding States
+  const [stoneName, setStoneName] = useState("");
+  const [stoneEmail, setStoneEmail] = useState("");
+  const [stoneDocument, setStoneDocument] = useState("");
+  const [stoneBank, setStoneBank] = useState("");
+  const [stoneBranch, setStoneBranch] = useState("");
+  const [stoneBranchDigit, setStoneBranchDigit] = useState("");
+  const [stoneAccount, setStoneAccount] = useState("");
+  const [stoneAccountDigit, setStoneAccountDigit] = useState("");
+  const [stoneAccountType, setStoneAccountType] = useState<"checking" | "savings">("checking");
+  const [creatingStoneRecipient, setCreatingStoneRecipient] = useState(false);
 
   const handleFetchDevices = async () => {
     const token = storeConfig?.storeOwnerAccessToken;
@@ -369,6 +382,53 @@ export const SettingsPage = () => {
       showFeedback('error', `Erro: ${err.message}`);
     } finally {
       setCreatingStorePos(false);
+    }
+  };
+
+  const handleCreateStoneRecipient = async () => {
+    const token = storeConfig?.stoneAccessToken;
+    if (!token) {
+      showFeedback('error', 'Preencha a Secret Key da Stone e salve antes de conectar a conta bancária.');
+      return;
+    }
+    setCreatingStoneRecipient(true);
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://localhost:5173';
+      const cleanDoc = stoneDocument.replace(/\D/g, '');
+      const type = cleanDoc.length > 11 ? 'company' : 'individual';
+      
+      const payload = {
+        token: token,
+        name: stoneName,
+        email: stoneEmail,
+        document: cleanDoc,
+        type: type,
+        bank: stoneBank,
+        branch_number: stoneBranch,
+        branch_check_digit: stoneBranchDigit || '0',
+        account_number: stoneAccount,
+        account_check_digit: stoneAccountDigit || '0',
+        account_type: stoneAccountType
+      };
+
+      const res = await fetch(`${API_BASE_URL}/api/pagamentos/stone-create-recipient`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const docRef = doc(db, 'settings', 'store_config');
+        await updateDoc(docRef, { stoneRecipientId: data.recipientId });
+        setStoreConfig(prev => ({ ...prev, stoneRecipientId: data.recipientId }));
+        showFeedback('success', 'Recebedor da Stone criado com sucesso! O Split automático está ativo.');
+      } else {
+        throw new Error(data.message || 'Erro ao criar recebedor');
+      }
+    } catch(err: any) {
+      showFeedback('error', `Erro: ${err.message}`);
+    } finally {
+      setCreatingStoneRecipient(false);
     }
   };
 
@@ -695,11 +755,16 @@ export const SettingsPage = () => {
         storeOwnerEmail: storeConfig.storeOwnerEmail ?? ''
       };
 
-      if (isDev) {
+      if (isDev || role === 'owner') {
         updateData.devPercentage = storeConfig.devPercentage ?? 1;
         updateData.devClientId = storeConfig.devClientId ?? '';
         updateData.devAccessToken = storeConfig.devAccessToken ?? '';
         updateData.mpPublicKey = storeConfig.mpPublicKey ?? '';
+        updateData.stoneEnabled = storeConfig.stoneEnabled ?? false;
+        updateData.stoneAccessToken = storeConfig.stoneAccessToken ?? '';
+        updateData.stonePublicKey = storeConfig.stonePublicKey ?? '';
+        updateData.stoneWebhookSecret = storeConfig.stoneWebhookSecret ?? '';
+        updateData.stoneTerminalId = storeConfig.stoneTerminalId ?? '';
       }
 
       await updateDoc(docRef, updateData);
@@ -2948,7 +3013,7 @@ export const SettingsPage = () => {
               <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '12px', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', color: '#10b981' }}>
-                    Configurações Stone (Mock Mode)
+                    Configurações Stone (Pagar.me V5)
                   </label>
                   <label className="toggle-switch">
                     <input
@@ -2963,13 +3028,23 @@ export const SettingsPage = () => {
                 {storeConfig.stoneEnabled && (
                   <div className="responsive-grid-2">
                     <div className="input-group">
-                      <label>Stone Secret Key (Access Token)</label>
+                      <label>Stone Secret Key (sk_...)</label>
                       <input
                         type="password"
                         className="pastel-edit-input"
-                        placeholder="Ex: sk_test_... (Mock)"
+                        placeholder="Ex: sk_test_..."
                         value={storeConfig.stoneAccessToken || ''}
                         onChange={(e) => setStoreConfig(prev => ({ ...prev, stoneAccessToken: e.target.value }))}
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label>Stone Public Key (pk_...)</label>
+                      <input
+                        type="text"
+                        className="pastel-edit-input"
+                        placeholder="Ex: pk_test_..."
+                        value={storeConfig.stonePublicKey || ''}
+                        onChange={(e) => setStoreConfig(prev => ({ ...prev, stonePublicKey: e.target.value }))}
                       />
                     </div>
                     <div className="input-group">
@@ -2992,6 +3067,83 @@ export const SettingsPage = () => {
                         onChange={(e) => setStoreConfig(prev => ({ ...prev, stoneTerminalId: e.target.value }))}
                       />
                     </div>
+                  </div>
+                )}
+
+                {storeConfig.stoneEnabled && (role === 'owner' || isDev) && (
+                  <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem' }}>
+                    <h4 style={{ color: '#10b981', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                      Conta do Estabelecimento (Split Stone)
+                    </h4>
+                    {storeConfig.stoneRecipientId ? (
+                      <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', padding: '1rem', borderRadius: '8px' }}>
+                        <p style={{ margin: 0, color: '#10b981', fontSize: '0.85rem', fontWeight: 600 }}>
+                          ✓ Conta conectada via Pagar.me
+                        </p>
+                        <p style={{ margin: '0.25rem 0 0', color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>
+                          ID do Recebedor: {storeConfig.stoneRecipientId}
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginBottom: '1rem' }}>
+                          Preencha os dados bancários do proprietário para ativar o Split automático. Os pagamentos da Stone cairão diretamente nesta conta.
+                        </p>
+                        <div className="responsive-grid-2">
+                          <div className="input-group">
+                            <label>Nome Completo (ou Razão Social)</label>
+                            <input type="text" className="pastel-edit-input" value={stoneName} onChange={e => setStoneName(e.target.value)} />
+                          </div>
+                          <div className="input-group">
+                            <label>Email</label>
+                            <input type="email" className="pastel-edit-input" value={stoneEmail} onChange={e => setStoneEmail(e.target.value)} />
+                          </div>
+                          <div className="input-group">
+                            <label>CPF ou CNPJ</label>
+                            <input type="text" className="pastel-edit-input" value={stoneDocument} onChange={e => setStoneDocument(e.target.value)} />
+                          </div>
+                          <div className="input-group">
+                            <label>Código do Banco</label>
+                            <input type="text" className="pastel-edit-input" placeholder="Ex: 341 (Itaú)" value={stoneBank} onChange={e => setStoneBank(e.target.value)} />
+                          </div>
+                          <div className="input-group">
+                            <label>Agência e Dígito</label>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                              <input type="text" className="pastel-edit-input" placeholder="Agência" value={stoneBranch} onChange={e => setStoneBranch(e.target.value)} />
+                              <input type="text" className="pastel-edit-input" placeholder="Dígito" style={{ width: '60px' }} value={stoneBranchDigit} onChange={e => setStoneBranchDigit(e.target.value)} />
+                            </div>
+                          </div>
+                          <div className="input-group">
+                            <label>Conta, Dígito e Tipo</label>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                              <input type="text" className="pastel-edit-input" placeholder="Conta" value={stoneAccount} onChange={e => setStoneAccount(e.target.value)} />
+                              <input type="text" className="pastel-edit-input" placeholder="Dígito" style={{ width: '60px' }} value={stoneAccountDigit} onChange={e => setStoneAccountDigit(e.target.value)} />
+                              <select className="pastel-edit-input" style={{ width: '100px' }} value={stoneAccountType} onChange={e => setStoneAccountType(e.target.value as any)}>
+                                <option value="checking">Corrente</option>
+                                <option value="savings">Poupança</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleCreateStoneRecipient}
+                          disabled={creatingStoneRecipient}
+                          style={{
+                            marginTop: '1rem',
+                            padding: '0.6rem 1rem',
+                            background: creatingStoneRecipient ? '#4b5563' : '#10b981',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontWeight: 600,
+                            cursor: creatingStoneRecipient ? 'not-allowed' : 'pointer',
+                          }}
+                        >
+                          {creatingStoneRecipient ? 'Conectando...' : 'Conectar Conta Bancária'}
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
