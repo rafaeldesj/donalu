@@ -9,6 +9,7 @@ import processPayment from '../_pagamentos/process-payment.js';
 import refundPayment from '../_pagamentos/refund-payment.js';
 import stoneCreateCard from '../_pagamentos/stone-create-card.js';
 import stoneCreatePix from '../_pagamentos/stone-create-pix.js';
+import stoneCheckPix from '../_pagamentos/stone-check-pix.js';
 import stoneCreateRecipient from '../_pagamentos/stone-create-recipient.js';
 import stoneWebhook from '../_pagamentos/stone-webhook.js';
 import webhook from '../_pagamentos/webhook.js';
@@ -25,6 +26,7 @@ const routes = {
   'refund-payment': refundPayment,
   'stone-create-card': stoneCreateCard,
   'stone-create-pix': stoneCreatePix,
+  'stone-check-pix': stoneCheckPix,
   'stone-create-recipient': stoneCreateRecipient,
   'stone-webhook': stoneWebhook,
   'webhook': webhook
