@@ -413,7 +413,8 @@ export const ClientDashboard = ({
     const interval = setInterval(async () => {
       try {
         const isStone = String(billPixPaymentId).startsWith('STONE_PIX_MOCK_') || String(billPixPaymentId).startsWith('or_');
-        const res = await fetch(`${API_BASE_URL}/api/pagamentos/${isStone ? 'stone-check-pix' : 'check-pix'}?paymentId=${billPixPaymentId}&token=${token}`);
+        let currentToken = isStone ? (storeConfig?.stoneSecretKey || 'mock') : token;
+        const res = await fetch(`${API_BASE_URL}/api/pagamentos/${isStone ? 'stone-check-pix' : 'check-pix'}?paymentId=${billPixPaymentId}&token=${currentToken}`);
         const result = await res.json();
         if (result.status === 'approved') {
           setBillPixPaymentStatus('approved');
@@ -2155,7 +2156,8 @@ export const ClientDashboard = ({
       interval = setInterval(async () => {
         try {
           const isStone = String(pixPaymentId).startsWith('STONE_PIX_MOCK_') || String(pixPaymentId).startsWith('or_');
-          const res = await fetch(`${API_BASE_URL}/api/pagamentos/${isStone ? 'stone-check-pix' : 'check-pix'}?paymentId=${pixPaymentId}&token=${token}`);
+          let currentToken = isStone ? (storeConfig?.stoneSecretKey || 'mock') : token;
+          const res = await fetch(`${API_BASE_URL}/api/pagamentos/${isStone ? 'stone-check-pix' : 'check-pix'}?paymentId=${pixPaymentId}&token=${currentToken}`);
           const data = await res.json();
           console.log('[DEBUG PIX POLL]', data);
           if (data.success && data.status === 'approved') {
