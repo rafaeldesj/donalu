@@ -51,14 +51,14 @@ export default async function handler(req, res) {
     const { paymentId, token } = req.query;
 
     if (!paymentId || !token) {
-      return res.status(400).json({ success: false, message: 'Par‚metros inv·lidos.' });
+      return res.status(400).json({ success: false, message: 'Par√¢metros inv√°lidos.' });
     }
 
     if (paymentId.startsWith('STONE_PIX_MOCK_')) {
       return res.status(200).json({ success: true, status: 'pending' }); // Mock never automatically pays in this flow, you can simulate otherwise
     }
 
-    const stoneUrl = \https://api.pagar.me/core/v5/orders/\\;
+    const stoneUrl = `https://api.pagar.me/core/v5/orders/${paymentId}`;
     const authHeader = 'Basic ' + Buffer.from(token + ':').toString('base64');
     
     const headers = {
@@ -92,4 +92,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ success: false, message: 'Erro interno ao verificar Pix na Stone.' });
   }
 }
-
