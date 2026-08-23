@@ -54,7 +54,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: 'Parâmetros inválidos.' });
     }
 
-    if (paymentId.startsWith('STONE_PIX_MOCK_')) {
+    if (paymentId.startsWith('or_MOCK_')) {
       return res.status(200).json({ success: true, status: 'pending' }); // Mock never automatically pays in this flow, you can simulate otherwise
     }
 
