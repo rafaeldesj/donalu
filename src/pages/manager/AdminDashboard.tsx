@@ -68,7 +68,11 @@ export const AdminDashboard = () => {
   }, [orders, statusFilter, searchTerm, sortBy, paymentMethodFilter]);
 
   const handleRefundPayment = async (order: OrderDocument) => {
-    if (!window.confirm(`Tem certeza que deseja estornar o pagamento de R$ ${order.total.toFixed(2).replace('.', ',')} do Pedido ${order.dailySeq}?`)) {
+    const paymentId = order.mercadoPagoPaymentId || order.mercadoPagoOrderId;
+    const isStone = (order.paymentMethod?.includes('stone') || (typeof paymentId === 'string' && (paymentId.startsWith('or_') || paymentId.includes('STONE_PIX_MOCK'))));
+    const providerName = isStone ? 'Stone' : 'Mercado Pago';
+
+    if (!window.confirm(`Tem certeza que deseja estornar o pagamento de R$ ${order.total.toFixed(2).replace('.', ',')} do Pedido ${order.dailySeq} na ${providerName}?`)) {
       return;
     }
     setRefundLoading(true);
@@ -76,20 +80,27 @@ export const AdminDashboard = () => {
       const storeConfigRef = doc(db, 'settings', 'store_config');
       const storeConfigSnap = await getDoc(storeConfigRef);
       const storeConfigData = storeConfigSnap.exists() ? storeConfigSnap.data() : null;
-      const token = storeConfigData?.storeOwnerAccessToken || storeConfigData?.devAccessToken || 'mock';
+      
+      const token = isStone 
+        ? (storeConfigData?.stoneAccessToken || 'mock')
+        : (storeConfigData?.storeOwnerAccessToken || storeConfigData?.devAccessToken || 'mock');
 
-      const response = await fetch(`${API_BASE_URL}/api/pagamentos/refund-payment`, {
+      const endpoint = isStone 
+        ? `${API_BASE_URL}/api/pagamentos/stone-refund`
+        : `${API_BASE_URL}/api/pagamentos/refund-payment`;
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          paymentId: order.mercadoPagoPaymentId || order.mercadoPagoOrderId,
+          paymentId: paymentId,
           token: token
         })
       });
 
       const result = await response.json();
       if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Erro ao processar estorno no Mercado Pago.');
+        throw new Error(result.message || `Erro ao processar estorno na ${providerName}.`);
       }
 
       const orderDocRef = doc(db, 'orders', order.id!);
@@ -106,12 +117,12 @@ export const AdminDashboard = () => {
         userName: userData?.name || 'Administrador',
         actionType: 'PAYMENT_REFUND',
         title: 'Pagamento Estornado',
-        description: `Estornou o pagamento de R$ ${order.total.toFixed(2).replace('.', ',')} do Pedido ${order.dailySeq || ''} (ID: "${order.id}").`,
+        description: `Estornou o pagamento de R$ ${order.total.toFixed(2).replace('.', ',')} do Pedido ${order.dailySeq || ''} (ID: "${order.id}") na ${providerName}.`,
         userRole: userData?.role || 'admin',
-        metadata: { orderId: order.id, dailySeq: order.dailySeq, total: order.total, paymentId: order.mercadoPagoPaymentId || order.mercadoPagoOrderId }
+        metadata: { orderId: order.id, dailySeq: order.dailySeq, total: order.total, paymentId: paymentId, provider: providerName }
       });
 
-      alert('Pagamento estornado com sucesso no Mercado Pago!');
+      alert(`Pagamento estornado com sucesso na ${providerName}!`);
       
       setActiveModal(prev => {
         if (prev?.type === 'order' && prev.order.id === order.id) {
@@ -524,7 +535,11 @@ export const AdminDashboard = () => {
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Por: {order.refundedBy} em {new Date(order.refundedAt || '').toLocaleDateString('pt-BR')}</span>
                     </div>
                   )}
-                  {!order.refunded && (order.status === 'cancelled' || (order.status === 'completed' && userData?.role === 'developer')) && (order.mercadoPagoPaymentId || order.mercadoPagoOrderId) && (
+                  {!order.refunded && (order.status === 'cancelled' || (order.status === 'completed' && userData?.role === 'developer')) && (order.mercadoPagoPaymentId || order.mercadoPagoOrderId) && (() => {
+                    const paymentId = order.mercadoPagoPaymentId || order.mercadoPagoOrderId;
+                    const isStone = (order.paymentMethod?.includes('stone') || (typeof paymentId === 'string' && (paymentId.startsWith('or_') || paymentId.includes('STONE_PIX_MOCK'))));
+                    const providerName = isStone ? 'Stone' : 'Mercado Pago';
+                    return (
                     <div style={{ gridColumn: 'span 2', marginTop: '0.75rem' }}>
                       <button
                         type="button"
@@ -549,10 +564,10 @@ export const AdminDashboard = () => {
                         onMouseEnter={(e) => { if (!refundLoading) e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'; }}
                         onMouseLeave={(e) => { if (!refundLoading) e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; }}
                       >
-                        {refundLoading ? 'Estornando...' : 'Estornar Pagamento no Mercado Pago'}
+                        {refundLoading ? 'Estornando...' : `Estornar Pagamento na ${providerName}`}
                       </button>
                     </div>
-                  )}
+                  );})()}
                 </div>
               </div>
             </div>
