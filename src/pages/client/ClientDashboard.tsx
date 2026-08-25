@@ -2397,6 +2397,7 @@ export const ClientDashboard = ({
           } catch { pixDailySeq = Math.floor(Math.random() * 900) + 100; }
 
           const pixOrderData: any = {
+            id: generatedOrderId,
             clientUid: user?.uid || '',
             clientName: user?.displayName || user?.email || 'Cliente Anônimo',
             clientPhone: userData?.phoneNumber || '',
@@ -2448,7 +2449,7 @@ export const ClientDashboard = ({
             orderType,
         packForTakeout: orderType === 'dine_in' && isPdvMode ? packForTakeout : false,
         tableNumber: (orderType === 'dine_in_table' || (orderType === 'dine_in' && isPdvMode && eatAtCounter)) ? tableNumber : null,
-            paymentMethod: 'pix',
+            paymentMethod: paymentMethod === 'pix_stone' ? 'pix_stone' : 'pix',
             mercadoPagoPaymentId: result.paymentId,
             dailySeq: pixDailySeq,
             paymentVerificationToken: secureToken,
@@ -2466,12 +2467,9 @@ export const ClientDashboard = ({
 
           const pixOrderRef = await createOrderAndLog(pixOrderData, generatedOrderId);
           setPendingPixOrderId(pixOrderRef.id);
-          console.log('[PIX] Pedido registrado antecipadamente. ID:', pixOrderRef.id);
         } catch (saveErr) {
           console.error('[PIX] Erro ao salvar pedido antecipadamente:', saveErr);
-          // Continua mesmo com erro — o fallback em completeCheckoutAfterPixPayment cria o pedido ao aprovar
         }
-        // ─────────────────────────────────────────────────────────────────────────
 
         setPixPaymentId(result.paymentId);
         setPixQrCode(result.qrCode);
@@ -2488,7 +2486,6 @@ export const ClientDashboard = ({
           finalStatus = requiresApproval ? 'aguardando_caixa' : 'pending';
         }
       } else if (paymentMethod === 'credito' || paymentMethod === 'credito_stone') {
-        // FLUXO DE PAGAMENTO ONLINE DO PAGBANK / STONE
         const isUsingSavedCard = useSavedCard && !!userData?.pagbank_card_token;
         let encryptedCardToken = '';
 
@@ -2529,13 +2526,34 @@ export const ClientDashboard = ({
         }
 
         const endpoint = paymentMethod === 'credito_stone'
-          ? `${API_BASE_URL}/api/pagamentos/stone/create-card`
+          ? `${API_BASE_URL}/api/pagamentos/stone-create-card`
           : `${API_BASE_URL}/api/pagamentos/process-payment`;
 
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        let fetchBody: any = {};
+        
+        if (paymentMethod === 'credito_stone') {
+          const expiryParts = cardExpiry.split('/');
+          if (!isUsingSavedCard && expiryParts.length !== 2) throw new Error('Formato da validade inválido (use MM/AA).');
+          
+          fetchBody = {
+            token: storeConfig?.stoneAccessToken || 'mock',
+            amount: finalTotal,
+            email: user?.email || 'cliente@donalupastelaria.com.br',
+            name: user?.displayName || user?.email || 'Cliente Dona Lu',
+            cpf: clientCpf.replace(/\D/g, ''),
+            rawCard: !isUsingSavedCard ? {
+              cardNumber: cardNumber.replace(/\s/g, ''),
+              cardHolder: cardHolder,
+              cardExpiryMonth: expiryParts[0].trim(),
+              cardExpiryYear: expiryParts[1].trim().length === 2 ? '20' + expiryParts[1].trim() : expiryParts[1].trim(),
+              cardCvv: cardCvv
+            } : undefined,
+            orderId: generatedOrderId,
+            stoneRecipientId: storeConfig?.stoneRecipientId || null,
+            devPercentage: storeConfig?.devPercentage || 5
+          };
+        } else {
+          fetchBody = {
             encryptedCard: isUsingSavedCard ? undefined : encryptedCardToken,
             cpf: isUsingSavedCard ? undefined : clientCpf.replace(/\D/g, ''),
             saveCard: isUsingSavedCard ? false : saveCardConsent,
@@ -2545,15 +2563,23 @@ export const ClientDashboard = ({
             useSavedCard: isUsingSavedCard,
             savedCustomerId: userData?.pagbank_customer_id || undefined,
             savedCardToken: userData?.pagbank_card_token || undefined
-          })
+          };
+        }
+
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(fetchBody)
         });
 
         const result = await response.json();
         if (!response.ok || !result.success) {
-          throw new Error(result.message || 'Falha no pagamento do PagBank.');
+          throw new Error(result.message || 'Falha no pagamento do cartão.');
         }
 
-        if (!isUsingSavedCard && saveCardConsent && result.card) {
+        onlinePaymentId = result.orderId || result.paymentId || null;
+
+        if (!isUsingSavedCard && saveCardConsent && result.card && paymentMethod !== 'credito_stone') {
           const userDocRef = doc(db, 'users', user!.uid);
           await updateDoc(userDocRef, {
             cpf: clientCpf.replace(/\D/g, ''),
@@ -2569,6 +2595,7 @@ export const ClientDashboard = ({
       }
 
       const orderData: any = {
+        id: generatedOrderId,
         isTest: isTestOrder || false,
         clientUid: user?.uid || '',
         clientName: user?.displayName || user?.email || 'Cliente Anônimo',
@@ -2641,6 +2668,7 @@ export const ClientDashboard = ({
           lat: deliveryAddress!.lat ?? null,
           lng: deliveryAddress!.lng ?? null,
         } : null,
+        ...(onlinePaymentId ? { mercadoPagoPaymentId: onlinePaymentId } : {}),
       };
 
       await decrementStock(cart);
