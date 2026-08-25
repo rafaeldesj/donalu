@@ -71,7 +71,7 @@ export function StoneCardForm({
       
       const paymentStatus = result.status;
       if (paymentStatus !== 'paid' && paymentStatus !== 'approved') {
-        throw new Error(`Pagamento recusado. Tente outro cartao.`);
+        throw new Error(result.acquirerMessage ? `Pagamento recusado (${result.acquirerMessage}). Tente outro cartao.` : `Pagamento recusado. Tente outro cartao.`);
       }
       onSuccess(result.orderId || result.id, paymentStatus);
     } catch (err: any) {

@@ -72,7 +72,8 @@ export default async function handler(req, res) {
     }
 
     const transactionAmountCents = Math.round(parseFloat(amount) * 100);
-    const cleanCpf = (cpf || '').replace(/\D/g, '') || '00000000000';
+    const cleanCpf = (cpf || '').replace(/\D/g, '');
+    const finalCpf = cleanCpf.length === 11 ? cleanCpf : '00000000000';
 
     const stoneUrl = 'https://api.pagar.me/core/v5/orders';
     const authHeader = 'Basic ' + Buffer.from(token + ':').toString('base64');
@@ -113,7 +114,7 @@ export default async function handler(req, res) {
         name: name || 'Cliente Dona Lu',
         email: email || 'cliente@pastelaria.com',
         type: 'individual',
-        document: cleanCpf,
+        document: finalCpf,
         phones: {
           mobile_phone: {
             country_code: "55",
@@ -159,12 +160,24 @@ export default async function handler(req, res) {
 
     const order = orderRes.json;
     const paymentStatus = order.status; // pending, paid, failed, canceled
+    
+    let acquirerMessage = '';
+    if (paymentStatus === 'failed') {
+      try {
+        acquirerMessage = order.charges?.[0]?.last_transaction?.acquirer_message || 
+                          order.charges?.[0]?.last_transaction?.gateway_response?.errors?.[0]?.message || 
+                          'Pagamento recusado pela operadora.';
+      } catch (e) {
+        acquirerMessage = 'Pagamento recusado pela operadora.';
+      }
+    }
 
     return res.status(200).json({
       success: true,
       orderId: order.id,
       status: paymentStatus,
-      approved: paymentStatus === 'paid'
+      approved: paymentStatus === 'paid',
+      acquirerMessage: acquirerMessage
     });
 
   } catch (err) {
