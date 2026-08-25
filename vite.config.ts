@@ -4,7 +4,7 @@ import mkcert from 'vite-plugin-mkcert'
 // @ts-ignore
 import { processPaymentMiddleware, createPixMiddleware, checkPixMiddleware, createPointOrderMiddleware, checkPointOrderMiddleware, mpOAuthExchangeMiddleware, listPointDevicesMiddleware, setPointDeviceModeMiddleware, cancelPointOrderMiddleware, processMPCardOrderMiddleware, webhookMiddleware, pointUserMiddleware, pointStoresMiddleware, pointPosMiddleware } from './payment-middleware.js'
 // @ts-ignore
-import { createStonePixMiddleware, checkStonePixMiddleware, createStoneCardMiddleware, createStonePosOrderMiddleware, checkStonePosOrderMiddleware, cancelStonePosOrderMiddleware } from './stone-middleware.js'
+import { createStonePixMiddleware, checkStonePixMiddleware, createStoneCardMiddleware, createStonePosOrderMiddleware, checkStonePosOrderMiddleware, cancelStonePosOrderMiddleware, stoneRefundMiddleware } from './stone-middleware.js'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -55,6 +55,8 @@ export default defineConfig({
             checkStonePosOrderMiddleware(req, res);
           } else if (req.url?.startsWith('/api/pagamentos/stone/cancel-pos') && req.method === 'POST') {
             cancelStonePosOrderMiddleware(req, res);
+          } else if (req.url?.startsWith('/api/pagamentos/stone-refund') && req.method === 'POST') {
+            stoneRefundMiddleware(req, res);
           } else {
             next();
           }

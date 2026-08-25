@@ -148,3 +148,19 @@ export const cancelStonePosOrderMiddleware = async (req, res) => {
   res.writeHead(200, { 'Content-Type': 'application/json' });
   return res.end(JSON.stringify({ success: true, message: 'Pagamento simulado cancelado.' }));
 };
+
+export const stoneRefundMiddleware = async (req, res) => {
+  const data = await parseJsonBody(req);
+  console.log('[Stone Refund Mock] Estornando pagamento simulado...', data);
+
+  // Simula latência
+  await new Promise(resolve => setTimeout(resolve, 800));
+
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  return res.end(JSON.stringify({
+    success: true,
+    message: 'Estorno mockado efetuado com sucesso.',
+    status: 'canceled',
+    isMock: true
+  }));
+};
