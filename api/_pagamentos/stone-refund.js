@@ -91,12 +91,28 @@ export default async function handler(req, res) {
       'Content-Type': 'application/json'
     };
 
-    // De acordo com a documentação da V5, cancelar um pedido também cancela suas cobranças capturadas (faz o estorno)
-    const stoneCancelUrl = `https://api.pagar.me/core/v5/orders/${paymentId}`;
+    // 1. Fetch the order to get the charge_id
+    const orderUrl = `https://api.pagar.me/core/v5/orders/${paymentId}`;
+    const orderResponse = await nativeRequest(orderUrl, 'GET', headers, null);
+    
+    if (!orderResponse.ok) {
+      console.error('[Stone Refund] Erro ao buscar pedido:', JSON.stringify(orderResponse.json || orderResponse.text, null, 2));
+      return res.status(400).json({ success: false, message: 'Erro ao buscar pedido na Stone.' });
+    }
+
+    const orderData = orderResponse.json;
+    if (!orderData.charges || orderData.charges.length === 0) {
+      return res.status(400).json({ success: false, message: 'Nenhuma cobrança encontrada para este pedido na Stone.' });
+    }
+
+    const chargeId = orderData.charges[0].id;
+    
+    // 2. Cancel the charge (Refund)
+    const stoneCancelUrl = `https://api.pagar.me/core/v5/charges/${chargeId}`;
     const response = await nativeRequest(stoneCancelUrl, 'DELETE', headers, null);
 
     if (!response.ok) {
-      console.error('[Stone Refund] Erro ao estornar pagamento:', JSON.stringify(response.json || response.text, null, 2));
+      console.error('[Stone Refund] Erro ao estornar cobrança:', JSON.stringify(response.json || response.text, null, 2));
       return res.status(400).json({ success: false, message: response.json?.message || 'Erro ao processar estorno na Stone.' });
     }
 
