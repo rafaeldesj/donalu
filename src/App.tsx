@@ -740,6 +740,7 @@ const MainLayout = () => {
     // Acompanhe seu pedido visível apenas para clientes logados
     if (role === 'client' && user) {
       menuItems.push({ id: 'tracking', label: 'Acompanhe seu pedido', icon: Clock });
+      menuItems.push({ id: 'history', label: 'Pedidos Anteriores', icon: FileText });
     }
 
     // Fidelidade visível apenas para clientes e developers logados
@@ -833,7 +834,7 @@ const MainLayout = () => {
   }
 
   const menuGroups = [
-    { label: 'Cardápio / Cliente', ids: ['menu', 'tracking', 'fidelidade', 'suporte_virtual'] },
+    { label: 'Cardápio / Cliente', ids: ['menu', 'tracking', 'history', 'fidelidade', 'suporte_virtual'] },
     { label: 'Operações de Venda', ids: ['pdv_vendas'] },
     { label: 'Operações de Entrega', ids: ['entrega_andamento', 'entrega_finalizada', 'teste_mapa'] },
     { label: 'Painéis de Trabalho', ids: ['cozinha', 'atendimento', 'caixa', 'admin', 'mapa_mesas', 'mercadopago_transacoes', 'estoque', 'mostrador', 'avaliacoes', 'painel_atendimento'] },
@@ -968,7 +969,8 @@ const getRoleLabel = (r: string): React.ReactNode => {
         <main className="content-area-main">
           <Suspense fallback={<ViewLoader />}>
             {activeView === 'menu' && <ClientDashboard showOnly="menu" isVisitor={isVisitor} onLoginRequired={() => setIsVisitor(false)} onNavigate={setActiveView} cart={cart} setCart={setCart} storeStatus={storeStatus} />}
-            {activeView === 'tracking' && <OrderTracking />}
+            {activeView === 'tracking' && <OrderTracking showOnly="active" />}
+            {activeView === 'history' && <OrderTracking showOnly="history" />}
             {activeView === 'fidelidade' && <ClientDashboard showOnly="loyalty" isVisitor={isVisitor} onLoginRequired={() => setIsVisitor(false)} onNavigate={setActiveView} cart={cart} setCart={setCart} storeStatus={storeStatus} />}
             {activeView === 'cozinha' && <StaffDashboard filter="cook" />}
             {activeView === 'mostrador' && <OrderDisplayScreen />}

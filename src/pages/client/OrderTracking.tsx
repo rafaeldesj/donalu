@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
-import { collection, query, where, onSnapshot, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, getDoc, deleteDoc, getDocs } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../hooks/useAuth';
 import type { OrderDocument } from '../../types/order';
 import { GooglePayLogo } from '../../components/GooglePayLogo';
-import { Clock, ClipboardList, ChefHat, ShoppingBag, Navigation, CheckCircle, Camera, QrCode, X } from 'lucide-react';
+import { Clock, ClipboardList, ChefHat, ShoppingBag, Navigation, CheckCircle, Camera, QrCode, X, Trash2 } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -557,7 +557,11 @@ const OrderPaymentRetry = ({ order, userData }: PaymentRetryProps) => {
   );
 };
 
-export const OrderTracking = () => {
+interface OrderTrackingProps {
+  showOnly?: 'active' | 'history';
+}
+
+export const OrderTracking = ({ showOnly }: OrderTrackingProps = {}) => {
   const { user, userData } = useAuth();
   const [orders, setOrders] = useState<OrderDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -607,7 +611,41 @@ export const OrderTracking = () => {
       console.error("Erro ao ignorar pesquisa:", err);
       setSurveyOrder(null);
     }
-  };  useEffect(() => {
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (window.confirm('Tem certeza que deseja apagar este pedido?')) {
+      try {
+        if (userData?.role === 'client') {
+          // Clientes não têm permissão de DELETE no Firestore (security rules).
+          // Alteramos o status para 'abandoned' para sumir da tela permanentemente.
+          await updateDoc(doc(db, 'orders', orderId), { 
+            status: 'abandoned',
+            updatedAt: new Date().toISOString()
+          });
+        } else {
+          await deleteDoc(doc(db, 'orders', orderId));
+        }
+      } catch (err: any) {
+        if (err?.code === 'not-found' || err?.message?.includes('No document to update') || true) {
+          const q = query(collection(db, 'orders'), where('id', '==', orderId));
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            if (userData?.role === 'client') {
+              await updateDoc(doc(db, 'orders', snap.docs[0].id), { status: 'abandoned', updatedAt: new Date().toISOString() });
+            } else {
+              await deleteDoc(doc(db, 'orders', snap.docs[0].id));
+            }
+          } else {
+            console.error(err);
+            alert('Não foi possível apagar o pedido. Tente novamente.');
+          }
+        }
+      }
+    }
+  };
+
+  useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'tables_config'), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
@@ -845,8 +883,8 @@ export const OrderTracking = () => {
   }
 
   // Divide os pedidos em Ativos (não finalizados) e Histórico Recente
-  const activeOrders = orders.filter((o) => o.status !== 'completed' && o.status !== 'cancelled');
-  const pastOrders = orders.filter((o) => o.status === 'completed' || o.status === 'cancelled').slice(0, 5); // Últimos 5 concluídos ou cancelados
+  const activeOrders = orders.filter((o) => o.status !== 'completed' && o.status !== 'cancelled' && o.status !== 'abandoned' && o.status !== 'building_cart');
+  const pastOrders = orders.filter((o) => (o.status === 'completed' || o.status === 'cancelled') && o.status !== 'abandoned' && o.status !== 'building_cart').slice(0, 5);
 
   const formatOrderDate = (isoString: string) => {
     const d = new Date(isoString);
@@ -935,6 +973,10 @@ export const OrderTracking = () => {
   // Status descritivo para exibir no cabeçalho do pedido
   const getStatusText = (status: string, orderType: string) => {
     switch (status) {
+      case 'building_cart': return 'Aguardando Finalização';
+      case 'pendente_pagamento':
+      case 'awaiting_payment':
+      case 'aguardando_caixa': return 'Aguardando Pagamento';
       case 'pending': return 'Recebido pela cozinha';
       case 'preparing': 
       case 'prepared': return 'Sendo preparado';
@@ -953,13 +995,14 @@ export const OrderTracking = () => {
   return (
     <div className="dashboard-layout animate-fade-in">
       <div className="dashboard-header">
-        <h2>Acompanhe seu pedido 🛵</h2>
-        <p>Acompanhe o andamento dos seus pastéis quentinhos em tempo real.</p>
+        <h2>{showOnly === 'history' ? 'Pedidos Anteriores 📜' : 'Acompanhe seu pedido 🛵'}</h2>
+        <p>{showOnly === 'history' ? 'Acesse o histórico de todos os seus pedidos anteriores.' : 'Acompanhe o andamento dos seus pastéis quentinhos em tempo real.'}</p>
       </div>
 
       <div className="tracking-grid">
         
         {/* Seção Principal: Pedidos Ativos */}
+        {showOnly !== 'history' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <h3 style={{ fontSize: '1.25rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem', textAlign: 'left' }}>
             Pedidos em Andamento ({activeOrders.length})
@@ -982,6 +1025,7 @@ export const OrderTracking = () => {
             activeOrders.map((order) => {
               const isDelivery = !!order.address;
               const { steps, activeIndex, progressWidth } = getStepperConfig(order);
+              console.log('DEBUG_ORDER:', order.id, 'STATUS:', order.status, 'ROLE:', userData?.role);
 
               return (
                 <div key={order.id} className="order-tracking-card">
@@ -1017,6 +1061,16 @@ export const OrderTracking = () => {
                             }}
                           >
                             {simulatingOrderId === order.id ? 'Simulando GPS...' : '⚡ Simular Rota GPS'}
+                          </button>
+                        )}
+                        {(userData?.role !== 'client' || !order.status || ['pending', 'pendente_pagamento', 'aguardando_caixa', 'awaiting_payment', 'building_cart'].includes(order.status)) && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteOrder(order.id!); }}
+                            style={{ background: 'transparent', border: 'none', color: '#f87171', cursor: 'pointer', padding: '0.2rem', display: 'flex', alignItems: 'center' }}
+                            title="Apagar Pedido"
+                          >
+                            <Trash2 size={16} />
                           </button>
                         )}
                       </div>
@@ -1149,7 +1203,7 @@ export const OrderTracking = () => {
                       <div>
                         <strong>Consumo no Local (Salão):</strong>
                         <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-secondary)' }}>
-                          O seu pedido será servido nas mesas da Dona Lu Pastelaria {order.tableNumber ? `(Mesa ${order.tableNumber})` : ''} (Rua Jícara, 239 - Campo Grande). Pode vir vindo!
+                          {order.tableNumber ? `O seu pedido será servido na mesa ${order.tableNumber}` : 'O seu pedido será servido no salão.'}
                         </p>
                         {order.orderType === 'dine_in' && !order.tableNumber && (
                           <button
@@ -1186,7 +1240,7 @@ export const OrderTracking = () => {
                       <div>
                         <strong>Retirada Balcão:</strong>
                         <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-secondary)' }}>
-                          Retire seu pedido diretamente na Dona Lu Pastelaria (Rua Jícara, 239 - Campo Grande).
+                          Retire seu pedido no balcão da pastelaria.
                         </p>
                       </div>
                     )}
@@ -1207,11 +1261,13 @@ export const OrderTracking = () => {
             })
           )}
         </div>
+        )}
 
         {/* Seção Lateral: Histórico de Pedidos Recentes */}
+        {showOnly !== 'active' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <h3 style={{ fontSize: '1.25rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem', textAlign: 'left' }}>
-            Histórico Recente
+            {showOnly === 'history' ? 'Pedidos Anteriores' : 'Histórico Recente'}
           </h3>
 
           {pastOrders.length === 0 ? (
@@ -1235,7 +1291,7 @@ export const OrderTracking = () => {
                 padding: '0.85rem 1rem',
                 textAlign: 'left'
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', alignItems: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <strong style={{ color: '#fff' }}>
                     {order.dailySeq ? (
                       userData?.role === 'developer' ? (
@@ -1247,16 +1303,28 @@ export const OrderTracking = () => {
                       `Pedido #${order.id?.slice(-4).toUpperCase()}`
                     )}
                   </strong>
-                  <span style={{
-                    fontSize: '0.7rem',
-                    fontWeight: 700,
-                    padding: '0.1rem 0.4rem',
-                    borderRadius: '4px',
-                    backgroundColor: order.status === 'cancelled' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                    color: order.status === 'cancelled' ? '#f87171' : '#34d399'
-                  }}>
-                    {order.status === 'cancelled' ? 'Cancelado' : 'Concluído'}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      padding: '0.1rem 0.4rem',
+                      borderRadius: '4px',
+                      backgroundColor: order.status === 'cancelled' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                      color: order.status === 'cancelled' ? '#f87171' : '#34d399'
+                    }}>
+                      {order.status === 'cancelled' ? 'Cancelado' : 'Concluído'}
+                    </span>
+                    {(userData?.role !== 'client' || ['pending', 'pendente_pagamento', 'aguardando_caixa'].includes(order.status)) && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleDeleteOrder(order.id!); }}
+                        style={{ background: 'transparent', border: 'none', color: '#f87171', cursor: 'pointer', padding: '0.2rem', display: 'flex', alignItems: 'center' }}
+                        title="Apagar Pedido do Histórico"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 {order.status === 'cancelled' && order.cancelReason && (
                   <div style={{ fontSize: '0.75rem', color: '#f87171', marginTop: '0.25rem', fontStyle: 'italic' }}>
@@ -1278,7 +1346,7 @@ export const OrderTracking = () => {
             ))
           )}
         </div>
-
+        )}
       </div>
 
       {showTableScannerModal && (
