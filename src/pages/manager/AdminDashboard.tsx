@@ -578,7 +578,7 @@ export const AdminDashboard = () => {
                 <h4>Cronologia do Pedido</h4>
                 <div className="modal-timeline">
                   <div className={`modal-timeline-step completed`}>
-                    <span className="modal-timeline-label">Criado</span>
+                    <span className="modal-timeline-label">Criado {order.clientName ? `(Por: ${order.clientName})` : ''}</span>
                     <span className="modal-timeline-time">{formatDateTime(order.createdAt)}</span>
                   </div>
                   {order.kitchenEnteredAt && (
@@ -613,7 +613,7 @@ export const AdminDashboard = () => {
                   )}
                   {order.status === 'cancelled' && (
                     <div className="modal-timeline-step cancelled">
-                      <span className="modal-timeline-label">Cancelado</span>
+                      <span className="modal-timeline-label">Cancelado {order.cancelledBy ? `(Por: ${order.cancelledBy})` : ''}</span>
                       <span className="modal-timeline-time">{formatDateTime(order.cancelledAt || order.createdAt)}</span>
                     </div>
                   )}

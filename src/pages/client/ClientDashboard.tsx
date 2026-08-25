@@ -2676,7 +2676,7 @@ export const ClientDashboard = ({
       };
 
       await decrementStock(cart);
-      await createOrderAndLog(orderData);
+      await createOrderAndLog(orderData, generatedOrderId);
       setCart([]);
       setUseFidelityRescueGrande(false);
     setUseFidelityRescueKids(false);
