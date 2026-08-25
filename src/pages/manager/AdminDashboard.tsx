@@ -617,6 +617,12 @@ export const AdminDashboard = () => {
                       <span className="modal-timeline-time">{formatDateTime(order.cancelledAt || order.createdAt)}</span>
                     </div>
                   )}
+                  {order.refunded && (
+                    <div className="modal-timeline-step cancelled">
+                      <span className="modal-timeline-label">Estornado {order.refundedBy ? `(Por: ${order.refundedBy})` : ''}</span>
+                      <span className="modal-timeline-time">{order.refundedAt ? formatDateTime(order.refundedAt) : formatDateTime(order.cancelledAt || order.createdAt)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
