@@ -86,14 +86,7 @@ export default async function handler(req, res) {
 
     let creditCardData = {
       installments: parseInt(installments || 1),
-      statement_descriptor: 'DONA LU',
-      billing_address: {
-        line_1: "Rua Jicara, 239",
-        zip_code: "23092000",
-        city: "Rio de Janeiro",
-        state: "RJ",
-        country: "BR"
-      }
+      statement_descriptor: 'DONA LU'
     };
 
     if (cardToken) {
@@ -104,7 +97,14 @@ export default async function handler(req, res) {
         holder_name: rawCard.cardHolder,
         exp_month: parseInt(rawCard.cardExpiryMonth),
         exp_year: parseInt(rawCard.cardExpiryYear),
-        cvv: rawCard.cardCvv
+        cvv: rawCard.cardCvv,
+        billing_address: {
+          line_1: "Rua Jicara, 239",
+          zip_code: "23092000",
+          city: "Rio de Janeiro",
+          state: "RJ",
+          country: "BR"
+        }
       };
     }
 
