@@ -73,4 +73,5 @@ export interface OrderDocument {
   paymentVerificationToken?: string;
   satisfactionRating?: number;
   satisfactionFeedback?: string;
+  stonePaymentId?: string;
 }
