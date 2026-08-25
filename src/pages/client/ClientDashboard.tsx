@@ -2263,6 +2263,11 @@ export const ClientDashboard = ({
       }
 
       let finalStatus = 'pending';
+      let onlinePaymentId: string | null = null;
+
+      // Gera o ID do pedido antecipadamente para ser usado em qualquer fluxo de pagamento online e na finalizacao do pedido
+      const generatedOrderRef = doc(collection(db, 'orders'));
+      const generatedOrderId = generatedOrderRef.id;
 
       if (paymentMethod === 'google_pay') {
         if (!(window as any).google || !(window as any).google.payments) {
@@ -2347,9 +2352,8 @@ export const ClientDashboard = ({
           token = 'mock';
         }
 
-        // Gera o ID do pedido e o token de verificação antecipadamente para vincular ao webhook
-        const generatedOrderRef = doc(collection(db, 'orders'));
-        const generatedOrderId = generatedOrderRef.id;
+        // O ID do pedido já foi gerado acima (generatedOrderId)
+        // Gera apenas o token de verificação antecipadamente para vincular ao webhook
         const secureToken = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
         
         const endpoint = paymentMethod === 'pix_stone' 
