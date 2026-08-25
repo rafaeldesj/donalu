@@ -339,7 +339,20 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
     if (userData?.role !== 'developer') return;
     if (!window.confirm(`[DEV] Tem certeza que deseja EXCLUIR permanentemente o Pedido #${seqNum} do histórico?`)) return;
     try {
-      await deleteDoc(doc(db, 'orders', orderId));
+      try {
+        await deleteDoc(doc(db, 'orders', orderId));
+      } catch (err: any) {
+        if (err?.code === 'not-found' || err?.message?.includes('No document to update') || true) {
+          const q = query(collection(db, 'orders'), where('id', '==', orderId));
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            const batchPromises = snap.docs.map(d => deleteDoc(doc(db, 'orders', d.id)));
+            await Promise.all(batchPromises);
+          } else {
+            throw err;
+          }
+        }
+      }
       alert(`[DEV] Pedido #${seqNum} excluído com sucesso.`);
       setViewingStatsDetailType(null);
     } catch (err) {
@@ -355,12 +368,11 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
     if (!window.confirm(`[DEV] CONFIRMAÇÃO FINAL: Deseja realmente apagar todos os registros de hoje? Esta ação é irreversível!`)) return;
     
     try {
-      const todayOrders = orders.filter(o => getBusinessDay(o.createdAt) === todayStr);
-      const batchPromises = todayOrders.map(async (o) => {
-        if (o.id) {
-          await deleteDoc(doc(db, 'orders', o.id));
-        }
-      });
+      const bStart = new Date();
+      bStart.setHours(0,0,0,0);
+      const q = query(collection(db, 'orders'), where('createdAt', '>=', bStart.toISOString()));
+      const snap = await getDocs(q);
+      const batchPromises = snap.docs.map(d => deleteDoc(doc(db, 'orders', d.id)));
       await Promise.all(batchPromises);
       alert("[DEV] Histórico do dia excluído com sucesso.");
       setShowDevToolsModal(false);
@@ -646,7 +658,19 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
           }
         }
       }
-      await updateDoc(orderDocRef, updates);
+      try {
+        await updateDoc(orderDocRef, updates);
+      } catch (err: any) {
+        if (err?.code === 'not-found' || err?.message?.includes('No document to update') || true) {
+          const q = query(collection(db, 'orders'), where('id', '==', orderId));
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            await updateDoc(doc(db, 'orders', snap.docs[0].id), updates);
+          } else {
+            throw err;
+          }
+        }
+      }
 
       // Log status update audit trail
       if (userData) {
@@ -759,13 +783,27 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
 
     try {
       const order = orders.find(o => o.id === cancelOrderId);
-      const orderDocRef = doc(db, 'orders', cancelOrderId);
-      await updateDoc(orderDocRef, {
+      const updates = {
         status: 'cancelled',
         cancelReason: reason,
         cancelledAt: new Date().toISOString(),
         cancelledBy: userData?.name || userData?.email || 'Admin',
-      });
+      };
+      
+      try {
+        const orderDocRef = doc(db, 'orders', cancelOrderId);
+        await updateDoc(orderDocRef, updates);
+      } catch (err: any) {
+        if (err?.code === 'not-found' || err?.message?.includes('No document to update') || true) {
+          const q = query(collection(db, 'orders'), where('id', '==', cancelOrderId));
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            await updateDoc(doc(db, 'orders', snap.docs[0].id), updates);
+          } else {
+            throw err;
+          }
+        }
+      }
 
       if (userData) {
         await logAuditAction({
