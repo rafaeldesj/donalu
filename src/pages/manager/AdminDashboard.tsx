@@ -68,7 +68,7 @@ export const AdminDashboard = () => {
   }, [orders, statusFilter, searchTerm, sortBy, paymentMethodFilter]);
 
   const handleRefundPayment = async (order: OrderDocument) => {
-    const paymentId = order.mercadoPagoPaymentId || order.mercadoPagoOrderId;
+    const paymentId = order.mercadoPagoPaymentId || order.mercadoPagoOrderId || order.stonePaymentId;
     const isStone = (order.paymentMethod?.includes('stone') || (typeof paymentId === 'string' && (paymentId.startsWith('or_') || paymentId.includes('STONE_PIX_MOCK'))));
     const providerName = isStone ? 'Stone' : 'Mercado Pago';
 
@@ -535,8 +535,8 @@ export const AdminDashboard = () => {
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Por: {order.refundedBy} em {new Date(order.refundedAt || '').toLocaleDateString('pt-BR')}</span>
                     </div>
                   )}
-                  {!order.refunded && (order.status === 'cancelled' || (order.status === 'completed' && userData?.role === 'developer')) && (order.mercadoPagoPaymentId || order.mercadoPagoOrderId) && (() => {
-                    const paymentId = order.mercadoPagoPaymentId || order.mercadoPagoOrderId;
+                  {!order.refunded && (order.status === 'cancelled' || (order.status === 'completed' && userData?.role === 'developer')) && (order.mercadoPagoPaymentId || order.mercadoPagoOrderId || order.stonePaymentId) && (() => {
+                    const paymentId = order.mercadoPagoPaymentId || order.mercadoPagoOrderId || order.stonePaymentId;
                     const isStone = (order.paymentMethod?.includes('stone') || (typeof paymentId === 'string' && (paymentId.startsWith('or_') || paymentId.includes('STONE_PIX_MOCK'))));
                     const providerName = isStone ? 'Stone' : 'Mercado Pago';
                     return (
