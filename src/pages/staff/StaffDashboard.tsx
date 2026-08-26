@@ -1354,7 +1354,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
           {/* Fila do Caixa */}
           {filter === 'cashier' && isAuthorized('cashier') && (() => {
             const todayStr = getBusinessDay(new Date().toISOString());
-            let todayOrders = orders.filter(o => o.status !== 'cancelled' && o.status !== 'awaiting_payment' && !(!o.paymentMethod && !o.paymentVerificationToken));
+            let todayOrders = orders.filter(o => o.status !== 'cancelled' && o.status !== 'merged' && o.status !== 'abandoned' && o.status !== 'building_cart' && o.status !== 'awaiting_payment' && !(!o.paymentMethod && !o.paymentVerificationToken));
 
             // Lógica de filtragem por tempo estendido / específico
             if (timeFilterHours === 'all_day') {
@@ -2033,13 +2033,27 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                                   <span style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
                                     {tOrders.length} pedido(s) unificados
                                   </span>
-                                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>
-                                    {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Pagamento(s): {
-                                      [...new Set(tOrders.flatMap((o: any) => o.payments ? o.payments.map((p: any) => p.method) : [o.paymentMethod]).filter(Boolean))]
-                                      .map(m => m === 'dinheiro' ? 'Dinheiro' : m === 'debito' ? 'Débito' : m === 'credito' ? 'Crédito' : m === 'pix' ? 'PIX' : m)
-                                      .join(', ')
-                                    }
-                                  </span>
+                                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.1rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                    <span>
+                                      {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Pagamento(s): {
+                                        [...new Set(tOrders.flatMap((o: any) => o.payments ? o.payments.map((p: any) => p.method) : [o.paymentMethod]).filter(Boolean))]
+                                        .map(m => m === 'dinheiro' ? 'Dinheiro' : m === 'debito' ? 'Débito' : m === 'credito' ? 'Crédito' : m === 'pix' ? 'PIX' : m)
+                                        .join(', ')
+                                      }
+                                    </span>
+                                    {(() => {
+                                      const onlinePayment = tOrders.flatMap((o: any) => o.payments || []).find((p: any) => p.id && ['pix', 'credito', 'credito_mp', 'google_pay'].includes(p.method));
+                                      if (onlinePayment) {
+                                        return (
+                                          <div style={{ color: '#10b981', padding: '0.4rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '4px', border: '1px dashed rgba(16,185,129,0.3)' }}>
+                                            ✅ <strong>Pedido já pago pelo cliente em seu próprio dispositivo.</strong><br/>
+                                            ID Transação: {onlinePayment.id}
+                                          </div>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
+                                  </div>
                                 </div>
                                 
                                 <div className="order-actions" style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -2108,9 +2122,23 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                                   <span style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
                                     {order.clientName}
                                   </span>
-                                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>
-                                    {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Pagamento: {order.paymentMethod === 'dinheiro' ? 'Dinheiro' : order.paymentMethod === 'debito' ? 'Débito' : order.paymentMethod === 'credito' ? 'Crédito' : order.paymentMethod === 'pix' ? 'PIX' : order.paymentMethod}
-                                  </span>
+                                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.1rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                    <span>
+                                      {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Pagamento: {order.paymentMethod === 'dinheiro' ? 'Dinheiro' : order.paymentMethod === 'debito' ? 'Débito' : order.paymentMethod === 'credito' ? 'Crédito' : order.paymentMethod === 'pix' ? 'PIX' : order.paymentMethod}
+                                    </span>
+                                    {(() => {
+                                      const onlinePayment = (order.payments || []).find((p: any) => p.id && ['pix', 'credito', 'credito_mp', 'google_pay'].includes(p.method));
+                                      if (onlinePayment) {
+                                        return (
+                                          <div style={{ color: '#10b981', padding: '0.4rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '4px', border: '1px dashed rgba(16,185,129,0.3)' }}>
+                                            ✅ <strong>Pedido já pago pelo cliente em seu próprio dispositivo.</strong><br/>
+                                            ID Transação: {onlinePayment.id}
+                                          </div>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
+                                  </div>
                                 </div>
                                 
                                 <div className="order-actions" style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -3735,12 +3763,25 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                           </div>
                         </div>
 
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', gap: '0.75rem' }}>
-                          <span>Cliente: <strong style={{ color: '#fff' }}>{order.clientName}</strong></span>
-                          <span>•</span>
-                          <span>Tipo: <strong style={{ color: '#fff' }}>{getOrderTypeLabel(order)}</strong></span>
-                          <span>•</span>
-                          <span>Pagamento: <strong style={{ color: '#fff' }}>{order.paymentMethod === 'dinheiro' ? '💵 Dinheiro' : order.paymentMethod === 'debito' ? '💳 Débito' : order.paymentMethod === 'credito' ? '💳 Crédito' : order.paymentMethod === 'pagar_final' ? '🍽️ Pagar no Final' : order.paymentMethod === 'cartao' ? '💳 Cartões ou Pix' : order.paymentMethod === 'pix' ? '🟢 Pix' : '🟢 Pix (Automático)'}</strong></span>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                          <div style={{ display: 'flex', gap: '0.75rem' }}>
+                            <span>Cliente: <strong style={{ color: '#fff' }}>{order.clientName}</strong></span>
+                            <span>•</span>
+                            <span>Tipo: <strong style={{ color: '#fff' }}>{getOrderTypeLabel(order)}</strong></span>
+                          </div>
+                          <div style={{ color: 'var(--text-secondary)' }}>
+                            {order.createdAt.substring(11, 16)} - Pagamento(s): {
+                              order.payments && order.payments.length > 0 
+                              ? order.payments.map(p => p.method.toUpperCase()).join(', ') 
+                              : (order.paymentMethod ? order.paymentMethod.toUpperCase() : 'Não informado')
+                            }
+                            {['pix', 'credito', 'credito_mp', 'google_pay'].includes(order.paymentMethod || '') && order.payments && order.payments.length > 0 && order.payments[0].id && (
+                              <div style={{ fontSize: '0.8rem', color: '#10b981', marginTop: '0.2rem', padding: '0.2rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '4px' }}>
+                                ✅ Pedido já pago pelo cliente em seu próprio dispositivo.<br/>
+                                <strong>ID Transação:</strong> {order.payments[0].id}
+                              </div>
+                            )}
+                          </div>
                         </div>
 
                         {/* Itens */}

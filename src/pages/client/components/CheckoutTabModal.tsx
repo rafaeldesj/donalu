@@ -143,6 +143,10 @@ export function CheckoutTabModal({ isOpen, onClose, orders, storeConfig, user, u
         createdAt: new Date().toISOString(),
       };
       
+      if (method === 'pix' && pixPaymentId) {
+        faturaOrder.payments = [{ method: 'pix', amount: total, id: pixPaymentId.toString() }];
+      }
+      
       const newOrderRef = await addDoc(collection(db, 'orders'), faturaOrder);
 
       // 2. Mark old orders as merged
