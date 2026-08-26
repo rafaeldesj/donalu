@@ -69,6 +69,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
   const [specificDateValue, setSpecificDateValue] = useState<string>(new Date().toISOString().split('T')[0]);
   const [viewingStatsDetailType, setViewingStatsDetailType] = useState<'realized' | 'paid' | 'unpaid' | null>(null);
   const [viewingReceiptDetails, setViewingReceiptDetails] = useState<{ title: string; orders: OrderDocument[] } | null>(null);
+  const [refundLoading, setRefundLoading] = useState<boolean>(false);
   const [showDevToolsModal, setShowDevToolsModal] = useState<boolean>(false);
   const [devSelectedClientUid, setDevSelectedClientUid] = useState<string>('');
   const [deliverers, setDeliverers] = useState<any[]>([]);
@@ -442,6 +443,94 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
         console.error("Erro ao isentar taxa de serviço:", err);
         alert("Erro ao remover taxa. Verifique suas permissões.");
       }
+    }
+  };
+
+  const handleRefundReceipt = async (ordersToRefund: OrderDocument[]) => {
+    // Busca um pagamento online válido
+    const orderWithPayment = ordersToRefund.find(o => 
+      o.mercadoPagoPaymentId || o.mercadoPagoOrderId || o.stonePaymentId || 
+      (o.payments && o.payments.some((p: any) => p.id && ['pix', 'credito', 'credito_mp', 'google_pay'].includes(p.method)))
+    );
+
+    if (!orderWithPayment) {
+      alert("Não foi encontrado um ID de pagamento online nesta conta para realizar o estorno.");
+      return;
+    }
+
+    let paymentId: string | number | undefined = orderWithPayment.mercadoPagoPaymentId || orderWithPayment.mercadoPagoOrderId || orderWithPayment.stonePaymentId;
+    if (!paymentId && orderWithPayment.payments) {
+      const onlinePmt = orderWithPayment.payments.find((p: any) => p.id && ['pix', 'credito', 'credito_mp', 'google_pay'].includes(p.method));
+      if (onlinePmt) paymentId = onlinePmt.id;
+    }
+
+    const totalToRefund = ordersToRefund.reduce((sum, o) => sum + o.total, 0);
+    const isStone = (orderWithPayment.paymentMethod?.includes('stone') || (typeof paymentId === 'string' && (paymentId.startsWith('or_') || paymentId.includes('STONE_PIX_MOCK'))));
+    const providerName = isStone ? 'Stone' : 'Mercado Pago';
+
+    if (!window.confirm(`Tem certeza que deseja estornar R$ ${totalToRefund.toFixed(2).replace('.', ',')} na ${providerName}?`)) {
+      return;
+    }
+
+    setRefundLoading(true);
+    try {
+      const storeConfigRef = doc(db, 'settings', 'store_config');
+      const storeConfigSnap = await getDoc(storeConfigRef);
+      const storeConfigData = storeConfigSnap.exists() ? storeConfigSnap.data() : null;
+      
+      const token = isStone 
+        ? (storeConfigData?.stoneAccessToken || 'mock')
+        : (storeConfigData?.storeOwnerAccessToken || storeConfigData?.devAccessToken || 'mock');
+
+      const endpoint = isStone 
+        ? `${API_BASE_URL}/api/pagamentos/stone-refund`
+        : `${API_BASE_URL}/api/pagamentos/refund-payment`;
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentId: paymentId,
+          token: token
+        })
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || `Erro ao processar estorno na ${providerName}.`);
+      }
+
+      // Marcar todos os pedidos como estornados
+      const batchPromises = ordersToRefund.map(async (o) => {
+        const orderDocRef = doc(db, 'orders', o.id!);
+        await updateDoc(orderDocRef, {
+          refunded: true,
+          refundedAt: new Date().toISOString(),
+          refundedBy: userData?.name || 'Sistema',
+          updatedAt: new Date().toISOString()
+        });
+      });
+      await Promise.all(batchPromises);
+
+      await logAuditAction({
+        userId: user?.uid || 'guest',
+        userEmail: user?.email || 'anonimo@donalu.web.app',
+        userName: userData?.name || 'Staff',
+        actionType: 'PAYMENT_REFUND',
+        title: 'Pagamento Estornado',
+        description: `Estornou o pagamento de R$ ${totalToRefund.toFixed(2).replace('.', ',')} (ID: "${paymentId}") na ${providerName}.`,
+        userRole: userData?.role || 'staff',
+        metadata: { total: totalToRefund, paymentId: paymentId, provider: providerName }
+      });
+
+      alert(`Pagamento estornado com sucesso na ${providerName}!`);
+      
+      setViewingReceiptDetails(null);
+    } catch (err: any) {
+      console.error("Erro ao estornar:", err);
+      alert(err.message || 'Erro ao processar o estorno.');
+    } finally {
+      setRefundLoading(false);
     }
   };
 
@@ -3588,6 +3677,42 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
                   R$ {viewingReceiptDetails.orders.reduce((sum, o) => sum + o.total, 0).toFixed(2).replace('.', ',')}
                 </span>
               </div>
+              
+              {(() => {
+                const isAlreadyRefunded = viewingReceiptDetails.orders.some(o => o.refunded);
+                const hasOnlinePayment = viewingReceiptDetails.orders.some(o => 
+                  o.mercadoPagoPaymentId || o.mercadoPagoOrderId || o.stonePaymentId || 
+                  (o.payments && o.payments.some((p: any) => p.id && ['pix', 'credito', 'credito_mp', 'google_pay'].includes(p.method)))
+                );
+                
+                if (hasOnlinePayment) {
+                  return (
+                    <button
+                      onClick={() => handleRefundReceipt(viewingReceiptDetails.orders)}
+                      disabled={isAlreadyRefunded || refundLoading}
+                      style={{
+                        marginTop: '0.5rem',
+                        width: '100%',
+                        padding: '1rem',
+                        background: isAlreadyRefunded ? 'rgba(255,255,255,0.05)' : 'rgba(239, 68, 68, 0.1)',
+                        color: isAlreadyRefunded ? 'var(--text-secondary)' : '#ef4444',
+                        border: `1px solid ${isAlreadyRefunded ? 'rgba(255,255,255,0.1)' : 'rgba(239, 68, 68, 0.2)'}`,
+                        borderRadius: '12px',
+                        cursor: isAlreadyRefunded || refundLoading ? 'not-allowed' : 'pointer',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {refundLoading ? 'Processando Estorno...' : isAlreadyRefunded ? '✅ Pagamento Estornado' : 'Estornar Pagamento Online'}
+                    </button>
+                  );
+                }
+                return null;
+              })()}
             </div>
           </div>
         </div>
