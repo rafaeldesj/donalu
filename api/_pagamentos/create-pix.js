@@ -126,7 +126,7 @@ export default async function handler(req, res) {
         payment_verification_token: paymentVerificationToken || undefined
       },
       payer: {
-        email: email || 'cliente@email.com',
+        email: email && email.includes('@') && !email.includes('cliente@email.com') ? email : `visitante-${Date.now()}@donalupastelaria.com.br`,
         first_name: firstName,
         last_name: lastName,
         ...(cleanCpf ? {
