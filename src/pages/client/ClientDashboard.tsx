@@ -2375,7 +2375,7 @@ export const ClientDashboard = ({
             amount: finalTotal,
             email: user?.email || 'cliente@email.com',
             name: user?.displayName || user?.email || 'Cliente',
-            cpf: userData?.cpf || '80288053702',
+            cpf: userData?.cpf || undefined,
             devPercentage: isStoreOwnerConnected ? (storeConfig?.devPercentage || 0) : 0,
             orderId: generatedOrderId,
             paymentVerificationToken: secureToken
