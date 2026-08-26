@@ -83,7 +83,7 @@ export const AdminDashboard = () => {
       
       const token = isStone 
         ? (storeConfigData?.stoneAccessToken || 'mock')
-        : (storeConfigData?.storeOwnerAccessToken || storeConfigData?.devAccessToken || 'mock');
+        : (storeConfigData?.devAccessToken || storeConfigData?.storeOwnerAccessToken || 'mock');
 
       const devToken = storeConfigData?.devAccessToken || 'mock';
 

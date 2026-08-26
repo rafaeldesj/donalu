@@ -478,9 +478,9 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
       const storeConfigSnap = await getDoc(storeConfigRef);
       const storeConfigData = storeConfigSnap.exists() ? storeConfigSnap.data() : null;
       
-      const token = isStone 
-        ? (storeConfigData?.stoneAccessToken || 'mock')
-        : (storeConfigData?.storeOwnerAccessToken || storeConfigData?.devAccessToken || 'mock');
+        const token = isStone 
+          ? (storeConfigData?.stoneAccessToken || 'mock')
+          : (storeConfigData?.devAccessToken || storeConfigData?.storeOwnerAccessToken || 'mock');
 
       const devToken = storeConfigData?.devAccessToken || 'mock';
 
