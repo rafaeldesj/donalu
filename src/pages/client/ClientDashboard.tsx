@@ -427,8 +427,13 @@ export const ClientDashboard = ({
           );
           
           const batchPromises = unpaid.map(async (order) => {
+            const isStone = String(billPixPaymentId).startsWith('STONE_PIX_MOCK_') || String(billPixPaymentId).startsWith('or_');
+            const providerKey = isStone ? 'stonePaymentId' : 'mercadoPagoPaymentId';
             await updateDoc(doc(db, 'orders', order.id), {
               status: 'completed',
+              paymentMethod: 'pix',
+              [providerKey]: billPixPaymentId.toString(),
+              payments: [{ method: 'pix', amount: order.total, id: billPixPaymentId.toString() }],
               updatedAt: new Date().toISOString()
             });
             await processOrderLoyaltyStamps(order.id, { ...order, status: 'completed' });
@@ -767,6 +772,8 @@ export const ClientDashboard = ({
       const batchPromises = unpaid.map(async (order) => {
         await updateDoc(doc(db, 'orders', order.id), {
           status: 'completed',
+          paymentMethod: 'credito',
+          payments: [{ method: 'credito', amount: order.total, id: result.paymentId || result.id || 'PAGBANK_CARD' }],
           updatedAt: new Date().toISOString()
         });
         await processOrderLoyaltyStamps(order.id, { ...order, status: 'completed' });
