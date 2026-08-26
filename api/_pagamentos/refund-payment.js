@@ -101,9 +101,10 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       console.error('[Refund Error] Response:', response.json || response.text);
-      let errMsg = response.json?.message || 'Erro ao processar estorno no Mercado Pago.';
+      let originalMsg = response.json?.message || response.text || 'Erro desconhecido';
+      let errMsg = `Erro ao processar estorno: ${originalMsg}`;
       if (response.status === 401 || response.status === 403 || errMsg.includes('UNAUTHORIZED')) {
-        errMsg = 'Não autorizado. Se este for um pagamento com Taxa de Desenvolvedor (Split), o estorno deve ser feito pelo Token do Desenvolvedor (ou manualmente no painel do MP). Verifique suas configurações de Token.';
+        errMsg = `Não autorizado (Split/Permissão). Erro do MP: ${originalMsg}. Verifique os Tokens.`;
       }
       return res.status(400).json({ success: false, message: errMsg });
     }
