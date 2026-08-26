@@ -1068,7 +1068,7 @@ export const OrderTracking = ({ showOnly }: OrderTrackingProps = {}) => {
                             {simulatingOrderId === order.id ? 'Simulando GPS...' : '⚡ Simular Rota GPS'}
                           </button>
                         )}
-                        {(userData?.role !== 'client' || !order.status || ['pending', 'pendente_pagamento', 'aguardando_caixa', 'awaiting_payment', 'building_cart'].includes(order.status)) && (
+                        {(userData?.role !== 'client' || !order.status || ['pending', 'pendente_pagamento', 'aguardando_caixa', 'awaiting_payment', 'building_cart'].includes(order.status as string)) && (
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); handleDeleteOrder(order.id!); }}
@@ -1343,7 +1343,7 @@ export const OrderTracking = ({ showOnly }: OrderTrackingProps = {}) => {
                     }}>
                       {order.status === 'cancelled' ? 'Cancelado' : 'Concluído'}
                     </span>
-                    {(userData?.role !== 'client' || ['pending', 'pendente_pagamento', 'aguardando_caixa'].includes(order.status)) && (
+                    {(userData?.role !== 'client' || ['pending', 'pendente_pagamento', 'aguardando_caixa'].includes(order.status as string)) && (
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); handleDeleteOrder(order.id!); }}
