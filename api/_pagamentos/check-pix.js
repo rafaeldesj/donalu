@@ -94,7 +94,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: 'Erro ao verificar pagamento no Mercado Pago.' });
     }
 
-    return res.status(200).json({ success: true, status: response.json.status });
+    return res.status(200).json({ success: true, status: response.json.status, status_detail: response.json.status_detail });
 
   } catch (err) {
     console.error('[Mercado Pago Pix Status] Erro no middleware:', err);
