@@ -82,24 +82,39 @@ export default async function handler(req, res) {
     }
 
     const mpUrl = `https://api.mercadopago.com/v1/payments/${paymentId}/refunds`;
+    
+    let firstToken = token;
+    let secondToken = null;
+    let firstPrefix = 'DONALU_REFUND_';
+    let secondPrefix = 'DONALU_REFUND_DEV_';
+
+    // Se temos um devToken diferente, tentamos ele PRIMEIRO, pois o dono do marketplace
+    // é o único que pode estornar pagamentos com split. Tentar o da loja primeiro pode causar um lock.
+    if (devToken && devToken.trim() !== token.trim() && !detectIsMock(devToken)) {
+      firstToken = devToken;
+      secondToken = token;
+      firstPrefix = 'DONALU_REFUND_DEV_';
+      secondPrefix = 'DONALU_REFUND_STORE_';
+    }
+
     let headers = {
-      'Authorization': `Bearer ${token.trim()}`,
-      'X-Idempotency-Key': 'DONALU_REFUND_' + paymentId + '_' + Date.now()
+      'Authorization': `Bearer ${firstToken.trim()}`,
+      'X-Idempotency-Key': firstPrefix + paymentId + '_' + Date.now()
     };
 
-    let response = await nativeRequest(mpUrl, 'POST', headers, {});
-
-    // Fallback: se retornar UNAUTHORIZED ou permissão negada, e tivermos devToken disponível e diferente do token primário
+    let response = await nativeRequest(mpUrl, 'POST', headers, null);
     let fallbackMsg = '';
-    if (!response.ok && (response.status === 401 || response.status === 403 || (response.json && response.json.message && response.json.message.includes('UNAUTHORIZED'))) && devToken && devToken.trim() !== token.trim() && !detectIsMock(devToken)) {
-      console.log(`[Refund Fallback] Tentando estornar com devToken...`);
+
+    // Se falhar e tivermos um segundo token, tentamos o fallback
+    if (!response.ok && (response.status === 401 || response.status === 403 || (response.json && response.json.message && response.json.message.includes('UNAUTHORIZED'))) && secondToken && !detectIsMock(secondToken)) {
+      console.log(`[Refund Fallback] Tentando estornar com token secundario...`);
       headers = {
-        'Authorization': `Bearer ${devToken.trim()}`,
-        'X-Idempotency-Key': 'DONALU_REFUND_DEV_' + paymentId + '_' + Date.now()
+        'Authorization': `Bearer ${secondToken.trim()}`,
+        'X-Idempotency-Key': secondPrefix + paymentId + '_' + Date.now()
       };
-      response = await nativeRequest(mpUrl, 'POST', headers, {});
+      response = await nativeRequest(mpUrl, 'POST', headers, null);
       if (!response.ok) {
-        fallbackMsg = ` (Falha no Fallback DevToken: ${response.json?.message || response.text})`;
+        fallbackMsg = ` (Falha no Fallback: ${response.json?.message || response.text})`;
       }
     }
 
