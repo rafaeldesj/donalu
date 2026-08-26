@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { ChefHat, CreditCard, Bell, Play, Check, Navigation, TrendingUp, DollarSign, Clock, Printer, CheckCircle } from 'lucide-react';
-import { collection, query, onSnapshot, doc, updateDoc, orderBy, addDoc, getDocs, where, deleteDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, updateDoc, orderBy, addDoc, getDocs, getDoc, where, deleteDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { logAuditAction } from '../../utils/audit';
 import { processOrderLoyaltyStamps } from '../../utils/loyalty';
@@ -15,7 +15,7 @@ interface StaffDashboardProps {
 }
 
 export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
-  const { userData } = useAuth();
+  const { user, userData } = useAuth();
   const staff = userData?.staffFunctions;
 
   const getOrderTypeLabel = (order: any) => {
