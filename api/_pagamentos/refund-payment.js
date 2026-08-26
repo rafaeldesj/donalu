@@ -90,6 +90,7 @@ export default async function handler(req, res) {
     let response = await nativeRequest(mpUrl, 'POST', headers, {});
 
     // Fallback: se retornar UNAUTHORIZED ou permissão negada, e tivermos devToken disponível e diferente do token primário
+    let fallbackMsg = '';
     if (!response.ok && (response.status === 401 || response.status === 403 || (response.json && response.json.message && response.json.message.includes('UNAUTHORIZED'))) && devToken && devToken !== token && !detectIsMock(devToken)) {
       console.log(`[Refund Fallback] Tentando estornar com devToken...`);
       headers = {
@@ -97,14 +98,17 @@ export default async function handler(req, res) {
         'X-Idempotency-Key': 'DONALU_REFUND_DEV_' + paymentId + '_' + Date.now()
       };
       response = await nativeRequest(mpUrl, 'POST', headers, {});
+      if (!response.ok) {
+        fallbackMsg = ` (Falha no Fallback DevToken: ${response.json?.message || response.text})`;
+      }
     }
 
     if (!response.ok) {
       console.error('[Refund Error] Response:', response.json || response.text);
       let originalMsg = response.json?.message || response.text || 'Erro desconhecido';
-      let errMsg = `Erro ao processar estorno: ${originalMsg}`;
+      let errMsg = `Erro ao processar estorno: ${originalMsg}${fallbackMsg}`;
       if (response.status === 401 || response.status === 403 || errMsg.includes('UNAUTHORIZED')) {
-        errMsg = `Não autorizado (Split/Permissão). Erro do MP: ${originalMsg}. Verifique os Tokens.`;
+        errMsg = `Não autorizado (Split/Permissão). Erro do MP: ${originalMsg}${fallbackMsg}. Verifique os Tokens.`;
       }
       return res.status(400).json({ success: false, message: errMsg });
     }
