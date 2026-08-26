@@ -109,6 +109,7 @@ export default async function handler(req, res) {
       let errMsg = `Erro ao processar estorno: ${originalMsg}${fallbackMsg}`;
       if (response.status === 401 || response.status === 403 || errMsg.includes('UNAUTHORIZED')) {
         errMsg = `Não autorizado (Split/Permissão). Erro do MP: ${originalMsg}${fallbackMsg}. Verifique os Tokens.`;
+        return res.status(400).json({ success: false, message: errMsg, requiresManualRefund: true });
       }
       return res.status(400).json({ success: false, message: errMsg });
     }

@@ -103,7 +103,14 @@ export const AdminDashboard = () => {
 
       const result = await response.json();
       if (!response.ok || !result.success) {
-        throw new Error(result.message + ` [DEBUG: ID=${paymentId}, Token=${token ? token.substring(0,15) : 'none'}...]`);
+        if (result.requiresManualRefund) {
+          const force = window.confirm(`${result.message}\n\nO Mercado Pago bloqueou o estorno automático. Deseja marcar o pedido como ESTORNADO no sistema e fazer a devolução manualmente lá no painel do Mercado Pago?`);
+          if (!force) {
+            throw new Error('Estorno cancelado pelo usuário.');
+          }
+        } else {
+          throw new Error(result.message + ` [DEBUG: ID=${paymentId}, Token=${token ? token.substring(0,15) : 'none'}...]`);
+        }
       }
 
       const orderDocRef = doc(db, 'orders', order.id!);
