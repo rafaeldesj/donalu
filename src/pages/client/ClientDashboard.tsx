@@ -2373,7 +2373,7 @@ export const ClientDashboard = ({
           body: JSON.stringify({
             token,
             amount: finalTotal,
-            email: user?.email || 'cliente@email.com',
+            email: user?.email === storeConfig?.storeOwnerEmail ? `teste-${Date.now()}@donalupastelaria.com.br` : (user?.email || 'cliente@email.com'),
             name: user?.displayName || user?.email || 'Cliente',
             cpf: userData?.cpf || undefined,
             devPercentage: isStoreOwnerConnected && storeConfig?.devAccessToken && storeConfig?.devAccessToken !== storeConfig?.storeOwnerAccessToken ? (storeConfig?.devPercentage || 0) : 0,
