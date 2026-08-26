@@ -500,7 +500,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
 
       const result = await response.json();
       if (!response.ok || !result.success) {
-        throw new Error(result.message || `Erro ao processar estorno na ${providerName}.`);
+        throw new Error(result.message + ` [DEBUG: ID=${paymentId}, Token=${token ? token.substring(0,15) : 'none'}...]`);
       }
 
       // Marcar todos os pedidos como estornados
