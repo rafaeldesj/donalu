@@ -70,6 +70,7 @@ interface StoreConfig {
   deliveryAdditionalKmFee?: number;
   openDays?: (number | string)[];
   disabledPaymentMethodsByOrderType?: Record<string, string[]>;
+  payAtEndSubMethods?: string[];
   isTemporarilyClosed?: boolean;
   temporaryCloseReason?: string;
 }
@@ -807,6 +808,7 @@ export const SettingsPage = () => {
         paymentMethodsVisibilityByOrderType: storeConfig.paymentMethodsVisibilityByOrderType || {},
         paymentMethodsDescriptions: storeConfig.paymentMethodsDescriptions || {},
         paymentMethodsNames: storeConfig.paymentMethodsNames || {},
+        payAtEndSubMethods: storeConfig.payAtEndSubMethods || [],
         requireCashierApproval: storeConfig.requireCashierApproval !== undefined ? storeConfig.requireCashierApproval : false
       });
 
@@ -1741,6 +1743,44 @@ export const SettingsPage = () => {
                             {isDisabled ? 'Ocultado' : 'Ativo'}
                           </button>
                         </div>
+                      {method.id === 'pagar_final' && (
+                        <div style={{ width: '100%', marginTop: '1rem', padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+                          <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Opções disponíveis no Fechamento da Conta</h4>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+                            {[
+                              { id: 'pix', label: 'Pix MP' },
+                              { id: 'credito_mp', label: 'Cartão MP' },
+                              { id: 'google_pay', label: 'Google Pay' },
+                              { id: 'debito_point', label: 'Débito Maquininha' },
+                              { id: 'credito_point', label: 'Crédito Maquininha' },
+                              { id: 'pix_point', label: 'Pix Maquininha' },
+                              { id: 'dinheiro', label: 'Dinheiro' },
+                              { id: 'cartao', label: 'Cartões/Pix Balcão' }
+                            ].map(subMethod => {
+                              // @ts-ignore
+                              const allowed = (storeConfig?.payAtEndSubMethods || []).includes(subMethod.id);
+                              return (
+                                <label key={subMethod.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                                  <input 
+                                    type="checkbox" 
+                                    checked={allowed}
+                                    onChange={(e) => {
+                                      // @ts-ignore
+                                      const current = storeConfig?.payAtEndSubMethods || [];
+                                      const next = e.target.checked 
+                                        ? [...current, subMethod.id] 
+                                        : current.filter((m: string) => m !== subMethod.id);
+                                      setStoreConfig(prev => prev ? { ...prev, payAtEndSubMethods: next } : prev);
+                                    }}
+                                    style={{ accentColor: 'var(--primary-gold)', width: '16px', height: '16px' }}
+                                  />
+                                  {subMethod.label}
+                                </label>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
                       </div>
                     );
                   })}

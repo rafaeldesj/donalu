@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { collection, query, where, onSnapshot, doc, updateDoc, getDoc, deleteDoc, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../hooks/useAuth';
 import type { OrderDocument } from '../../types/order';
@@ -10,7 +10,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { geocodeAddress } from '../../utils/geocoding';
 import { API_BASE_URL } from '../../config/api';
-
+import { CheckoutTabModal } from './components/CheckoutTabModal';
 
 const DONA_LU_COORDS: [number, number] = [-22.9112951, -43.5602961];
 
@@ -572,6 +572,21 @@ export const OrderTracking = ({ showOnly }: OrderTrackingProps = {}) => {
   const [activeTablesCount, setActiveTablesCount] = useState<number>(10);
   const [scanningOrderId, setScanningOrderId] = useState<string | null>(null);
 
+  const [storeConfig, setStoreConfig] = useState<any>(null);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'store_config'));
+        if (snap.exists()) setStoreConfig(snap.data());
+      } catch (err) {
+        console.error("Erro ao buscar store config:", err);
+      }
+    };
+    fetchConfig();
+  }, []);
+
   // Survey states
   const [surveyOrder, setSurveyOrder] = useState<OrderDocument | null>(null);
   const [surveyRating, setSurveyRating] = useState<number>(0);
@@ -627,20 +642,8 @@ export const OrderTracking = ({ showOnly }: OrderTrackingProps = {}) => {
           await deleteDoc(doc(db, 'orders', orderId));
         }
       } catch (err: any) {
-        if (err?.code === 'not-found' || err?.message?.includes('No document to update') || true) {
-          const q = query(collection(db, 'orders'), where('id', '==', orderId));
-          const snap = await getDocs(q);
-          if (!snap.empty) {
-            if (userData?.role === 'client') {
-              await updateDoc(doc(db, 'orders', snap.docs[0].id), { status: 'abandoned', updatedAt: new Date().toISOString() });
-            } else {
-              await deleteDoc(doc(db, 'orders', snap.docs[0].id));
-            }
-          } else {
-            console.error(err);
-            alert('Não foi possível apagar o pedido. Tente novamente.');
-          }
-        }
+        console.error("Erro ao apagar pedido:", err);
+        alert('Não foi possível apagar o pedido. Tente novamente.');
       }
     }
   };
@@ -883,8 +886,10 @@ export const OrderTracking = ({ showOnly }: OrderTrackingProps = {}) => {
   }
 
   // Divide os pedidos em Ativos (não finalizados) e Histórico Recente
-  const activeOrders = orders.filter((o) => o.status !== 'completed' && o.status !== 'cancelled' && o.status !== 'abandoned' && o.status !== 'building_cart');
-  const pastOrders = orders.filter((o) => (o.status === 'completed' || o.status === 'cancelled') && o.status !== 'abandoned' && o.status !== 'building_cart').slice(0, 5);
+  const activeOrders = orders.filter((o) => o.status !== 'completed' && o.status !== 'cancelled' && o.status !== 'abandoned' && o.status !== 'building_cart' && o.status !== 'merged');
+  const pastOrders = orders.filter((o) => o.status === 'completed' || o.status === 'cancelled').slice(0, 5);
+
+  const pagarFinalOrders = activeOrders.filter(o => o.paymentMethod === 'pagar_final');
 
   const formatOrderDate = (isoString: string) => {
     const d = new Date(isoString);
@@ -1260,6 +1265,30 @@ export const OrderTracking = ({ showOnly }: OrderTrackingProps = {}) => {
               );
             })
           )}
+          
+          {pagarFinalOrders.length > 0 && (
+            <button
+              onClick={() => setShowCheckoutModal(true)}
+              className="auth-btn"
+              style={{
+                marginTop: '1rem',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: '#fff',
+                fontSize: '1.05rem',
+                fontWeight: 800,
+                padding: '1rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.75rem',
+                boxShadow: '0 10px 25px rgba(16, 185, 129, 0.3)',
+                border: '1px solid rgba(255,255,255,0.2)'
+              }}
+            >
+              <CheckCircle size={22} />
+              Fechar minha conta e fazer pagamento
+            </button>
+          )}
         </div>
         )}
 
@@ -1564,6 +1593,15 @@ export const OrderTracking = ({ showOnly }: OrderTrackingProps = {}) => {
           </div>
         </div>
       )}
+
+      <CheckoutTabModal
+        isOpen={showCheckoutModal}
+        onClose={() => setShowCheckoutModal(false)}
+        orders={pagarFinalOrders}
+        storeConfig={storeConfig}
+        user={user}
+        userData={userData}
+      />
     </div>
   );
 };

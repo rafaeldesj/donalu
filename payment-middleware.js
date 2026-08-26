@@ -279,14 +279,14 @@ export const createPixMiddleware = async (req, res) => {
       
       const firstName = name.split(' ')[0] || 'Cliente';
       const lastName = name.split(' ').slice(1).join(' ') || 'Dona Lu';
-      const transactionAmount = parseFloat(amount);
+      const transactionAmount = Number(parseFloat(amount).toFixed(2));
 
       // Constrói a URL do webhook dinamicamente com base no host do request
       const protocol = req.headers['x-forwarded-proto'] || 'https';
       const host = req.headers.host || '';
       const notificationUrl = `${protocol}://${host}/api/pagamentos/webhook`;
       
-      const isLocalHost = host.includes('localhost') || host.includes('127.0.0.1') || host.startsWith('192.168.') || host.startsWith('10.') || host.startsWith('172.');
+      const isLocalHost = host.includes('localhost') || host.includes('127.0.0.1') || host.startsWith('192.168.') || host.startsWith('10.') || host.startsWith('172.') || !host.includes('.');
       
       const cleanCpf = (cpf || '').replace(/\D/g, '');
       
@@ -295,7 +295,7 @@ export const createPixMiddleware = async (req, res) => {
         description: 'Pedido Dona Lu Pastelaria',
         payment_method_id: 'pix',
         external_reference: orderId || undefined,
-        notification_url: isLocalHost ? undefined : notificationUrl,
+        ...(isLocalHost ? {} : { notification_url: notificationUrl }),
         metadata: {
           payment_verification_token: paymentVerificationToken || undefined
         },
@@ -393,7 +393,7 @@ export const checkPixMiddleware = async (req, res) => {
     }
     
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({ success: true, status: response.json.status }));
+    return res.end(JSON.stringify({ success: true, status: response.json.status, status_detail: response.json.status_detail }));
     
   } catch (err) {
     console.error('[Mercado Pago Pix Status] Erro no middleware:', err);
@@ -448,7 +448,9 @@ export const createPointOrderMiddleware = async (req, res) => {
         global.mockPointIntents[mockIntentId] = {
           status: 'OPEN',
           createdAt: Date.now(),
-          amount: parseFloat(amount),
+          external_reference: orderId,
+          amount: Number(parseFloat(amount).toFixed(2)),
+          description: `Pedido ${orderId} na Dona Lu`,
           deviceId: devIdStr
         };
 
@@ -470,7 +472,9 @@ export const createPointOrderMiddleware = async (req, res) => {
         }));
       }
 
-      const numericAmount = parseFloat(amount);
+      const reference = orderId || 'POINT_' + Date.now();
+      const numericAmount = Number(parseFloat(amount).toFixed(2));
+      
       if (numericAmount < 1.00) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ success: false, message: 'O valor mínimo para pagamento na maquininha é de R$ 1,00.' }));

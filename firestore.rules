@@ -74,8 +74,8 @@ service cloud.firestore {
           (resource.data.clientUid == request.auth.uid && request.resource.data.clientUid == request.auth.uid)
         ));
       
-      // Excluir pedido: apenas admins
-      allow delete: if isAdmin();
+      // Excluir pedido: staff e admins
+      allow delete: if isStaff();
     }
 
     // Regras para a coleção de produtos (products)
