@@ -482,6 +482,8 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
         ? (storeConfigData?.stoneAccessToken || 'mock')
         : (storeConfigData?.storeOwnerAccessToken || storeConfigData?.devAccessToken || 'mock');
 
+      const devToken = storeConfigData?.devAccessToken || 'mock';
+
       const endpoint = isStone 
         ? `${API_BASE_URL}/api/pagamentos/stone-refund`
         : `${API_BASE_URL}/api/pagamentos/refund-payment`;
@@ -491,7 +493,8 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           paymentId: paymentId,
-          token: token
+          token: token,
+          devToken: devToken
         })
       });
 
