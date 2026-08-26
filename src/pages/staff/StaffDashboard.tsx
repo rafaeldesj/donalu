@@ -480,7 +480,7 @@ export const StaffDashboard = ({ filter }: StaffDashboardProps) => {
       
         const token = isStone 
           ? (storeConfigData?.stoneAccessToken || 'mock')
-          : (storeConfigData?.devAccessToken || storeConfigData?.storeOwnerAccessToken || 'mock');
+          : (storeConfigData?.storeOwnerAccessToken || 'mock');
 
       const devToken = storeConfigData?.devAccessToken || 'mock';
 
