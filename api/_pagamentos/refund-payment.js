@@ -83,7 +83,7 @@ export default async function handler(req, res) {
 
     const mpUrl = `https://api.mercadopago.com/v1/payments/${paymentId}/refunds`;
     let headers = {
-      'Authorization': `Bearer ${token}`,
+      'Authorization': `Bearer ${token.trim()}`,
       'X-Idempotency-Key': 'DONALU_REFUND_' + paymentId + '_' + Date.now()
     };
 
@@ -91,10 +91,10 @@ export default async function handler(req, res) {
 
     // Fallback: se retornar UNAUTHORIZED ou permissão negada, e tivermos devToken disponível e diferente do token primário
     let fallbackMsg = '';
-    if (!response.ok && (response.status === 401 || response.status === 403 || (response.json && response.json.message && response.json.message.includes('UNAUTHORIZED'))) && devToken && devToken !== token && !detectIsMock(devToken)) {
+    if (!response.ok && (response.status === 401 || response.status === 403 || (response.json && response.json.message && response.json.message.includes('UNAUTHORIZED'))) && devToken && devToken.trim() !== token.trim() && !detectIsMock(devToken)) {
       console.log(`[Refund Fallback] Tentando estornar com devToken...`);
       headers = {
-        'Authorization': `Bearer ${devToken}`,
+        'Authorization': `Bearer ${devToken.trim()}`,
         'X-Idempotency-Key': 'DONALU_REFUND_DEV_' + paymentId + '_' + Date.now()
       };
       response = await nativeRequest(mpUrl, 'POST', headers, {});
