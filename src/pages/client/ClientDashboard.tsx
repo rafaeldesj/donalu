@@ -2377,6 +2377,7 @@ export const ClientDashboard = ({
             name: user?.displayName || user?.email || 'Cliente',
             cpf: userData?.cpf || undefined,
             devPercentage: isStoreOwnerConnected && storeConfig?.devAccessToken && storeConfig?.devAccessToken !== storeConfig?.storeOwnerAccessToken ? (storeConfig?.devPercentage || 0) : 0,
+            stoneRecipientId: storeConfig?.stoneRecipientId || undefined,
             orderId: generatedOrderId,
             paymentVerificationToken: secureToken
           })
