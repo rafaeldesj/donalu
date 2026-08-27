@@ -83,47 +83,19 @@ export default async function handler(req, res) {
 
     const mpUrl = `https://api.mercadopago.com/v1/payments/${paymentId}/refunds`;
     
-    let firstToken = token;
-    let secondToken = null;
-    let firstPrefix = 'DONALU_REFUND_';
-    let secondPrefix = 'DONALU_REFUND_DEV_';
-
-    // Se temos um devToken diferente, tentamos ele PRIMEIRO, pois o dono do marketplace
-    // é o único que pode estornar pagamentos com split. Tentar o da loja primeiro pode causar um lock.
-    if (devToken && devToken.trim() !== token.trim() && !detectIsMock(devToken)) {
-      firstToken = devToken;
-      secondToken = token;
-      firstPrefix = 'DONALU_REFUND_DEV_';
-      secondPrefix = 'DONALU_REFUND_STORE_';
-    }
-
-    let headers = {
-      'Authorization': `Bearer ${firstToken.trim()}`,
-      'X-Idempotency-Key': firstPrefix + paymentId + '_' + Date.now()
+    const headers = {
+      'Authorization': `Bearer ${token.trim()}`,
+      'X-Idempotency-Key': 'DONALU_REFUND_' + paymentId + '_' + Date.now()
     };
 
     let response = await nativeRequest(mpUrl, 'POST', headers, null);
-    let fallbackMsg = '';
-
-    // Se falhar e tivermos um segundo token, tentamos o fallback
-    if (!response.ok && (response.status === 401 || response.status === 403 || (response.json && response.json.message && response.json.message.includes('UNAUTHORIZED'))) && secondToken && !detectIsMock(secondToken)) {
-      console.log(`[Refund Fallback] Tentando estornar com token secundario...`);
-      headers = {
-        'Authorization': `Bearer ${secondToken.trim()}`,
-        'X-Idempotency-Key': secondPrefix + paymentId + '_' + Date.now()
-      };
-      response = await nativeRequest(mpUrl, 'POST', headers, null);
-      if (!response.ok) {
-        fallbackMsg = ` (Falha no Fallback: ${response.json?.message || response.text})`;
-      }
-    }
 
     if (!response.ok) {
       console.error('[Refund Error] Response:', response.json || response.text);
       let originalMsg = response.json?.message || response.text || 'Erro desconhecido';
-      let errMsg = `Erro ao processar estorno: ${originalMsg}${fallbackMsg}`;
+      let errMsg = `Erro ao processar estorno: ${originalMsg}`;
       if (response.status === 401 || response.status === 403 || errMsg.includes('UNAUTHORIZED')) {
-        errMsg = `Não autorizado (Split/Permissão). Erro do MP: ${originalMsg}${fallbackMsg}. Verifique os Tokens.`;
+        errMsg = `Não autorizado (Split/Permissão). Erro do MP: ${originalMsg}. Verifique os Tokens.`;
         return res.status(400).json({ success: false, message: errMsg, requiresManualRefund: true });
       }
       return res.status(400).json({ success: false, message: errMsg });
