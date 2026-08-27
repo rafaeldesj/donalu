@@ -168,6 +168,13 @@ export default async function handler(req, res) {
     const qrCode = charge?.last_transaction?.qr_code || '';
     const qrCodeUrl = charge?.last_transaction?.qr_code_url || '';
 
+    // Se o gateway falhou a transação silenciosamente ou não gerou o QR Code
+    if (r.status === 'failed' || charge?.status === 'failed' || !qrCode) {
+      console.error('[Stone Pix] Pagar.me retornou falha na transação ou QR Code vazio:', r);
+      const failMessage = charge?.last_transaction?.gateway_response?.errors?.[0]?.message || 'O pagamento foi recusado pela Stone. Verifique os dados (ex: CPF).';
+      return res.status(400).json({ success: false, message: failMessage });
+    }
+
     return res.status(200).json({
       success: true,
       paymentId: r.id, // Formato or_xxxxx
