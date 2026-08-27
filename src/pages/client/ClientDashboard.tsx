@@ -4329,153 +4329,6 @@ export const ClientDashboard = ({
                   )}
                 </div>
               )}
-
-              {paymentMethod === 'credito_mp' && (
-                <MercadoPagoCardForm
-                  amount={finalTotal}
-                  publicKey={storeConfig?.mpPublicKey || import.meta.env.VITE_MP_PUBLIC_KEY || 'APP_USR-da72e390-0c33-4e4d-98e0-4d0fbbe22147'}
-                  accessToken={storeConfig?.storeOwnerAccessToken || storeConfig?.devAccessToken || 'mock'}
-                  payer={{
-                    email: user?.email || 'cliente@email.com',
-                    name: user?.displayName || user?.email || 'Cliente',
-                    cpf: userData?.cpf || ''
-                  }}
-                  items={cart.map(item => ({
-                    title: item.name,
-                    unit_price: item.price,
-                    quantity: item.quantity
-                  }))}
-                  devPercentage={storeConfig?.developerPercentage || 0}
-                  onSuccess={async (orderId) => {
-                    try {
-                      const now = new Date();
-                      const businessStart = new Date(now);
-                      if (now.getHours() < 6) businessStart.setDate(now.getDate() - 1);
-                      businessStart.setHours(6, 0, 0, 0);
-                      let dailySeq = 1;
-                        try {
-                          const qDaily = query(collection(db, 'orders'), where('createdAt', '>=', businessStart.toISOString()), where('clientUid', '==', user?.uid || ''));
-                          const dailySnap = await getDocs(qDaily);
-                          dailySeq = dailySnap.size + 1;
-                        } catch (errSeq) {
-                          console.warn('Erro dailySeq:', errSeq);
-                          dailySeq = Math.floor(Math.random() * 900) + 100;
-                        }
-                      const orderData: any = {
-                        clientUid: user?.uid || '',
-                        clientName: user?.displayName || user?.email || 'Cliente',
-                        clientPhone: userData?.phoneNumber || '',
-                        items: cart.map(item => ({ id: item.id, name: item.name, price: item.price, quantity: item.quantity, category: item.category, size: item.size || null })),
-                        total: finalTotal,
-                        deliveryFee: orderType === 'delivery' ? deliveryFee : 0,
-                        status: 'pending',
-                        createdAt: now.toISOString(),
-                        orderType,
-        packForTakeout: orderType === 'dine_in' && isPdvMode ? packForTakeout : false,
-        tableNumber: (orderType === 'dine_in_table' || (orderType === 'dine_in' && isPdvMode && eatAtCounter)) ? tableNumber : null,
-                        paymentMethod: 'credito_mp',
-                        mercadoPagoPaymentId: orderId,
-                        dailySeq,
-                        address: orderType === 'delivery' && deliveryAddress ? {
-                          street: deliveryAddress.street,
-                          number: deliveryAddress.number || '',
-                          neighborhood: deliveryAddress.neighborhood || '',
-                          city: deliveryAddress.city || 'Rio de Janeiro',
-                          zipCode: deliveryAddress.zipCode || '',
-                          complement: deliveryAddress.complement || '',
-                          lat: deliveryAddress.lat ?? null,
-                          lng: deliveryAddress.lng ?? null
-                        } : null
-                      };
-                      await addDoc(collection(db, 'orders'), orderData);
-                      setCart([]);
-                      alert('✅ Pagamento aprovado! Seu pedido foi registrado com sucesso.');
-                    } catch (err) {
-                      console.error('Erro ao registrar pedido MP:', err);
-                    }
-                  }}
-                  onError={(msg) => setError(msg)}
-                />
-              )}
-
-              {paymentMethod === 'credito_stone' && (
-                <StoneCardForm
-                  amount={finalTotal}
-                  accessToken={storeConfig?.stoneAccessToken || 'mock'}
-                  payer={{
-                    email: user?.email || 'cliente@email.com',
-                    name: user?.displayName || user?.email || 'Cliente Dona Lu',
-                    cpf: userData?.cpf || '',
-                    phone: userData?.phoneNumber || '',
-                    address: orderType === 'delivery' && deliveryAddress ? {
-                      street: deliveryAddress.street,
-                      number: deliveryAddress.number || 'S/N',
-                      neighborhood: deliveryAddress.neighborhood || '',
-                      city: deliveryAddress.city || 'Rio de Janeiro',
-                      zipCode: deliveryAddress.zipCode || '',
-                      state: 'RJ'
-                    } : undefined
-                  }}
-                  items={cart.map(item => ({
-                    title: item.name,
-                    unit_price: item.price,
-                    quantity: item.quantity
-                  }))}
-                  stoneRecipientId={storeConfig?.stoneRecipientId}
-                  devPercentage={storeConfig?.devPercentage}
-                  onSuccess={async (orderId) => {
-                    try {
-                      const now = new Date();
-                      const businessStart = new Date(now);
-                      if (now.getHours() < 6) businessStart.setDate(now.getDate() - 1);
-                      businessStart.setHours(6, 0, 0, 0);
-                      let dailySeq = 1;
-                        try {
-                          const qDaily = query(collection(db, 'orders'), where('createdAt', '>=', businessStart.toISOString()), where('clientUid', '==', user?.uid || ''));
-                          const dailySnap = await getDocs(qDaily);
-                          dailySeq = dailySnap.size + 1;
-                        } catch (errSeq) {
-                          console.warn('Erro dailySeq:', errSeq);
-                          dailySeq = Math.floor(Math.random() * 900) + 100;
-                        }
-                      
-                      const orderData: any = {
-                        clientUid: user?.uid || '',
-                        clientName: user?.displayName || user?.email || 'Cliente',
-                        clientPhone: userData?.phoneNumber || '',
-                        items: cart.map(item => ({ id: item.id, name: item.name, price: item.price, quantity: item.quantity, category: item.category, size: item.size || null })),
-                        total: finalTotal,
-                        deliveryFee: orderType === 'delivery' ? deliveryFee : 0,
-                        status: 'pending',
-                        createdAt: now.toISOString(),
-                        orderType,
-                        packForTakeout: orderType === 'dine_in' && isPdvMode ? packForTakeout : false,
-                        tableNumber: (orderType === 'dine_in_table' || (orderType === 'dine_in' && isPdvMode && eatAtCounter)) ? tableNumber : null,
-                        paymentMethod: 'credito_stone',
-                        stonePaymentId: orderId,
-                        dailySeq,
-                        address: orderType === 'delivery' && deliveryAddress ? {
-                          street: deliveryAddress.street,
-                          number: deliveryAddress.number || '',
-                          neighborhood: deliveryAddress.neighborhood || '',
-                          city: deliveryAddress.city || 'Rio de Janeiro',
-                          zipCode: deliveryAddress.zipCode || '',
-                          complement: deliveryAddress.complement || '',
-                          lat: deliveryAddress.lat ?? null,
-                          lng: deliveryAddress.lng ?? null
-                        } : null
-                      };
-                      
-                      await addDoc(collection(db, 'orders'), orderData);
-                      setCart([]);
-                      alert('✅ Pagamento aprovado na Stone! Seu pedido foi registrado com sucesso.');
-                    } catch (err) {
-                      console.error('Erro ao registrar pedido Stone:', err);
-                    }
-                  }}
-                  onError={(msg) => setError(msg)}
-                />
-              )}
             </div>
 
             {paymentMethod === 'dinheiro' && !noChangeNeeded && changeFor.trim() === '' && (
@@ -4483,28 +4336,25 @@ export const ClientDashboard = ({
                 ⚠️ Por favor, informe para quanto precisa de troco ou marque "Não preciso de troco" para prosseguir.
               </div>
             )}
-
-            {paymentMethod !== 'credito_mp' && paymentMethod !== 'credito_stone' && (
-              <button
-                type="submit"
-                disabled={
-                  cart.length === 0 || 
-                  (orderType === 'delivery' && !deliveryAddress) || 
-                  isClosedForUser ||
-                  (paymentMethod === 'dinheiro' && !noChangeNeeded && changeFor.trim() === '')
-                }
-                className="auth-btn auth-btn-login"
-                style={{ 
-                  marginTop: '6px', 
-                  padding: '0.7rem', 
-                  fontSize: '0.95rem', 
-                  fontWeight: 700,
-                  ...((isClosedForUser || (paymentMethod === 'dinheiro' && !noChangeNeeded && changeFor.trim() === '')) ? { opacity: 0.5, cursor: 'not-allowed', background: '#4b5563' } : {})
-                }}
-              >
-                <span>🛒 Ver Resumo do Pedido</span>
-              </button>
-            )}
+            <button
+              type="submit"
+              disabled={
+                cart.length === 0 || 
+                (orderType === 'delivery' && !deliveryAddress) || 
+                isClosedForUser ||
+                (paymentMethod === 'dinheiro' && !noChangeNeeded && changeFor.trim() === '')
+              }
+              className="auth-btn auth-btn-login"
+              style={{ 
+                marginTop: '6px', 
+                padding: '0.7rem', 
+                fontSize: '0.95rem', 
+                fontWeight: 700,
+                ...((isClosedForUser || (paymentMethod === 'dinheiro' && !noChangeNeeded && changeFor.trim() === '')) ? { opacity: 0.5, cursor: 'not-allowed', background: '#4b5563' } : {})
+              }}
+            >
+              <span>🛒 Ver Resumo do Pedido</span>
+            </button>
           </form>
 
           {orderType === 'dine_in_table' && tableNumber && (
@@ -4955,6 +4805,159 @@ export const ClientDashboard = ({
 
             {error && <div className="auth-error-message">{error}</div>}
 
+            {paymentMethod === 'credito_mp' && (
+              <div style={{ marginTop: '1rem' }}>
+                <MercadoPagoCardForm
+                  amount={finalTotal}
+                  publicKey={storeConfig?.mpPublicKey || import.meta.env.VITE_MP_PUBLIC_KEY || 'APP_USR-da72e390-0c33-4e4d-98e0-4d0fbbe22147'}
+                  accessToken={storeConfig?.storeOwnerAccessToken || storeConfig?.devAccessToken || 'mock'}
+                  payer={{
+                    email: user?.email || 'cliente@email.com',
+                    name: user?.displayName || user?.email || 'Cliente',
+                    cpf: userData?.cpf || ''
+                  }}
+                  items={cart.map(item => ({
+                    title: item.name,
+                    unit_price: item.price,
+                    quantity: item.quantity
+                  }))}
+                  devPercentage={storeConfig?.developerPercentage || 0}
+                  onSuccess={async (orderId) => {
+                    try {
+                      const now = new Date();
+                      const businessStart = new Date(now);
+                      if (now.getHours() < 6) businessStart.setDate(now.getDate() - 1);
+                      businessStart.setHours(6, 0, 0, 0);
+                      let dailySeq = 1;
+                        try {
+                          const qDaily = query(collection(db, 'orders'), where('createdAt', '>=', businessStart.toISOString()), where('clientUid', '==', user?.uid || ''));
+                          const dailySnap = await getDocs(qDaily);
+                          dailySeq = dailySnap.size + 1;
+                        } catch (errSeq) {
+                          console.warn('Erro dailySeq:', errSeq);
+                          dailySeq = Math.floor(Math.random() * 900) + 100;
+                        }
+                      const orderData: any = {
+                        clientUid: user?.uid || '',
+                        clientName: user?.displayName || user?.email || 'Cliente',
+                        clientPhone: userData?.phoneNumber || '',
+                        items: cart.map(item => ({ id: item.id, name: item.name, price: item.price, quantity: item.quantity, category: item.category, size: item.size || null })),
+                        total: finalTotal,
+                        deliveryFee: orderType === 'delivery' ? deliveryFee : 0,
+                        status: 'pending',
+                        createdAt: now.toISOString(),
+                        orderType,
+                        packForTakeout: orderType === 'dine_in' && isPdvMode ? packForTakeout : false,
+                        tableNumber: (orderType === 'dine_in_table' || (orderType === 'dine_in' && isPdvMode && eatAtCounter)) ? tableNumber : null,
+                        paymentMethod: 'credito_mp',
+                        mercadoPagoPaymentId: orderId,
+                        dailySeq,
+                        address: orderType === 'delivery' && deliveryAddress ? {
+                          street: deliveryAddress.street,
+                          number: deliveryAddress.number || '',
+                          neighborhood: deliveryAddress.neighborhood || '',
+                          city: deliveryAddress.city || 'Rio de Janeiro',
+                          zipCode: deliveryAddress.zipCode || '',
+                          complement: deliveryAddress.complement || '',
+                          lat: deliveryAddress.lat ?? null,
+                          lng: deliveryAddress.lng ?? null
+                        } : null
+                      };
+                      await addDoc(collection(db, 'orders'), orderData);
+                      setCart([]);
+                      setShowOrderSummary(false);
+                      setOrderPlaced(true);
+                    } catch (err) {
+                      console.error('Erro ao registrar pedido MP:', err);
+                    }
+                  }}
+                  onError={(msg) => setError(msg)}
+                />
+              </div>
+            )}
+
+            {paymentMethod === 'credito_stone' && (
+              <div style={{ marginTop: '1rem' }}>
+                <StoneCardForm
+                  amount={finalTotal}
+                  accessToken={storeConfig?.stoneAccessToken || 'mock'}
+                  payer={{
+                    email: user?.email || 'cliente@email.com',
+                    name: user?.displayName || user?.email || 'Cliente Dona Lu',
+                    cpf: userData?.cpf || '',
+                    phone: userData?.phoneNumber || '',
+                    address: orderType === 'delivery' && deliveryAddress ? {
+                      street: deliveryAddress.street,
+                      number: deliveryAddress.number || 'S/N',
+                      neighborhood: deliveryAddress.neighborhood || '',
+                      city: deliveryAddress.city || 'Rio de Janeiro',
+                      zipCode: deliveryAddress.zipCode || '',
+                      state: 'RJ'
+                    } : undefined
+                  }}
+                  items={cart.map(item => ({
+                    title: item.name,
+                    unit_price: item.price,
+                    quantity: item.quantity
+                  }))}
+                  stoneRecipientId={storeConfig?.stoneRecipientId}
+                  devPercentage={storeConfig?.devPercentage}
+                  onSuccess={async (orderId) => {
+                    try {
+                      const now = new Date();
+                      const businessStart = new Date(now);
+                      if (now.getHours() < 6) businessStart.setDate(now.getDate() - 1);
+                      businessStart.setHours(6, 0, 0, 0);
+                      let dailySeq = 1;
+                        try {
+                          const qDaily = query(collection(db, 'orders'), where('createdAt', '>=', businessStart.toISOString()), where('clientUid', '==', user?.uid || ''));
+                          const dailySnap = await getDocs(qDaily);
+                          dailySeq = dailySnap.size + 1;
+                        } catch (errSeq) {
+                          console.warn('Erro dailySeq:', errSeq);
+                          dailySeq = Math.floor(Math.random() * 900) + 100;
+                        }
+                      
+                      const orderData: any = {
+                        clientUid: user?.uid || '',
+                        clientName: user?.displayName || user?.email || 'Cliente',
+                        clientPhone: userData?.phoneNumber || '',
+                        items: cart.map(item => ({ id: item.id, name: item.name, price: item.price, quantity: item.quantity, category: item.category, size: item.size || null })),
+                        total: finalTotal,
+                        deliveryFee: orderType === 'delivery' ? deliveryFee : 0,
+                        status: 'pending',
+                        createdAt: now.toISOString(),
+                        orderType,
+                        packForTakeout: orderType === 'dine_in' && isPdvMode ? packForTakeout : false,
+                        tableNumber: (orderType === 'dine_in_table' || (orderType === 'dine_in' && isPdvMode && eatAtCounter)) ? tableNumber : null,
+                        paymentMethod: 'credito_stone',
+                        stonePaymentId: orderId,
+                        dailySeq,
+                        address: orderType === 'delivery' && deliveryAddress ? {
+                          street: deliveryAddress.street,
+                          number: deliveryAddress.number || '',
+                          neighborhood: deliveryAddress.neighborhood || '',
+                          city: deliveryAddress.city || 'Rio de Janeiro',
+                          zipCode: deliveryAddress.zipCode || '',
+                          complement: deliveryAddress.complement || '',
+                          lat: deliveryAddress.lat ?? null,
+                          lng: deliveryAddress.lng ?? null
+                        } : null
+                      };
+                      
+                      await addDoc(collection(db, 'orders'), orderData);
+                      setCart([]);
+                      setShowOrderSummary(false);
+                      setOrderPlaced(true);
+                    } catch (err) {
+                      console.error('Erro ao registrar pedido Stone:', err);
+                    }
+                  }}
+                  onError={(msg) => setError(msg)}
+                />
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
               <button
                 type="button"
@@ -4973,19 +4976,21 @@ export const ClientDashboard = ({
               >
                 ← Voltar
               </button>
-              <button
-                type="button"
-                onClick={handlePlaceOrder}
-                disabled={submitting}
-                className="auth-btn auth-btn-login"
-                style={{ flex: 2, padding: '0.75rem', fontSize: '0.95rem', fontWeight: 700 }}
-              >
-                {submitting ? (
-                  <><span className="spinner" /><span>Confirmando...</span></>
-                ) : (
-                  <span>🌟 Confirmar Pedido</span>
-                )}
-              </button>
+              {paymentMethod !== 'credito_mp' && paymentMethod !== 'credito_stone' && (
+                <button
+                  type="button"
+                  onClick={handlePlaceOrder}
+                  disabled={submitting}
+                  className="auth-btn auth-btn-login"
+                  style={{ flex: 2, padding: '0.75rem', fontSize: '0.95rem', fontWeight: 700 }}
+                >
+                  {submitting ? (
+                    <><span className="spinner" /><span>Confirmando...</span></>
+                  ) : (
+                    <span>🌟 Confirmar Pedido</span>
+                  )}
+                </button>
+              )}
             </div>
             {/* Espaçador para garantir respiro no final da rolagem no celular */}
             <div style={{ minHeight: '0.5rem', height: '0.5rem', flexShrink: 0 }} />
