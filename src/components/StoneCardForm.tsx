@@ -5,7 +5,7 @@ interface StoneCardFormProps {
   amount: number;
   accessToken: string;
   publicKey?: string;
-  payer: { email: string; name: string; cpf: string; };
+  payer: { email: string; name: string; cpf: string; phone?: string; address?: { street: string; number: string; neighborhood: string; city: string; zipCode: string; state?: string } };
   orderId?: string;
   items?: Array<{ title: string; unit_price: number; quantity: number }>;
   stoneRecipientId?: string;
@@ -59,6 +59,8 @@ export function StoneCardForm({
           email: payer.email,
           name: payer.name,
           cpf: payer.cpf,
+          phone: payer.phone,
+          address: payer.address,
           installments: installments,
           orderId: orderId,
           items: items,
@@ -70,7 +72,7 @@ export function StoneCardForm({
       if (!resp.ok) throw new Error(result?.message || "Falha no pagamento.");
       
       const paymentStatus = result.status;
-      if (paymentStatus !== 'paid' && paymentStatus !== 'approved') {
+      if (paymentStatus !== 'paid' && paymentStatus !== 'approved' && paymentStatus !== 'pending' && paymentStatus !== 'closed') {
         throw new Error(result.acquirerMessage ? `Pagamento recusado (${result.acquirerMessage}). Tente outro cartao.` : `Pagamento recusado. Tente outro cartao.`);
       }
       onSuccess(result.orderId || result.id, paymentStatus);

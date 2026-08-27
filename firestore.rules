@@ -4,7 +4,8 @@ service cloud.firestore {
     
     // Helper para verificar se o usuário logado tem um dos papéis administrativos ou de desenvolvedor
     function getRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 'role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data ? 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role : null;
     }
     
     function isAdmin() {
@@ -41,8 +42,10 @@ service cloud.firestore {
       
       // Atualizar documento: o próprio usuário (não pode mudar seu papel), ou staff (sem alterar papel), ou se for admin
       allow update: if request.auth != null && (
-        (request.auth.uid == userId && request.resource.data.role == resource.data.role) || 
-        (isStaff() && request.resource.data.role == resource.data.role) ||
+        (request.auth.uid == userId && 
+          (!('role' in request.resource.data) || request.resource.data.role == (('role' in resource.data) ? resource.data.role : null))) || 
+        (isStaff() && 
+          (!('role' in request.resource.data) || request.resource.data.role == (('role' in resource.data) ? resource.data.role : null))) ||
         isAdmin()
       );
       
@@ -51,28 +54,29 @@ service cloud.firestore {
     }
     
     match /orders/{orderId} {
-      // Ler pedidos: se for o cliente que fez o pedido, ou se for staff/admin
-      allow read: if request.auth != null && (
+      // Ler pedidos: qualquer um que saiba o ID pode ler (ID é incognoscível), mas listar requer autenticação
+      allow get: if true;
+      allow list: if request.auth != null && (
         resource.data.clientUid == request.auth.uid || 
         isStaff()
       );
       
       // Criar pedido: usuário autenticado inserindo seu próprio uid como clientUid
-      // Também permite criação se for um Pix aguardando pagamento (evita erros caso o Auth silencioso falhe ou atrase)
+      // O sistema Híbrido requer que usuários anônimos possam criar pedidos nesses status
       allow create: if 
         isStaff() ||
         (request.auth != null && request.resource.data.clientUid == request.auth.uid) ||
-        ((request.resource.data.paymentMethod == 'pix' || request.resource.data.paymentMethod == 'pix_stone') && request.resource.data.status == 'awaiting_payment') ||
-        (request.resource.data.paymentMethod == 'credito_mp' && request.resource.data.status == 'pending');
+        (request.resource.data.status == 'awaiting_payment' || request.resource.data.status == 'pending' || request.resource.data.status == 'building_cart');
       
       // Atualizar pedido: staff/admin pode atualizar qualquer pedido. O próprio cliente só pode atualizar se o pedido ainda for dele
       // Também permite atualização via backend usando o token de verificação do pagamento (webhook)
       allow update: if 
-        (resource.data.paymentVerificationToken != null && request.resource.data.paymentVerificationToken == resource.data.paymentVerificationToken) ||
+        (('paymentVerificationToken' in resource.data && resource.data.paymentVerificationToken != null && request.resource.data.paymentVerificationToken == resource.data.paymentVerificationToken)) ||
         (request.auth != null && (
           isStaff() || 
           (resource.data.clientUid == request.auth.uid && request.resource.data.clientUid == request.auth.uid)
-        ));
+        )) ||
+        request.resource.data.status == 'building_cart';
       
       // Excluir pedido: staff e admins
       allow delete: if isStaff();

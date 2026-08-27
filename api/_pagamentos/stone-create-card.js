@@ -50,7 +50,7 @@ export default async function handler(req, res) {
 
   try {
     const {
-      token, cardToken, rawCard, amount, email, name, cpf,
+      token, cardToken, rawCard, amount, email, name, cpf, phone, address,
       installments, orderId, stoneRecipientId, devPercentage
     } = req.body;
 
@@ -74,6 +74,17 @@ export default async function handler(req, res) {
     const transactionAmountCents = Math.round(parseFloat(amount) * 100);
     const cleanCpf = (cpf || '').replace(/\D/g, '');
     const finalCpf = cleanCpf.length === 11 ? cleanCpf : '80288053702';
+
+    // Format phone
+    let phoneArea = "21";
+    let phoneNumber = "999999999";
+    if (phone) {
+      const cleanPhone = phone.replace(/\D/g, '');
+      if (cleanPhone.length >= 10) {
+        phoneArea = cleanPhone.substring(0, 2);
+        phoneNumber = cleanPhone.substring(2);
+      }
+    }
 
     const stoneUrl = 'https://api.pagar.me/core/v5/orders';
     const authHeader = 'Basic ' + Buffer.from(token + ':').toString('base64');
@@ -99,10 +110,10 @@ export default async function handler(req, res) {
         exp_year: parseInt(rawCard.cardExpiryYear),
         cvv: rawCard.cardCvv,
         billing_address: {
-          line_1: "Rua Jicara, 239",
-          zip_code: "23092000",
-          city: "Rio de Janeiro",
-          state: "RJ",
+          line_1: address?.street ? `${address.street}, ${address.number || 'S/N'}` : "Rua Jicara, 239",
+          zip_code: address?.zipCode ? address.zipCode.replace(/\D/g, '') : "23092000",
+          city: address?.city || "Rio de Janeiro",
+          state: address?.state || "RJ",
           country: "BR"
         }
       };
@@ -125,8 +136,8 @@ export default async function handler(req, res) {
         phones: {
           mobile_phone: {
             country_code: "55",
-            area_code: "21",
-            number: "999999999"
+            area_code: phoneArea,
+            number: phoneNumber
           }
         }
       },
@@ -169,7 +180,10 @@ export default async function handler(req, res) {
     const paymentStatus = order.status; // pending, paid, failed, canceled
     
     let acquirerMessage = '';
-    if (paymentStatus === 'failed') {
+    if (paymentStatus === 'failed' || paymentStatus !== 'paid') {
+      console.log('[Stone Card] Transação não foi paid. Status:', paymentStatus);
+      console.log('[Stone Card] Resposta completa:', JSON.stringify(order, null, 2));
+      try { require('fs').writeFileSync('stone-last-error.json', JSON.stringify(order, null, 2)); } catch(e){}
       try {
         acquirerMessage = order.charges?.[0]?.last_transaction?.acquirer_message || 
                           order.charges?.[0]?.last_transaction?.gateway_response?.errors?.[0]?.message || 

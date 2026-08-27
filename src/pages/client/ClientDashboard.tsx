@@ -4405,7 +4405,16 @@ export const ClientDashboard = ({
                   payer={{
                     email: user?.email || 'cliente@email.com',
                     name: user?.displayName || user?.email || 'Cliente Dona Lu',
-                    cpf: userData?.cpf || ''
+                    cpf: userData?.cpf || '',
+                    phone: userData?.phoneNumber || '',
+                    address: orderType === 'delivery' && deliveryAddress ? {
+                      street: deliveryAddress.street,
+                      number: deliveryAddress.number || 'S/N',
+                      neighborhood: deliveryAddress.neighborhood || '',
+                      city: deliveryAddress.city || 'Rio de Janeiro',
+                      zipCode: deliveryAddress.zipCode || '',
+                      state: 'RJ'
+                    } : undefined
                   }}
                   items={cart.map(item => ({
                     title: item.name,
