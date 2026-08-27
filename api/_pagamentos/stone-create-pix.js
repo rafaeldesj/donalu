@@ -115,7 +115,7 @@ export default async function handler(req, res) {
         name: name || 'Cliente Dona Lu',
         email: email || 'cliente@pastelaria.com',
         type: 'individual',
-        document: cleanCpf || '00000000000',
+        document: cleanCpf || '80288053702', // CPF válido de teste obrigatório para a Stone
         phones: {
           mobile_phone: {
             country_code: "55",

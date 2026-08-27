@@ -73,7 +73,7 @@ export default async function handler(req, res) {
 
     const transactionAmountCents = Math.round(parseFloat(amount) * 100);
     const cleanCpf = (cpf || '').replace(/\D/g, '');
-    const finalCpf = cleanCpf.length === 11 ? cleanCpf : '00000000000';
+    const finalCpf = cleanCpf.length === 11 ? cleanCpf : '80288053702';
 
     const stoneUrl = 'https://api.pagar.me/core/v5/orders';
     const authHeader = 'Basic ' + Buffer.from(token + ':').toString('base64');
