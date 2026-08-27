@@ -100,4 +100,4 @@ export default async function handler(req, res) {
     console.error('[Mercado Pago Pix Status] Erro no middleware:', err);
     return res.status(500).json({ success: false, message: 'Erro interno ao checar Pix.' });
   }
-}
+}
