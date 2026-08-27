@@ -143,6 +143,9 @@ export default async function handler(req, res) {
       const fee = parseFloat((transactionAmount * devPercentage / 100).toFixed(2));
       if (fee >= 0.01) {
         payload.application_fee = fee;
+        if (process.env.VITE_MP_SPONSOR_ID) {
+          payload.sponsor_id = Number(process.env.VITE_MP_SPONSOR_ID);
+        }
         console.log(`[Mercado Pago Pix] Split ativado: application_fee = R$${fee.toFixed(2)} (${devPercentage}% de R$${transactionAmount.toFixed(2)})`);
       }
     }
