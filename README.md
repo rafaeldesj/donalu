@@ -136,3 +136,12 @@ VITE_PAGSEG_MERCHANT_ID=...
 3. **Padrão de Cores e Estilos:** Não use cores genéricas. Todos os estilos devem seguir o padrão dourado/vermelho/escuro premium definido pelas variáveis CSS de cores no [index.css](file:///e:/REPOSITORIOS%20-%20PROJETOS/DONA-LU-PASTELARIA/src/index.css).
 4. **Responsividade Mobile-First:** Qualquer nova tela, menu, painel de controle ou layout deve ser planejado e implementado atendendo à **responsividade mobile primeiro** (Mobile-First). Em layouts complexos (como chats, listagens mestre-detalhe ou tabelas de dados), garanta que telas pequenas (como celulares de largura ≤ 768px) escondam elementos secundários ou empilhem as colunas de forma lógica (por exemplo, alternando entre lista e detalhes com botão "Voltar") ao invés de usar largura fixa ou flexbox sem quebra, evitando esmagamento e distorção de conteúdo para o usuário final no celular.
 
+---
+
+## ⚠️ Lições Aprendidas (Post-Mortem) e Boas Práticas de Integração de Pagamento
+
+Ao implementar novos gateways de pagamento (como Stone, PagSeguro, etc.) ao lado do Mercado Pago ou refatorar o código de pagamentos, é **CRUCIAL** manter a atenção aos detalhes do fluxo de "Split de Pagamento" (taxas de plataforma/application_fee) para evitar quebra de funcionalidades essenciais como o Estorno (Refund):
+
+1. **Split Requer Sponsor ID:** Se você criar um pagamento que desconta uma taxa para o desenvolvedor/plataforma (`application_fee`), você DEVE, obrigatoriamente, informar de qual desenvolvedor é essa taxa (no caso do Mercado Pago, enviando o `sponsor_id`). Se esquecer o `sponsor_id`, o gateway cria o pagamento sem saber quem é o dono da taxa, bloqueando o estorno futuro e gerando o erro `UNAUTHORIZED` (Policy).
+2. **Estorno de Split Exige Token do Lojista:** No Mercado Pago, pagamentos criados via OAuth por um lojista (mesmo os que têm split) DEVEM ser estornados utilizando exclusivamente o **Token do Lojista** (`Authorization: Bearer <storeToken>`), e não o Token do Desenvolvedor (`devToken`). Tentar usar o devToken para a rota padrão de refunds resultará no erro `Caller ID is not allowed for this operation`.
+3. **Cuidado com Refatorações de Arquivos Monolíticos:** Quando quebrar um arquivo central de pagamentos (ex: `payment-middleware.js`) em funções menores (`create-pix`, `check-pix`, `refund`), certifique-se de copiar 100% dos campos de payload e variáveis de ambiente (`process.env`). A falta de um campo copiado pode derrubar a integração em produção de forma silenciosa.
