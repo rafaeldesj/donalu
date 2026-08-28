@@ -62,7 +62,7 @@ export default async function handler(req, res) {
 
       if (orderId) {
         // Atualiza o Firestore usando a REST API
-        const firestoreUrl = `https://firestore.googleapis.com/v1/projects/dona-lu-4242d/databases/(default)/documents/orders/${orderId}?updateMask.fieldPaths=status&updateMask.fieldPaths=kitchenEnteredAt`;
+        let firestoreUrl = `https://firestore.googleapis.com/v1/projects/dona-lu-4242d/databases/(default)/documents/orders/${orderId}?updateMask.fieldPaths=status&updateMask.fieldPaths=kitchenEnteredAt`;
         
         let updateFields = {
           status: { stringValue: 'pending' },
