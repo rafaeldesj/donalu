@@ -51,7 +51,7 @@ export default async function handler(req, res) {
   try {
     const {
       token, cardToken, rawCard, amount, email, name, cpf, phone, address,
-      installments, orderId, stoneRecipientId, devPercentage
+      installments, orderId, stoneRecipientId, devPercentage, paymentVerificationToken
     } = req.body;
 
     const isMock = detectIsMock(token);
@@ -150,7 +150,8 @@ export default async function handler(req, res) {
       ],
       closed: true,
       metadata: {
-        orderId: orderId
+        orderId: orderId,
+        paymentVerificationToken: paymentVerificationToken
       }
     };
 
