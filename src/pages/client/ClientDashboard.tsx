@@ -265,6 +265,7 @@ export const ClientDashboard = ({
   const setCart = externalSetCart !== undefined ? externalSetCart : setLocalCart;
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [pendingStoneOrderId, setPendingStoneOrderId] = useState<string | null>(null);
   const [useFidelityRescueGrande, setUseFidelityRescueGrande] = useState(false);
   const [useFidelityRescueKids, setUseFidelityRescueKids] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -2160,7 +2161,7 @@ export const ClientDashboard = ({
         token = 'mock';
       }
       
-      interval = setInterval(async () => {
+      const checkPixStatus = async () => {
         try {
           const isStone = String(pixPaymentId).startsWith('STONE_PIX_MOCK_') || String(pixPaymentId).startsWith('or_');
           let currentToken = isStone ? (storeConfig?.stoneAccessToken || 'mock') : token;
@@ -2175,17 +2176,38 @@ export const ClientDashboard = ({
             setPixPaymentStatus('rejected');
             clearInterval(interval);
           } else if (data.success && data.status !== 'pending') {
-            console.log('[DEBUG PIX UNEXPECTED STATUS]', data.status);
-            setPixPaymentStatus('rejected'); // Fallback so we know it hit an unknown state
+            setPixPaymentStatus('rejected');
             clearInterval(interval);
           }
         } catch (err) {
           console.error('Erro ao verificar status Pix:', err);
         }
-      }, 3000);
+      };
+      checkPixStatus();
+      interval = setInterval(checkPixStatus, 3000);
     }
     return () => clearInterval(interval);
   }, [showPixLightbox, pixPaymentId, pixPaymentStatus, storeConfig]);
+
+  // Listener para aprovação em background do Cartão Stone (via webhook)
+  useEffect(() => {
+    if (!pendingStoneOrderId) return;
+    const unsub = onSnapshot(doc(db, 'orders', pendingStoneOrderId), (docSnap) => {
+      if (docSnap.exists()) {
+        const currentStatus = docSnap.data().status;
+        if (currentStatus === 'pending' || currentStatus === 'preparing') {
+          setOrderPlaced(true);
+          setShowOrderSummary(false);
+          setCart([]);
+          setPendingStoneOrderId(null);
+        } else if (currentStatus === 'cancelled') {
+          setError('Pagamento cancelado ou recusado permanentemente.');
+          setPendingStoneOrderId(null);
+        }
+      }
+    });
+    return () => unsub();
+  }, [pendingStoneOrderId, setCart]);
 
   const handleCancelPix = async () => {
     try {
@@ -4902,8 +4924,7 @@ export const ClientDashboard = ({
                   }))}
                   stoneRecipientId={storeConfig?.stoneRecipientId}
                   devPercentage={storeConfig?.devPercentage}
-                  onSuccess={async (orderId) => {
-                    try {
+                  onBeforeSubmit={async () => {
                       const now = new Date();
                       const businessStart = new Date(now);
                       if (now.getHours() < 6) businessStart.setDate(now.getDate() - 1);
@@ -4918,6 +4939,9 @@ export const ClientDashboard = ({
                           dailySeq = Math.floor(Math.random() * 900) + 100;
                         }
                       
+                      const newDocRef = doc(collection(db, 'orders'));
+                      const paymentVerificationToken = `stone_vtoken_${Math.random().toString(36).substring(2)}${Date.now()}`;
+                      
                       const orderData: any = {
                         clientUid: user?.uid || '',
                         clientName: user?.displayName || user?.email || 'Cliente',
@@ -4925,13 +4949,13 @@ export const ClientDashboard = ({
                         items: cart.map(item => ({ id: item.id, name: item.name, price: item.price, quantity: item.quantity, category: item.category, size: item.size || null })),
                         total: finalTotal,
                         deliveryFee: orderType === 'delivery' ? deliveryFee : 0,
-                        status: 'pending',
+                        status: 'awaiting_payment',
                         createdAt: now.toISOString(),
                         orderType,
                         packForTakeout: orderType === 'dine_in' && isPdvMode ? packForTakeout : false,
                         tableNumber: (orderType === 'dine_in_table' || (orderType === 'dine_in' && isPdvMode && eatAtCounter)) ? tableNumber : null,
                         paymentMethod: 'credito_stone',
-                        stonePaymentId: orderId,
+                        stonePaymentId: newDocRef.id,
                         dailySeq,
                         address: orderType === 'delivery' && deliveryAddress ? {
                           street: deliveryAddress.street,
@@ -4942,13 +4966,26 @@ export const ClientDashboard = ({
                           complement: deliveryAddress.complement || '',
                           lat: deliveryAddress.lat ?? null,
                           lng: deliveryAddress.lng ?? null
-                        } : null
+                        } : null,
+                        paymentVerificationToken
                       };
                       
-                      await addDoc(collection(db, 'orders'), orderData);
+                      await setDoc(newDocRef, orderData);
+                      setPendingStoneOrderId(newDocRef.id);
+                      return { orderId: newDocRef.id, paymentVerificationToken };
+                  }}
+                  onSuccess={async (orderId) => {
+                    try {
+                      const orderRef = doc(db, 'orders', orderId);
+                      const orderSnap = await getDoc(orderRef);
+                      if (orderSnap.exists()) {
+                        const token = orderSnap.data().paymentVerificationToken;
+                        await updateDoc(orderRef, { status: 'pending', paymentVerificationToken: token });
+                      }
                       setCart([]);
                       setShowOrderSummary(false);
                       setOrderPlaced(true);
+                      setPendingStoneOrderId(null);
                     } catch (err) {
                       console.error('Erro ao registrar pedido Stone:', err);
                     }
