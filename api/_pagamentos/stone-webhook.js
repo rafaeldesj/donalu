@@ -55,8 +55,9 @@ export default async function handler(req, res) {
     }
 
     if (eventType === 'order.paid') {
-      const orderId = orderData.metadata?.orderId;
-      const paymentVerificationToken = orderData.metadata?.paymentVerificationToken;
+      // Stone automatically converts camelCase metadata keys to snake_case.
+      const orderId = orderData.metadata?.orderId || orderData.metadata?.order_id;
+      const paymentVerificationToken = orderData.metadata?.paymentVerificationToken || orderData.metadata?.payment_verification_token;
 
       console.log(`[Webhook Stone] Detalhes Pagamento - OrderID: ${orderId}, Token: ${paymentVerificationToken}`);
 
