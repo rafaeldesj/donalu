@@ -144,7 +144,8 @@ export default async function handler(req, res) {
       payments: [
         {
           payment_method: 'credit_card',
-          credit_card: creditCardData
+          credit_card: creditCardData,
+          antifraud_enabled: false
         }
       ],
       closed: true,
