@@ -80,6 +80,18 @@ export function StoneCardForm({
         })
       });
       const result = await resp.json();
+      // Log diagnostics — check browser console tab when payment fails
+      if (result._diag) {
+        console.group('🔍 Stone Diagnostico de Pagamento');
+        console.log('Status do Pedido:', result._diag.orderStatus);
+        console.log('Status da Cobrança:', result._diag.chargeStatus);
+        console.log('Status da Transação:', result._diag.lastTxStatus);
+        console.log('Mensagem Adquirente:', result._diag.lastTxAcquirerMessage);
+        console.log('Código Retorno:', result._diag.lastTxAcquirerReturnCode);
+        console.log('Antifraude:', JSON.stringify(result._diag.antifraud, null, 2));
+        console.log('Erros Gateway:', JSON.stringify(result._diag.gatewayErrors, null, 2));
+        console.groupEnd();
+      }
       if (!resp.ok) throw new Error(result?.message || "Falha no pagamento.");
       
       const paymentStatus = result.status;

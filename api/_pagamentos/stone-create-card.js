@@ -108,18 +108,15 @@ export default async function handler(req, res) {
         holder_name: rawCard.cardHolder,
         exp_month: parseInt(rawCard.cardExpiryMonth),
         exp_year: parseInt(rawCard.cardExpiryYear),
-        cvv: rawCard.cardCvv,
-        billing_address: {
-          line_1: address?.street ? `${address.street}, ${address.number || 'S/N'}` : "Rua Jicara, 239",
-          zip_code: address?.zipCode ? address.zipCode.replace(/\D/g, '') : "23092000",
-          city: address?.city || "Rio de Janeiro",
-          state: address?.state || "RJ",
-          country: "BR"
-        }
+        cvv: rawCard.cardCvv
       };
     }
 
+    // Use cardholder name for better AVS matching
+    const customerName = (rawCard?.cardHolder || name || 'Cliente Dona Lu');
+
     const payload = {
+      antifraud_enabled: false,
       items: [
         {
           amount: transactionAmountCents,
@@ -129,7 +126,7 @@ export default async function handler(req, res) {
         }
       ],
       customer: {
-        name: name || 'Cliente Dona Lu',
+        name: customerName,
         email: email || 'cliente@pastelaria.com',
         type: 'individual',
         ...(hasValidCpf ? { document: cleanCpf, document_type: 'CPF' } : {}),
@@ -146,8 +143,7 @@ export default async function handler(req, res) {
       payments: [
         {
           payment_method: 'credit_card',
-          credit_card: creditCardData,
-          antifraud_enabled: false
+          credit_card: creditCardData
         }
       ],
       closed: true,
@@ -215,7 +211,17 @@ export default async function handler(req, res) {
       orderId: order.id,
       status: paymentStatus,
       approved: paymentStatus === 'paid',
-      acquirerMessage: acquirerMessage
+      acquirerMessage: acquirerMessage,
+      // Diagnostic fields (safe to expose, no sensitive data)
+      _diag: {
+        orderStatus: order.status,
+        chargeStatus: order.charges?.[0]?.status,
+        lastTxStatus: order.charges?.[0]?.last_transaction?.status,
+        lastTxAcquirerMessage: order.charges?.[0]?.last_transaction?.acquirer_message,
+        lastTxAcquirerReturnCode: order.charges?.[0]?.last_transaction?.acquirer_return_code,
+        antifraud: order.charges?.[0]?.antifraud_response,
+        gatewayErrors: order.charges?.[0]?.last_transaction?.gateway_response?.errors
+      }
     });
 
   } catch (err) {
