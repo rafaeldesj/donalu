@@ -4983,7 +4983,7 @@ export const ClientDashboard = ({
                       const orderSnap = await getDoc(orderRef);
                       if (orderSnap.exists()) {
                         const token = orderSnap.data().paymentVerificationToken;
-                        await updateDoc(orderRef, { status: 'pending', paymentVerificationToken: token });
+                        await updateDoc(orderRef, { status: 'pending', paymentVerificationToken: token, stonePaymentId: stoneOrderId });
                       }
                       setCart([]);
                       setShowOrderSummary(false);
