@@ -115,8 +115,25 @@ export default async function handler(req, res) {
     // Use cardholder name for better AVS matching
     const customerName = (rawCard?.cardHolder || name || 'Cliente Dona Lu');
 
+    // Build address objects — antifraude requer customer.address + billing + shipping
+    // Para pedidos de retirada, usa o endereço da loja como fallback
+    const STORE_ADDRESS = {
+      line_1: 'Rua Jicara, 239',
+      zip_code: '23092000',
+      city: 'Campo Grande',
+      state: 'RJ',
+      country: 'BR'
+    };
+
+    const customerAddress = address?.street ? {
+      line_1: `${address.street}, ${address.number || 'S/N'}`,
+      zip_code: (address.zipCode || '23092000').replace(/\D/g, ''),
+      city: address.city || 'Campo Grande',
+      state: address.state || 'RJ',
+      country: 'BR'
+    } : STORE_ADDRESS;
+
     const payload = {
-      antifraud_enabled: false,
       items: [
         {
           amount: transactionAmountCents,
@@ -130,6 +147,8 @@ export default async function handler(req, res) {
         email: email || 'cliente@pastelaria.com',
         type: 'individual',
         ...(hasValidCpf ? { document: cleanCpf, document_type: 'CPF' } : {}),
+        // address obrigatório para antifraude (docs.pagar.me v5)
+        address: customerAddress,
         ...(phone && phone.replace(/\D/g, '').length >= 10 ? {
           phones: {
             mobile_phone: {
@@ -139,6 +158,18 @@ export default async function handler(req, res) {
             }
           }
         } : {})
+      },
+      // billing obrigatório no nível do pedido quando antifraude está ativo
+      billing: {
+        name: customerName,
+        address: customerAddress
+      },
+      // shipping obrigatório no nível do pedido quando antifraude está ativo
+      shipping: {
+        name: customerName,
+        fee: 0,
+        type: 'ballistic',
+        address: customerAddress
       },
       payments: [
         {
@@ -152,6 +183,7 @@ export default async function handler(req, res) {
         paymentVerificationToken: paymentVerificationToken
       }
     };
+
 
     if (stoneRecipientId && devPercentage && devPercentage > 0) {
       payload.payments[0].split = [
