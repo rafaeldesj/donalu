@@ -63,11 +63,12 @@ export default async function handler(req, res) {
 
       if (orderId) {
         // Atualiza o Firestore usando a REST API
-        let firestoreUrl = `https://firestore.googleapis.com/v1/projects/dona-lu-4242d/databases/(default)/documents/orders/${orderId}?updateMask.fieldPaths=status&updateMask.fieldPaths=kitchenEnteredAt`;
+        let firestoreUrl = `https://firestore.googleapis.com/v1/projects/dona-lu-4242d/databases/(default)/documents/orders/${orderId}?updateMask.fieldPaths=status&updateMask.fieldPaths=kitchenEnteredAt&updateMask.fieldPaths=stonePaymentId`;
         
         let updateFields = {
           status: { stringValue: 'pending' },
-          kitchenEnteredAt: { stringValue: new Date().toISOString() }
+          kitchenEnteredAt: { stringValue: new Date().toISOString() },
+          stonePaymentId: { stringValue: orderData.id }
         };
 
         if (paymentVerificationToken) {

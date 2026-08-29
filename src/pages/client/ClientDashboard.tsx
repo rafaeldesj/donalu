@@ -4974,9 +4974,12 @@ export const ClientDashboard = ({
                       setPendingStoneOrderId(newDocRef.id);
                       return { orderId: newDocRef.id, paymentVerificationToken };
                   }}
-                  onSuccess={async (orderId) => {
+                  onSuccess={async (stoneOrderId) => {
                     try {
-                      const orderRef = doc(db, 'orders', orderId);
+                      const firestoreOrderId = pendingStoneOrderId;
+                      if (!firestoreOrderId) return;
+                      
+                      const orderRef = doc(db, 'orders', firestoreOrderId);
                       const orderSnap = await getDoc(orderRef);
                       if (orderSnap.exists()) {
                         const token = orderSnap.data().paymentVerificationToken;
