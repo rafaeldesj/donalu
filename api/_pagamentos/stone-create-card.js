@@ -73,8 +73,8 @@ export default async function handler(req, res) {
 
     const transactionAmountCents = Math.round(parseFloat(amount) * 100);
     const cleanCpf = (cpf || '').replace(/\D/g, '');
-    // TEST 3: CPF fake de volta como fallback (como em 30004df que aprovou)
-    const finalCpf = cleanCpf.length === 11 ? cleanCpf : '80288053702';
+    // TESTE 2-B: sem CPF fake, apenas CPF real se disponível
+    const hasValidCpf = cleanCpf.length === 11;
 
     // Format phone
     let phoneArea = "21";
@@ -125,8 +125,8 @@ export default async function handler(req, res) {
     const customerName = (rawCard?.cardHolder || name || 'Cliente Dona Lu');
 
     const payload = {
-      // TESTE COMBINADO: exato estado do commit 30004df que aprovou
-      // SEM antifraud_enabled no root — vai dentro de payments[]
+      // TESTE 2-B: antifraud_enabled no root + billing_address no card + sem CPF fake
+      antifraud_enabled: false,
       items: [
         {
           amount: transactionAmountCents,
@@ -139,8 +139,8 @@ export default async function handler(req, res) {
         name: customerName,
         email: email || 'cliente@pastelaria.com',
         type: 'individual',
-        document: finalCpf,
-        document_type: 'CPF',
+        // Apenas CPF real se disponível
+        ...(hasValidCpf ? { document: cleanCpf, document_type: 'CPF' } : {}),
         ...(phone && phone.replace(/\D/g, '').length >= 10 ? {
           phones: {
             mobile_phone: {
@@ -154,8 +154,8 @@ export default async function handler(req, res) {
       payments: [
         {
           payment_method: 'credit_card',
-          credit_card: creditCardData,
-          antifraud_enabled: false  // ← dentro de payments[] como em 30004df
+          credit_card: creditCardData
+          // antifraud sem efeito dentro de payments (testado no T1)
         }
       ],
       closed: true,
