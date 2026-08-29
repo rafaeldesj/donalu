@@ -73,7 +73,6 @@ export default async function handler(req, res) {
 
     const transactionAmountCents = Math.round(parseFloat(amount) * 100);
     const cleanCpf = (cpf || '').replace(/\D/g, '');
-    // TESTE 2-B: sem CPF fake, apenas CPF real se disponível
     const hasValidCpf = cleanCpf.length === 11;
 
     // Format phone
@@ -104,20 +103,12 @@ export default async function handler(req, res) {
     if (cardToken) {
       creditCardData.card_token = cardToken;
     } else if (rawCard) {
-      // TESTE COMBINADO: billing_address de volta (como em 30004df)
       creditCardData.card = {
         number: rawCard.cardNumber,
         holder_name: rawCard.cardHolder,
         exp_month: parseInt(rawCard.cardExpiryMonth),
         exp_year: parseInt(rawCard.cardExpiryYear),
-        cvv: rawCard.cardCvv,
-        billing_address: {
-          line_1: address?.street ? `${address.street}, ${address.number || 'S/N'}` : "Rua Jicara, 239",
-          zip_code: address?.zipCode ? address.zipCode.replace(/\D/g, '') : "23092000",
-          city: address?.city || "Campo Grande",
-          state: address?.state || "RJ",
-          country: "BR"
-        }
+        cvv: rawCard.cardCvv
       };
     }
 
@@ -125,7 +116,6 @@ export default async function handler(req, res) {
     const customerName = (rawCard?.cardHolder || name || 'Cliente Dona Lu');
 
     const payload = {
-      // TESTE 2-B: antifraud_enabled no root + billing_address no card + sem CPF fake
       antifraud_enabled: false,
       items: [
         {
@@ -139,7 +129,6 @@ export default async function handler(req, res) {
         name: customerName,
         email: email || 'cliente@pastelaria.com',
         type: 'individual',
-        // Apenas CPF real se disponível
         ...(hasValidCpf ? { document: cleanCpf, document_type: 'CPF' } : {}),
         ...(phone && phone.replace(/\D/g, '').length >= 10 ? {
           phones: {
@@ -155,7 +144,6 @@ export default async function handler(req, res) {
         {
           payment_method: 'credit_card',
           credit_card: creditCardData
-          // antifraud sem efeito dentro de payments (testado no T1)
         }
       ],
       closed: true,
