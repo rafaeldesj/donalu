@@ -73,7 +73,8 @@ export default async function handler(req, res) {
 
     const transactionAmountCents = Math.round(parseFloat(amount) * 100);
     const cleanCpf = (cpf || '').replace(/\D/g, '');
-    const hasValidCpf = cleanCpf.length === 11;
+    // TEST 3: CPF fake de volta como fallback (como em 30004df que aprovou)
+    const finalCpf = cleanCpf.length === 11 ? cleanCpf : '80288053702';
 
     // Format phone
     let phoneArea = "21";
@@ -103,20 +104,13 @@ export default async function handler(req, res) {
     if (cardToken) {
       creditCardData.card_token = cardToken;
     } else if (rawCard) {
+      // TEST 3: sem billing_address (revertendo Test 2)
       creditCardData.card = {
         number: rawCard.cardNumber,
         holder_name: rawCard.cardHolder,
         exp_month: parseInt(rawCard.cardExpiryMonth),
         exp_year: parseInt(rawCard.cardExpiryYear),
-        cvv: rawCard.cardCvv,
-        // TEST 2: billing_address hardcoded de volta (como em 30004df que aprovou)
-        billing_address: {
-          line_1: address?.street ? `${address.street}, ${address.number || 'S/N'}` : "Rua Jicara, 239",
-          zip_code: address?.zipCode ? address.zipCode.replace(/\D/g, '') : "23092000",
-          city: address?.city || "Campo Grande",
-          state: address?.state || "RJ",
-          country: "BR"
-        }
+        cvv: rawCard.cardCvv
       };
     }
 
@@ -138,7 +132,9 @@ export default async function handler(req, res) {
         name: customerName,
         email: email || 'cliente@pastelaria.com',
         type: 'individual',
-        ...(hasValidCpf ? { document: cleanCpf, document_type: 'CPF' } : {}),
+        // TEST 3: CPF fake como fallback — sempre envia algum CPF
+        document: finalCpf,
+        document_type: 'CPF',
         ...(phone && phone.replace(/\D/g, '').length >= 10 ? {
           phones: {
             mobile_phone: {
