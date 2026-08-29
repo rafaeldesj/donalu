@@ -104,13 +104,20 @@ export default async function handler(req, res) {
     if (cardToken) {
       creditCardData.card_token = cardToken;
     } else if (rawCard) {
-      // TEST 3: sem billing_address (revertendo Test 2)
+      // TESTE COMBINADO: billing_address de volta (como em 30004df)
       creditCardData.card = {
         number: rawCard.cardNumber,
         holder_name: rawCard.cardHolder,
         exp_month: parseInt(rawCard.cardExpiryMonth),
         exp_year: parseInt(rawCard.cardExpiryYear),
-        cvv: rawCard.cardCvv
+        cvv: rawCard.cardCvv,
+        billing_address: {
+          line_1: address?.street ? `${address.street}, ${address.number || 'S/N'}` : "Rua Jicara, 239",
+          zip_code: address?.zipCode ? address.zipCode.replace(/\D/g, '') : "23092000",
+          city: address?.city || "Campo Grande",
+          state: address?.state || "RJ",
+          country: "BR"
+        }
       };
     }
 
@@ -118,8 +125,8 @@ export default async function handler(req, res) {
     const customerName = (rawCard?.cardHolder || name || 'Cliente Dona Lu');
 
     const payload = {
-      // TEST 2: antifraud_enabled de volta ao root (revertendo Test 1)
-      antifraud_enabled: false,
+      // TESTE COMBINADO: exato estado do commit 30004df que aprovou
+      // SEM antifraud_enabled no root — vai dentro de payments[]
       items: [
         {
           amount: transactionAmountCents,
@@ -132,7 +139,6 @@ export default async function handler(req, res) {
         name: customerName,
         email: email || 'cliente@pastelaria.com',
         type: 'individual',
-        // TEST 3: CPF fake como fallback — sempre envia algum CPF
         document: finalCpf,
         document_type: 'CPF',
         ...(phone && phone.replace(/\D/g, '').length >= 10 ? {
@@ -148,8 +154,8 @@ export default async function handler(req, res) {
       payments: [
         {
           payment_method: 'credit_card',
-          credit_card: creditCardData
-          // antifraud_enabled removido daqui (revertendo Test 1)
+          credit_card: creditCardData,
+          antifraud_enabled: false  // ← dentro de payments[] como em 30004df
         }
       ],
       closed: true,
