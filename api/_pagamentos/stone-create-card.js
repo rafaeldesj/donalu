@@ -73,7 +73,7 @@ export default async function handler(req, res) {
 
     const transactionAmountCents = Math.round(parseFloat(amount) * 100);
     const cleanCpf = (cpf || '').replace(/\D/g, '');
-    const finalCpf = cleanCpf.length === 11 ? cleanCpf : '80288053702';
+    const hasValidCpf = cleanCpf.length === 11;
 
     // Format phone
     let phoneArea = "21";
@@ -132,14 +132,16 @@ export default async function handler(req, res) {
         name: name || 'Cliente Dona Lu',
         email: email || 'cliente@pastelaria.com',
         type: 'individual',
-        document: finalCpf,
-        phones: {
-          mobile_phone: {
-            country_code: "55",
-            area_code: phoneArea,
-            number: phoneNumber
+        ...(hasValidCpf ? { document: cleanCpf, document_type: 'CPF' } : {}),
+        ...(phone && phone.replace(/\D/g, '').length >= 10 ? {
+          phones: {
+            mobile_phone: {
+              country_code: "55",
+              area_code: phoneArea,
+              number: phoneNumber
+            }
           }
-        }
+        } : {})
       },
       payments: [
         {
