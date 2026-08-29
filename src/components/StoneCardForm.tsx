@@ -22,6 +22,7 @@ export function StoneCardForm({
   const [cardHolder, setCardHolder] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvv, setCardCvv] = useState("");
+  const [cpf, setCpf] = useState(payer.cpf || "");
 
   const [installments, setInstallments] = useState(1);
   const [cardType, setCardType] = useState<"credit" | "debit">("credit");
@@ -40,8 +41,8 @@ export function StoneCardForm({
     setError("");
     setLoading(true);
     try {
-      if (!cardNumber.replace(/\s/g, "") || !cardHolder || !cardExpiry || !cardCvv)
-        throw new Error("Preencha todos os dados do cartão.");
+      if (!cardNumber.replace(/\s/g, "") || !cardHolder || !cardExpiry || !cardCvv || !cpf.replace(/\D/g, ""))
+        throw new Error("Preencha todos os dados do cartão e o CPF (Titular).");
       const expiryClean = cardExpiry.replace(/\D/g, "");
       
       let finalOrderId = orderId;
@@ -71,7 +72,7 @@ export function StoneCardForm({
           phone: payer.phone,
           address: payer.address,
           installments: installments,
-          cpf: payer.cpf || '',
+          cpf: cpf.replace(/\D/g, ""),
           orderId: finalOrderId,
           paymentVerificationToken: finalToken,
           items: items,
@@ -153,6 +154,16 @@ export function StoneCardForm({
             <input type="text" inputMode="numeric" placeholder="123" maxLength={4} value={cardCvv} onChange={e => setCardCvv(e.target.value.replace(/\D/g, "").slice(0, 4))} style={inp} />
           </div>
         </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ color: "#94a3b8", fontSize: 12, display: "block", marginBottom: 4 }}>CPF do Titular (Obrigatório para Antifraude)</label>
+          <input type="text" inputMode="numeric" placeholder="000.000.000-00" maxLength={14} value={cpf} onChange={(e) => {
+            let v = e.target.value.replace(/\D/g, '');
+            if (v.length <= 11) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+            setCpf(v);
+          }} style={inp} />
+        </div>
+
         <div style={{ marginBottom: 16 }}>
           <label style={{ color: "#94a3b8", fontSize: 12, display: "block", marginBottom: 4 }}>Parcelas</label>
           <select value={installments} onChange={e => setInstallments(parseInt(e.target.value))} style={{ ...inp, background: "rgba(30,35,50,0.95)", cursor: "not-allowed", opacity: 0.8 }} disabled>
