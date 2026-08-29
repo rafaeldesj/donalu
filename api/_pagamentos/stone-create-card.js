@@ -95,26 +95,6 @@ export default async function handler(req, res) {
       'Idempotency-key': 'CARD_STONE_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6)
     };
 
-    let creditCardData = {
-      installments: parseInt(installments || 1),
-      statement_descriptor: 'DONA LU'
-    };
-
-    if (cardToken) {
-      creditCardData.card_token = cardToken;
-    } else if (rawCard) {
-      creditCardData.card = {
-        number: rawCard.cardNumber,
-        holder_name: rawCard.cardHolder,
-        exp_month: parseInt(rawCard.cardExpiryMonth),
-        exp_year: parseInt(rawCard.cardExpiryYear),
-        cvv: rawCard.cardCvv
-      };
-    }
-
-    // Use cardholder name for better AVS matching
-    const customerName = (rawCard?.cardHolder || name || 'Cliente Dona Lu');
-
     // Build address objects — antifraude requer customer.address + billing + shipping
     // Para pedidos de retirada, usa o endereço da loja como fallback
     const STORE_ADDRESS = {
@@ -133,6 +113,27 @@ export default async function handler(req, res) {
       country: 'BR'
     } : STORE_ADDRESS;
 
+    let creditCardData = {
+      installments: parseInt(installments || 1),
+      statement_descriptor: 'DONA LU'
+    };
+
+    if (cardToken) {
+      creditCardData.card_token = cardToken;
+    } else if (rawCard) {
+      creditCardData.card = {
+        number: rawCard.cardNumber,
+        holder_name: rawCard.cardHolder,
+        exp_month: parseInt(rawCard.cardExpiryMonth),
+        exp_year: parseInt(rawCard.cardExpiryYear),
+        cvv: rawCard.cardCvv,
+        billing_address: customerAddress // Restaura billing_address no cartão como em 30004df
+      };
+    }
+
+    // Use cardholder name for better AVS matching
+    const customerName = (rawCard?.cardHolder || name || 'Cliente Dona Lu');
+
     const payload = {
       items: [
         {
@@ -147,7 +148,6 @@ export default async function handler(req, res) {
         email: email || 'cliente@pastelaria.com',
         type: 'individual',
         document: cleanCpf.length === 11 ? cleanCpf : '80288053702', // CPF fake obrigatório para o antifraude não bloquear transações sem CPF
-        document_type: 'CPF',
         // address obrigatório para antifraude (docs.pagar.me v5)
         address: customerAddress,
         ...(phone && phone.replace(/\D/g, '').length >= 10 ? {
