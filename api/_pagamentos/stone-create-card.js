@@ -212,15 +212,30 @@ export default async function handler(req, res) {
       status: paymentStatus,
       approved: paymentStatus === 'paid',
       acquirerMessage: acquirerMessage,
-      // Diagnostic fields (safe to expose, no sensitive data)
+      // Full raw charge for diagnosis — REMOVE IN PRODUCTION
       _diag: {
         orderStatus: order.status,
-        chargeStatus: order.charges?.[0]?.status,
-        lastTxStatus: order.charges?.[0]?.last_transaction?.status,
-        lastTxAcquirerMessage: order.charges?.[0]?.last_transaction?.acquirer_message,
-        lastTxAcquirerReturnCode: order.charges?.[0]?.last_transaction?.acquirer_return_code,
-        antifraud: order.charges?.[0]?.antifraud_response,
-        gatewayErrors: order.charges?.[0]?.last_transaction?.gateway_response?.errors
+        rawCharge: order.charges?.[0] ? {
+          id: order.charges[0].id,
+          status: order.charges[0].status,
+          code: order.charges[0].code,
+          amount: order.charges[0].amount,
+          paid_amount: order.charges[0].paid_amount,
+          antifraud_response: order.charges[0].antifraud_response,
+          last_transaction: order.charges[0].last_transaction ? {
+            id: order.charges[0].last_transaction.id,
+            status: order.charges[0].last_transaction.status,
+            amount: order.charges[0].last_transaction.amount,
+            acquirer_id: order.charges[0].last_transaction.acquirer_id,
+            acquirer_name: order.charges[0].last_transaction.acquirer_name,
+            acquirer_message: order.charges[0].last_transaction.acquirer_message,
+            acquirer_return_code: order.charges[0].last_transaction.acquirer_return_code,
+            installments: order.charges[0].last_transaction.installments,
+            operation_type: order.charges[0].last_transaction.operation_type,
+            gateway_response: order.charges[0].last_transaction.gateway_response,
+            three_d_secure: order.charges[0].last_transaction.three_d_secure
+          } : null
+        } : null
       }
     });
 
