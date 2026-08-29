@@ -22,7 +22,7 @@ export function StoneCardForm({
   const [cardHolder, setCardHolder] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvv, setCardCvv] = useState("");
-  const [clientCpf, setClientCpf] = useState(payer.cpf || "");
+
   const [installments, setInstallments] = useState(1);
   const [cardType, setCardType] = useState<"credit" | "debit">("credit");
   const [loading, setLoading] = useState(false);
@@ -40,8 +40,8 @@ export function StoneCardForm({
     setError("");
     setLoading(true);
     try {
-      if (!cardNumber.replace(/\s/g, "") || !cardHolder || !cardExpiry || !cardCvv || clientCpf.replace(/\D/g, "").length !== 11)
-        throw new Error("Preencha todos os dados e informe um CPF válido com 11 dígitos.");
+      if (!cardNumber.replace(/\s/g, "") || !cardHolder || !cardExpiry || !cardCvv)
+        throw new Error("Preencha todos os dados do cartão.");
       const expiryClean = cardExpiry.replace(/\D/g, "");
       
       let finalOrderId = orderId;
@@ -71,7 +71,7 @@ export function StoneCardForm({
           phone: payer.phone,
           address: payer.address,
           installments: installments,
-          cpf: clientCpf.replace(/\D/g, ""),
+          cpf: payer.cpf || '',
           orderId: finalOrderId,
           paymentVerificationToken: finalToken,
           items: items,
@@ -135,14 +135,7 @@ export function StoneCardForm({
           <label style={{ color: "#94a3b8", fontSize: 12, display: "block", marginBottom: 4 }}>Nome no Cartao</label>
           <input type="text" placeholder="Como impresso no cartao" value={cardHolder} onChange={e => setCardHolder(e.target.value.toUpperCase())} style={inp} />
         </div>
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ color: "#94a3b8", fontSize: 12, display: "block", marginBottom: 4 }}>CPF do Titular</label>
-          <input type="text" inputMode="numeric" placeholder="000.000.000-00" maxLength={14} value={clientCpf} onChange={e => {
-            let v = e.target.value.replace(/\D/g, "");
-            if (v.length <= 11) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-            setClientCpf(v);
-          }} style={inp} />
-        </div>
+
         <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
           <div style={{ flex: 1 }}>
             <label style={{ color: "#94a3b8", fontSize: 12, display: "block", marginBottom: 4 }}>Validade</label>

@@ -183,15 +183,28 @@ export default async function handler(req, res) {
     
     let acquirerMessage = '';
     if (paymentStatus === 'failed' || paymentStatus !== 'paid') {
-      console.log('[Stone Card] Transação não foi paid. Status:', paymentStatus);
+      const charge = order.charges?.[0];
+      const lastTx = charge?.last_transaction;
+      const antifraudRecommendation = charge?.antifraud_response?.recommendation;
+      const antifraudScore = charge?.antifraud_response?.score;
+      const antifraudStatus = charge?.antifraud_response?.status;
+      
+      console.log('[Stone Card] Status:', paymentStatus);
+      console.log('[Stone Card] Antifraude - Status:', antifraudStatus, '| Score:', antifraudScore, '| Recomendacao:', antifraudRecommendation);
+      console.log('[Stone Card] Mensagem adquirente:', lastTx?.acquirer_message);
+      console.log('[Stone Card] Gateway errors:', JSON.stringify(lastTx?.gateway_response?.errors));
       console.log('[Stone Card] Resposta completa:', JSON.stringify(order, null, 2));
-      try { require('fs').writeFileSync('stone-last-error.json', JSON.stringify(order, null, 2)); } catch(e){}
-      try {
-        acquirerMessage = order.charges?.[0]?.last_transaction?.acquirer_message || 
-                          order.charges?.[0]?.last_transaction?.gateway_response?.errors?.[0]?.message || 
-                          'Pagamento recusado pela operadora.';
-      } catch (e) {
-        acquirerMessage = 'Pagamento recusado pela operadora.';
+      
+      if (antifraudStatus === 'refused' || antifraudRecommendation === 'refuse') {
+        acquirerMessage = `Transacao negada pelo sistema antifraude (Score: ${antifraudScore || 'N/A'}).`;
+      } else {
+        try {
+          acquirerMessage = lastTx?.acquirer_message ||
+                            lastTx?.gateway_response?.errors?.[0]?.message ||
+                            'Pagamento recusado pela operadora.';
+        } catch (e) {
+          acquirerMessage = 'Pagamento recusado pela operadora.';
+        }
       }
     }
 
