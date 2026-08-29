@@ -108,7 +108,15 @@ export default async function handler(req, res) {
         holder_name: rawCard.cardHolder,
         exp_month: parseInt(rawCard.cardExpiryMonth),
         exp_year: parseInt(rawCard.cardExpiryYear),
-        cvv: rawCard.cardCvv
+        cvv: rawCard.cardCvv,
+        // TEST 2: billing_address hardcoded de volta (como em 30004df que aprovou)
+        billing_address: {
+          line_1: address?.street ? `${address.street}, ${address.number || 'S/N'}` : "Rua Jicara, 239",
+          zip_code: address?.zipCode ? address.zipCode.replace(/\D/g, '') : "23092000",
+          city: address?.city || "Campo Grande",
+          state: address?.state || "RJ",
+          country: "BR"
+        }
       };
     }
 
@@ -116,7 +124,8 @@ export default async function handler(req, res) {
     const customerName = (rawCard?.cardHolder || name || 'Cliente Dona Lu');
 
     const payload = {
-      // TEST 1: antifraud_enabled moved back inside payments[] (as in commit 30004df that approved)
+      // TEST 2: antifraud_enabled de volta ao root (revertendo Test 1)
+      antifraud_enabled: false,
       items: [
         {
           amount: transactionAmountCents,
@@ -143,8 +152,8 @@ export default async function handler(req, res) {
       payments: [
         {
           payment_method: 'credit_card',
-          credit_card: creditCardData,
-          antifraud_enabled: false  // ← de volta dentro de payments[]
+          credit_card: creditCardData
+          // antifraud_enabled removido daqui (revertendo Test 1)
         }
       ],
       closed: true,
