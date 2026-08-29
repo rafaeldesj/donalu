@@ -166,9 +166,10 @@ export default async function handler(req, res) {
       },
       // shipping obrigatório no nível do pedido quando antifraude está ativo
       shipping: {
-        name: customerName,
-        fee: 0,
-        type: 'ballistic',
+        amount: 0,
+        description: 'Retirada ou Entrega',
+        recipient_name: customerName,
+        recipient_phone: phoneNumber,
         address: customerAddress
       },
       payments: [
