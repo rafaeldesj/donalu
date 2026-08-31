@@ -2294,6 +2294,17 @@ export const ClientDashboard = ({
       let finalStatus = 'pending';
       let onlinePaymentId: string | null = null;
 
+      // Limpa possível carrinho abandonado para evitar duplicatas "MONTANDO CARRINHO"
+      try {
+        if (user?.uid) {
+          const qCart = query(collection(db, 'orders'), where('clientUid', '==', user.uid), where('status', '==', 'building_cart'));
+          const snapCart = await getDocs(qCart);
+          for (const docSnap of snapCart.docs) {
+            await deleteDoc(doc(db, 'orders', docSnap.id));
+          }
+        }
+      } catch (err) { console.warn('Erro ao limpar carrinho abandonado:', err); }
+
       // Gera o ID do pedido antecipadamente para ser usado em qualquer fluxo de pagamento online e na finalizacao do pedido
       const generatedOrderRef = doc(collection(db, 'orders'));
       const generatedOrderId = generatedOrderRef.id;
@@ -2385,36 +2396,9 @@ export const ClientDashboard = ({
         // Gera apenas o token de verificação antecipadamente para vincular ao webhook
         const secureToken = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
         
-        const endpoint = paymentMethod === 'pix_stone' 
-          ? `${API_BASE_URL}/api/pagamentos/stone-create-pix` 
-          : `${API_BASE_URL}/api/pagamentos/create-pix`;
-          
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            token,
-            amount: finalTotal,
-            email: user?.email === storeConfig?.storeOwnerEmail ? `teste-${Date.now()}@donalupastelaria.com.br` : (user?.email || 'cliente@email.com'),
-            name: user?.displayName || user?.email || 'Cliente',
-            cpf: userData?.cpf || undefined,
-            devPercentage: isStoreOwnerConnected && storeConfig?.devAccessToken && storeConfig?.devAccessToken !== storeConfig?.storeOwnerAccessToken ? (storeConfig?.devPercentage || 0) : 0,
-            stoneRecipientId: storeConfig?.stoneRecipientId || undefined,
-            orderId: generatedOrderId,
-            paymentVerificationToken: secureToken
-          })
-        });
-
-        const result = await response.json();
-        if (!response.ok || !result.success) {
-          throw new Error(result.message || `Erro ao gerar Pix no ${paymentMethod === 'pix_stone' ? 'Stone' : 'Mercado Pago'}.`);
-        }
-
         // ─── REGISTRO ANTECIPADO DO PEDIDO ───────────────────────────────────────
         // Salva o pedido IMEDIATAMENTE com status 'awaiting_payment' antes de mostrar
-        // o QR Code. Isso garante que a compra fica registrada no sistema mesmo que
-        // o pagamento seja extornado ou cancelado via app bancário, sem esperar pelo
-        // webhook de confirmação do Mercado Pago.
+        // o QR Code e chamar a API externa. Isso garante que a compra fica registrada no sistema.
         try {
           let pixDailySeq = 1;
           try {
@@ -2436,7 +2420,7 @@ export const ClientDashboard = ({
             clientName: user?.displayName || user?.email || 'Cliente Anônimo',
             clientPhone: userData?.phoneNumber || '',
             usedFidelityRescueGrande: useFidelityRescueGrande && canRescueFidelityGrande,
-      usedFidelityRescueKids: useFidelityRescueKids && canRescueFidelityKids,
+            usedFidelityRescueKids: useFidelityRescueKids && canRescueFidelityKids,
             items: cart.map(item => {
               let customSuffix = '';
               const details: string[] = [];
@@ -2481,10 +2465,10 @@ export const ClientDashboard = ({
             status: 'awaiting_payment',
             createdAt: new Date().toISOString(),
             orderType,
-        packForTakeout: orderType === 'dine_in' && isPdvMode ? packForTakeout : false,
-        tableNumber: (orderType === 'dine_in_table' || (orderType === 'dine_in' && isPdvMode && eatAtCounter)) ? tableNumber : null,
+            packForTakeout: orderType === 'dine_in' && isPdvMode ? packForTakeout : false,
+            tableNumber: (orderType === 'dine_in_table' || (orderType === 'dine_in' && isPdvMode && eatAtCounter)) ? tableNumber : null,
             paymentMethod: paymentMethod === 'pix_stone' ? 'pix_stone' : 'pix',
-            mercadoPagoPaymentId: result.paymentId,
+            mercadoPagoPaymentId: null, // Será atualizado após a chamada à API
             dailySeq: pixDailySeq,
             paymentVerificationToken: secureToken,
             address: orderType === 'delivery' ? {
@@ -2503,6 +2487,49 @@ export const ClientDashboard = ({
           setPendingPixOrderId(pixOrderRef.id);
         } catch (saveErr) {
           console.error('[PIX] Erro ao salvar pedido antecipadamente:', saveErr);
+          throw new Error('Falha ao registrar pedido. Verifique sua conexão e tente novamente.');
+        }
+
+        const endpoint = paymentMethod === 'pix_stone' 
+          ? `${API_BASE_URL}/api/pagamentos/stone-create-pix` 
+          : `${API_BASE_URL}/api/pagamentos/create-pix`;
+          
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token,
+            amount: finalTotal,
+            email: user?.email === storeConfig?.storeOwnerEmail ? `teste-${Date.now()}@donalupastelaria.com.br` : (user?.email || 'cliente@email.com'),
+            name: user?.displayName || user?.email || 'Cliente',
+            cpf: userData?.cpf || undefined,
+            devPercentage: isStoreOwnerConnected && storeConfig?.devAccessToken && storeConfig?.devAccessToken !== storeConfig?.storeOwnerAccessToken ? (storeConfig?.devPercentage || 0) : 0,
+            stoneRecipientId: storeConfig?.stoneRecipientId || undefined,
+            orderId: generatedOrderId,
+            paymentVerificationToken: secureToken
+          })
+        });
+
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          // Falhou ao gerar Pix. Cancela o pedido no banco.
+          try {
+            await updateDoc(doc(db, 'orders', generatedOrderId), { status: 'cancelled' });
+          } catch (e) {}
+          throw new Error(result.message || `Erro ao gerar Pix no ${paymentMethod === 'pix_stone' ? 'Stone' : 'Mercado Pago'}.`);
+        }
+
+        // Atualiza o pedido com o ID do pagamento gerado pela API externa
+        try {
+          const updatePayload: any = {};
+          if (paymentMethod === 'pix_stone') {
+            updatePayload.stonePaymentId = result.paymentId;
+          } else {
+            updatePayload.mercadoPagoPaymentId = result.paymentId;
+          }
+          await updateDoc(doc(db, 'orders', generatedOrderId), updatePayload);
+        } catch(e) {
+          console.warn('[PIX] Erro ao atualizar pedido com ID do pagamento:', e);
         }
 
         setPixPaymentId(result.paymentId);
