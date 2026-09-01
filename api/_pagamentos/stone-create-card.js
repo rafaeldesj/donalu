@@ -232,7 +232,7 @@ export default async function handler(req, res) {
 
     if (checkAntifraudRefusal(order)) {
       console.log('[Stone Card] Primeira tentativa negada pelo antifraude (Detectado pelo status ou gateway). Reprocessando...');
-      payload.payments[0].antifraud_enabled = false;
+      payload.antifraud_enabled = false;
       headers['Idempotency-key'] = 'CARD_STONE_RETRY_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
       
       orderRes = await nativeRequest(stoneUrl, 'POST', headers, payload);
