@@ -176,8 +176,7 @@ export default async function handler(req, res) {
       payments: [
         {
           payment_method: 'credit_card',
-          credit_card: creditCardData,
-          antifraud_enabled: false
+          credit_card: creditCardData
         }
       ],
       closed: true,
@@ -203,7 +202,29 @@ export default async function handler(req, res) {
       ];
     }
 
-    const orderRes = await nativeRequest(stoneUrl, 'POST', headers, payload);
+    let orderRes = await nativeRequest(stoneUrl, 'POST', headers, payload);
+    let order = orderRes.json;
+
+    // Helper para identificar recusa exclusiva do antifraude
+    const checkAntifraudRefusal = (ord) => {
+      if (!ord) return false;
+      if (ord.status === 'failed' || (ord.status && ord.status !== 'paid')) {
+        const charge = ord.charges?.[0];
+        const antifraudStatus = charge?.antifraud_response?.status;
+        const antifraudRecommendation = charge?.antifraud_response?.recommendation;
+        return (antifraudStatus === 'refused' || antifraudRecommendation === 'refuse');
+      }
+      return false;
+    };
+
+    if (checkAntifraudRefusal(order)) {
+      console.log('[Stone Card] Primeira tentativa negada pelo antifraude. Reprocessando com antifraude desativado...');
+      payload.payments[0].antifraud_enabled = false;
+      headers['Idempotency-key'] = 'CARD_STONE_RETRY_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+      
+      orderRes = await nativeRequest(stoneUrl, 'POST', headers, payload);
+      order = orderRes.json;
+    }
 
     if (!orderRes.ok) {
       console.error('[Stone Card Order] Erro:', JSON.stringify(orderRes.json, null, 2) || orderRes.text);
@@ -211,7 +232,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: errMsg, details: orderRes.json });
     }
 
-    const order = orderRes.json;
+    order = orderRes.json;
     const paymentStatus = order.status; // pending, paid, failed, canceled
     
     let acquirerMessage = '';
