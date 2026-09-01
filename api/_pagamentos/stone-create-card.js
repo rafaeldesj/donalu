@@ -210,15 +210,28 @@ export default async function handler(req, res) {
       if (!ord) return false;
       if (ord.status === 'failed' || (ord.status && ord.status !== 'paid')) {
         const charge = ord.charges?.[0];
+        
+        // 1. Objeto explícito de antifraude
         const antifraudStatus = charge?.antifraud_response?.status;
         const antifraudRecommendation = charge?.antifraud_response?.recommendation;
-        return (antifraudStatus === 'refused' || antifraudRecommendation === 'refuse');
+        if (antifraudStatus === 'refused' || antifraudRecommendation === 'refuse') return true;
+        
+        // 2. Sintoma de Antifraude: O banco aprovou (0000 / Sucesso) mas a Stone barrou a transação (failed)
+        const lastTx = charge?.last_transaction;
+        if (lastTx?.acquirer_return_code === '0000' || (lastTx?.acquirer_message && lastTx.acquirer_message.toLowerCase().includes('sucesso'))) {
+          return true;
+        }
+        
+        // 3. Antifraude dentro da last_transaction (alguns cenários da v5)
+        if (lastTx?.antifraud_response?.status === 'refused' || lastTx?.antifraud_response?.recommendation === 'refuse') {
+          return true;
+        }
       }
       return false;
     };
 
     if (checkAntifraudRefusal(order)) {
-      console.log('[Stone Card] Primeira tentativa negada pelo antifraude. Reprocessando com antifraude desativado...');
+      console.log('[Stone Card] Primeira tentativa negada pelo antifraude (Detectado pelo status ou gateway). Reprocessando...');
       payload.payments[0].antifraud_enabled = false;
       headers['Idempotency-key'] = 'CARD_STONE_RETRY_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
       
