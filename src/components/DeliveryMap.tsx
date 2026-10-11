@@ -350,11 +350,15 @@ export const DeliveryMap = ({ onAddressSelect, initialAddress }: DeliveryMapProp
       },
       (err) => {
         if (!mapRef.current || mapRef.current !== map) return;
-        console.warn('Geolocation error:', err.message);
-        setLocationError('Não foi possível obter sua localização.');
+        console.warn('Geolocation error:', err.code, err.message);
+        setLocationError(
+          err.code === err.PERMISSION_DENIED
+            ? 'Permissão de localização bloqueada. Clique no cadeado ao lado do endereço do site, permita a Localização e tente novamente — ou busque o endereço acima.'
+            : 'Não foi possível obter sua localização. Tente novamente ou busque o endereço acima.'
+        );
         setIsLocating(false);
       },
-      { timeout: 10000, maximumAge: 60000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   };
 
