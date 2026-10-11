@@ -44,8 +44,8 @@ const DeliveryRowMap = ({ orderId, address, clientCoords, deliveryCoords }: Deli
         scrollWheelZoom: true,
       }).setView(DONA_LU_COORDS, 14);
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
       }).addTo(map);
 
       mapRef.current = map;
