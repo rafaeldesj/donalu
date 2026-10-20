@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import type { OrderItem } from './types/order';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AuthButton } from './components/common/AuthButton';
-import { ShieldCheck, ChefHat, CreditCard, Bell, ShoppingCart, Heart, FileText, Users, Navigation, CheckCircle, Clock, Map, Settings, Menu, ChevronDown, Grid, Boxes, MessageCircle, ShoppingBag, Monitor, Star } from 'lucide-react';
+import { ShieldCheck, ChefHat, CreditCard, Bell, ShoppingCart, Heart, FileText, Users, Navigation, CheckCircle, Clock, Map, Settings, Menu, ChevronDown, Grid, Boxes, MessageCircle, ShoppingBag, Monitor, Star, Wallet } from 'lucide-react';
 import logoDonalu from './assets/logo_donalu.png';
 import logoDonaluMobile from './assets/logo_donalu_mobile.png';
 import { doc, onSnapshot, collection, query, orderBy, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -31,6 +31,7 @@ const TableMap = lazy(() => import('./pages/staff/TableMap'));
 const StockControl = lazy(() => import('./pages/staff/StockControl'));
 const SupportPanel = lazy(() => import('./pages/staff/SupportPanel'));
 const RiderLocationMonitor = lazy(() => import('./pages/manager/RiderLocationMonitor'));
+const OwnerWallet = lazy(() => import('./pages/manager/OwnerWallet'));
 const SystemLogs = lazy(() => import('./pages/manager/SystemLogs'));
 const PdvSales = lazy(() => import('./pages/staff/PdvSales'));
 const OrderDisplayScreen = lazy(() => import('./pages/staff/OrderDisplayScreen'));
@@ -797,6 +798,11 @@ const MainLayout = () => {
       menuItems.push({ id: 'mercadopago_transacoes', label: 'Transações MP', icon: CreditCard });
     }
 
+    // Carteira do Proprietário (owner, dev)
+    if (['developer', 'owner'].includes(role)) {
+      menuItems.push({ id: 'carteira', label: 'Carteira', icon: Wallet });
+    }
+
     // Painel de Gestão de Usuários (admin, owner, dev)
     if (['developer', 'owner', 'manager'].includes(role)) {
       menuItems.push({ id: 'users', label: 'Usuários', icon: Users });
@@ -837,7 +843,7 @@ const MainLayout = () => {
     { label: 'Cardápio / Cliente', ids: ['menu', 'tracking', 'history', 'fidelidade', 'suporte_virtual'] },
     { label: 'Operações de Venda', ids: ['pdv_vendas'] },
     { label: 'Operações de Entrega', ids: ['entrega_andamento', 'entrega_finalizada', 'teste_mapa'] },
-    { label: 'Painéis de Trabalho', ids: ['cozinha', 'atendimento', 'caixa', 'admin', 'mapa_mesas', 'mercadopago_transacoes', 'estoque', 'mostrador', 'avaliacoes', 'painel_atendimento'] },
+    { label: 'Painéis de Trabalho', ids: ['cozinha', 'atendimento', 'caixa', 'admin', 'mapa_mesas', 'mercadopago_transacoes', 'carteira', 'estoque', 'mostrador', 'avaliacoes', 'painel_atendimento'] },
     { label: 'Configurações', ids: ['users', 'registros', 'configuracoes'] },
   ];
 const getRoleLabel = (r: string): React.ReactNode => {
@@ -994,6 +1000,7 @@ const getRoleLabel = (r: string): React.ReactNode => {
             {activeView === 'configuracoes' && <SettingsPage />}
             {activeView === 'mapa_mesas' && <TableMap />}
             {activeView === 'mercadopago_transacoes' && <StaffDashboard filter="mercadopago" />}
+            {activeView === 'carteira' && <OwnerWallet />}
             {activeView === 'teste_mapa' && <RiderLocationMonitor />}
             {activeView === 'pdv_vendas' && <PdvSales />}
           </Suspense>

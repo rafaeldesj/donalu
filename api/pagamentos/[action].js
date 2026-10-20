@@ -13,6 +13,7 @@ import stoneCheckPix from '../_pagamentos/stone-check-pix.js';
 import stoneCreateRecipient from '../_pagamentos/stone-create-recipient.js';
 import stoneRefund from '../_pagamentos/stone-refund.js';
 import stoneWebhook from '../_pagamentos/stone-webhook.js';
+import walletVerify from '../_pagamentos/wallet-verify.js';
 import webhook from '../_pagamentos/webhook.js';
 
 const routes = {
@@ -31,6 +32,7 @@ const routes = {
   'stone-create-recipient': stoneCreateRecipient,
   'stone-refund': stoneRefund,
   'stone-webhook': stoneWebhook,
+  'wallet-verify': walletVerify,
   'webhook': webhook
 };
 
