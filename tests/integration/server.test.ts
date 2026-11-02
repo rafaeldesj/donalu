@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Testes de integração das funções de servidor contra os emuladores de Auth e Firestore:
 //   npm run test:server
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';

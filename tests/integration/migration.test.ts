@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Testa scripts/migrate-passwords.mjs no emulador (dados 100% fictícios).
 import { describe, it, expect, beforeEach } from 'vitest';
 import { execFileSync, spawnSync } from 'node:child_process';
