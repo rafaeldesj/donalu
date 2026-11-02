@@ -2,7 +2,7 @@ import { auth } from '../config/firebase';
 import { API_BASE_URL } from '../config/api';
 
 /** Chama uma função de servidor de /api/auth enviando o ID token do usuário logado. */
-export async function callAuthApi<T = any>(action: string, body: Record<string, unknown>): Promise<T> {
+export async function callAuthApi<T = { success: boolean }>(action: string, body: Record<string, unknown>): Promise<T> {
   const current = auth.currentUser;
   if (!current) throw new Error('Você precisa estar logado.');
   const idToken = await current.getIdToken();

@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:rules": "firebase emulators:exec --only firestore --project demo-donalu \"vitest run tests/rules\""
+    "test:rules": "firebase emulators:exec --only firestore --project demo-donalu \"vitest run tests/rules\"",
+    "test:server": "firebase emulators:exec --only auth,firestore --project demo-donalu \"vitest run tests/integration\"",
+    "test": "npm run test:rules && npm run test:server"
   },
   "dependencies": {
     "firebase": "^12.15.0",

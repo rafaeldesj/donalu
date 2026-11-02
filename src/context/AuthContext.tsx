@@ -25,8 +25,10 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Remove qualquer resquício de senha que ainda exista em documentos antigos.
-const stripSecrets = <T extends Record<string, any>>(data: T): T => {
-  const { password: _p, tempPassword: _t, ...rest } = data as any;
+const stripSecrets = <T extends object>(data: T): T => {
+  const rest = { ...data } as Record<string, unknown>;
+  delete rest.password;
+  delete rest.tempPassword;
   return rest as T;
 };
 
@@ -103,9 +105,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (isMobile && !isLocalhost) {
       try {
         await signInWithPopup(auth, provider);
-      } catch (err: any) {
+      } catch (err) {
         console.warn('signInWithPopup falhou no celular, tentando redirect...', err);
-        if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
+        const code = (err as { code?: string }).code;
+        if (code === 'auth/popup-blocked' || code === 'auth/cancelled-popup-request') {
           await signInWithRedirect(auth, provider);
         } else {
           throw err;
@@ -229,6 +232,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) throw new Error('useAuth deve ser usado dentro de um AuthProvider');
