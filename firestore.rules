@@ -22,37 +22,70 @@ service cloud.firestore {
       );
     }
     
+    // ---- Helpers da coleção de usuários ----
+    function isSelf(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // O cargo resultante da escrita é igual ao cargo atual do documento?
+    function sameRole() {
+      return request.resource.data.get('role', null) == resource.data.get('role', null);
+    }
+
+    // Senhas NUNCA podem ser gravadas no Firestore (só o Firebase Authentication cuida delas).
+    // Remover um campo legado de senha é permitido; criar ou alterar não.
+    function writesSecret() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny(['password', 'tempPassword'])
+        && request.resource.data.keys().hasAny(['password', 'tempPassword']);
+    }
+
+    function touchesIdentity() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny(['uid', 'email', 'authEmail']);
+    }
+
+    // Admin só gerencia contas de cargo inferior (developer: todas; owner: manager/staff/client; manager: staff/client).
+    function canManageTarget() {
+      return getRole() == 'developer'
+        || (getRole() == 'owner' && resource.data.get('role', 'client') in ['manager', 'staff', 'client'])
+        || (getRole() == 'manager' && resource.data.get('role', 'client') in ['staff', 'client']);
+    }
+
+    function roleChangeAllowed() {
+      return sameRole()
+        || getRole() == 'developer'
+        || (getRole() == 'owner'
+            && request.resource.data.get('role', 'client') in ['manager', 'staff', 'client']);
+    }
+
     // Regras para a coleção de usuários
     match /users/{userId} {
-      // Qualquer usuário autenticado pode ler seu próprio documento, ou se for admin/desenvolvedor
-      allow read: if request.auth != null && (
-        request.auth.uid == userId || 
-        isAdmin() ||
-        (resource != null && resource.data.email == request.auth.token.email)
+      // Cada pessoa lê só o próprio documento; equipe e administradores leem os demais.
+      allow get: if request.auth != null && (isSelf(userId) || isStaff());
+
+      // Listagem (consultas): somente equipe/administradores. Nada de consulta sem login.
+      allow list: if request.auth != null && isStaff();
+
+      // Cliente cria apenas o próprio perfil, sempre como 'client'. Contas de equipe são criadas pelo servidor.
+      allow create: if isSelf(userId)
+        && request.resource.data.role == 'client'
+        && request.resource.data.get('uid', userId) == userId
+        && !request.resource.data.keys().hasAny(['password', 'tempPassword']);
+
+      allow update: if request.auth != null && !writesSecret() && (
+        // o próprio usuário: nunca altera o próprio cargo nem a identidade (uid/authEmail)
+        (isSelf(userId) && sameRole() && request.resource.data.get('uid', userId) == userId
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['authEmail']))
+        // equipe: só contas de clientes, sem mexer em cargo nem identidade
+        || (isStaff() && !isSelf(userId) && resource.data.get('role', 'client') == 'client'
+            && sameRole() && !touchesIdentity())
+        // administradores: só cargos inferiores; ninguém altera o próprio cargo
+        || (isAdmin() && !isSelf(userId) && canManageTarget() && roleChangeAllowed())
       );
-      
-      // Permitir listagem (queries) apenas se tiver limite == 1
-      allow list: if isAdmin() || (request.query.limit != null && request.query.limit == 1);
-      
-      // Criar documento: se for o próprio usuário criando seu perfil (deve ser cliente) ou se for admin
-      allow create: if request.auth != null && (
-        (request.auth.uid == userId && request.resource.data.role == 'client') || 
-        isAdmin()
-      );
-      
-      // Atualizar documento: o próprio usuário (não pode mudar seu papel), ou staff (sem alterar papel), ou se for admin
-      allow update: if request.auth != null && (
-        (request.auth.uid == userId && 
-          (!('role' in request.resource.data) || request.resource.data.role == (('role' in resource.data) ? resource.data.role : null))) || 
-        (isStaff() && 
-          (!('role' in request.resource.data) || request.resource.data.role == (('role' in resource.data) ? resource.data.role : null))) ||
-        isAdmin()
-      );
-      
-      // Excluir: apenas admins
-      allow delete: if isAdmin();
+
+      // Exclusão de contas é feita pelo servidor (remove também o login no Auth).
+      allow delete: if false;
     }
-    
+
     match /orders/{orderId} {
       // Ler pedidos: qualquer um que saiba o ID pode ler (ID é incognoscível), mas listar requer autenticação
       allow get: if true;
@@ -102,7 +135,9 @@ service cloud.firestore {
 
     // Regras para a coleção de logs de auditoria (audit_logs)
     match /audit_logs/{logId} {
-      allow read, write: if true;
+      allow read: if isAdmin();
+      allow create: if request.auth != null;
+      allow update, delete: if false;
     }
 
     // Regras para a coleção de transações (transactions)
