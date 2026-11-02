@@ -88,3 +88,4 @@ temp_*.txt
 transcript.txt  
  
 .vercel
+migration-report.*.json
