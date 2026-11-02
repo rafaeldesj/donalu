@@ -1,9 +1,13 @@
 import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { onAuthStateChanged, signInWithPopup, signInWithRedirect, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import {
+  onAuthStateChanged, signInWithPopup, signInWithRedirect, GoogleAuthProvider, signOut,
+  signInWithEmailAndPassword, signInWithCustomToken, createUserWithEmailAndPassword, updateProfile
+} from 'firebase/auth';
 import type { User } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc, limit, onSnapshot, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
+import { API_BASE_URL } from '../config/api';
 import type { UserDocument } from '../types/user';
 
 interface AuthContextType {
@@ -20,162 +24,69 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Remove qualquer resquício de senha que ainda exista em documentos antigos.
+const stripSecrets = <T extends Record<string, any>>(data: T): T => {
+  const { password: _p, tempPassword: _t, ...rest } = data as any;
+  return rest as T;
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserDocument | null>(null);
   const [loading, setLoading] = useState(true);
-  const preRegAttemptedRef = useRef(false);
+  const claimAttemptedRef = useRef(false);
 
   useEffect(() => {
     let unsubscribeUserDoc: (() => void) | null = null;
 
-    const loadSession = async () => {
-      const savedSession = localStorage.getItem('donalu_session');
-      if (savedSession) {
-        try {
-          const { uid } = JSON.parse(savedSession);
-          const userDocRef = doc(db, 'users', uid);
-          const docSnap = await getDoc(userDocRef);
-          if (docSnap.exists()) {
-            const uData = docSnap.data() as UserDocument;
-            setUserData(uData);
-            setUser({
-              uid: uData.uid || uid,
-              email: uData.email,
-              displayName: uData.name,
-              emailVerified: true
-            } as any);
-            setLoading(false);
+    // Sessões do modelo antigo (sem login real) deixam de valer.
+    try { localStorage.removeItem('donalu_session'); } catch { /* ignore */ }
 
-            const silentPass = uData.password || uData.tempPassword;
-            if (uData.email && silentPass) {
-              signInWithEmailAndPassword(auth, uData.email, silentPass).catch(authErr => {
-                console.warn("Falha ao reestabelecer Auth silencioso no F5:", authErr);
-              });
-            }
-            return true;
-          }
-        } catch (sessionErr) {
-          console.error("Erro ao carregar sessão do localStorage:", sessionErr);
-        }
-      }
-      return false;
-    };
-
-    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
-      const savedSession = localStorage.getItem('donalu_session');
-      let isTempSession = false;
-      if (savedSession) {
-        try {
-          const { uid } = JSON.parse(savedSession);
-          isTempSession = uid && uid.length === 20;
-        } catch (e) {}
-      }
-
-      const sessionLoaded = await loadSession();
-      if (sessionLoaded) {
-        if (!currentUser) {
-          // Se a sessão local carregou com sucesso do localStorage, mas o Firebase Auth
-          // principal está deslogado, preserva a sessão local e não a redefine como nula.
-          return;
-        }
-        if (!isTempSession) {
-          return;
-        }
-      }
-
+    // O Firebase Authentication é a única fonte de sessão.
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      
-      // Limpa listener do documento anterior caso exista
+
       if (unsubscribeUserDoc) {
         unsubscribeUserDoc();
         unsubscribeUserDoc = null;
       }
 
-      if (currentUser) {
-        preRegAttemptedRef.current = false;
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        
-        // Escuta o perfil do usuário em tempo real
-        unsubscribeUserDoc = onSnapshot(userDocRef, async (docSnap) => {
-          if (docSnap.exists()) {
-            const uData = docSnap.data() as UserDocument;
-            setUserData(uData);
-
-            // Sincroniza e-mail no Firebase Auth caso o gerente o tenha alterado no Firestore
-            if (currentUser.email && uData.email && currentUser.email.toLowerCase() !== uData.email.toLowerCase()) {
-              try {
-                const { updateEmail } = await import('firebase/auth');
-                await updateEmail(currentUser, uData.email.toLowerCase());
-                await updateDoc(userDocRef, { authEmail: uData.email.toLowerCase() });
-                console.log("E-mail de autenticação sincronizado com sucesso no Firebase Auth!");
-              } catch (authErr) {
-                console.warn("Não foi possível atualizar e-mail no Auth silenciosamente (exige reautenticação recente):", authErr);
-              }
-            }
-          } else {
-            // Se o documento não existir no banco, busca pré-cadastro
-            if (preRegAttemptedRef.current) {
-              setUserData(prev => prev ? prev : null);
-              setLoading(false);
-              return;
-            }
-            preRegAttemptedRef.current = true;
-            try {
-              let foundPreRegistration = false;
-              if (currentUser.email) {
-                const emailLower = currentUser.email.toLowerCase();
-                const preRegQuery = query(collection(db, 'users'), where('email', '==', emailLower), limit(1));
-                let querySnapshot = await getDocs(preRegQuery);
-                
-                if (querySnapshot.empty && currentUser.email !== emailLower) {
-                  const preRegQueryOrig = query(collection(db, 'users'), where('email', '==', currentUser.email), limit(1));
-                  querySnapshot = await getDocs(preRegQueryOrig);
-                }
-                
-                if (!querySnapshot.empty) {
-                  const preRegDoc = querySnapshot.docs[0];
-                  const preRegData = preRegDoc.data() as UserDocument;
-                  
-                  const finalUserData: UserDocument = {
-                    ...preRegData,
-                    uid: currentUser.uid,
-                    updatedAt: new Date().toISOString(),
-                  };
-                  
-                  await setDoc(userDocRef, finalUserData);
-                  if (preRegDoc.id !== currentUser.uid) {
-                    await deleteDoc(doc(db, 'users', preRegDoc.id));
-                  }
-                  
-                  localStorage.setItem('donalu_session', JSON.stringify({ uid: currentUser.uid }));
-                  setUserData(finalUserData);
-                  foundPreRegistration = true;
-                }
-              }
-
-              if (!foundPreRegistration) {
-                setUserData(prev => prev ? prev : null);
-              }
-            } catch (err) {
-              console.error("Erro ao buscar pré-cadastro do usuário:", err);
-              setUserData(prev => prev ? prev : null);
-            }
-          }
-          setLoading(false);
-        }, (error) => {
-          console.error("Erro na escuta em tempo real do perfil do usuário:", error);
-          setLoading(false);
-        });
-
-      } else {
-        // Só limpa o userData se não houver nenhuma sessão ativa salva no localStorage
-        const savedSession = localStorage.getItem('donalu_session');
-        if (!savedSession) {
-          setUserData(null);
-        }
+      if (!currentUser) {
+        claimAttemptedRef.current = false;
+        setUserData(null);
         setLoading(false);
+        return;
       }
+
+      const userDocRef = doc(db, 'users', currentUser.uid);
+      unsubscribeUserDoc = onSnapshot(userDocRef, async (docSnap) => {
+        if (docSnap.exists()) {
+          setUserData(stripSecrets(docSnap.data() as UserDocument));
+          setLoading(false);
+          return;
+        }
+
+        // Sem perfil: pede ao servidor para assumir um pré-cadastro feito por um gerente (mesmo e-mail verificado).
+        if (!claimAttemptedRef.current) {
+          claimAttemptedRef.current = true;
+          try {
+            const idToken = await currentUser.getIdToken();
+            await fetch(`${API_BASE_URL}/api/auth/claim-profile`, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${idToken}`, 'Content-Type': 'application/json' },
+              body: '{}'
+            });
+            // se houve pré-cadastro, o onSnapshot dispara de novo com o documento criado
+          } catch (err) {
+            console.error('Erro ao buscar pré-cadastro do usuário:', err);
+          }
+        }
+        setUserData(null);
+        setLoading(false);
+      }, (error) => {
+        console.error('Erro na escuta em tempo real do perfil do usuário:', error);
+        setLoading(false);
+      });
     });
 
     return () => {
@@ -188,12 +99,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const provider = new GoogleAuthProvider();
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
-    
+
     if (isMobile && !isLocalhost) {
       try {
         await signInWithPopup(auth, provider);
       } catch (err: any) {
-        console.warn("signInWithPopup falhou no celular, tentando redirect...", err);
+        console.warn('signInWithPopup falhou no celular, tentando redirect...', err);
         if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
           await signInWithRedirect(auth, provider);
         } else {
@@ -205,186 +116,61 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  /**
+   * Login por e-mail (direto no Firebase Auth) ou por telefone (função de servidor que valida a senha
+   * no Firebase Auth e devolve um token de sessão). Nenhuma senha é lida ou comparada no navegador.
+   */
   const loginWithEmail = async (emailOrPhone: string, password: string) => {
     const trimmed = emailOrPhone.trim();
-    let userDocData: any = null;
-    let userDocId = '';
-
-    const usersRef = collection(db, 'users');
-
-    try {
-      const trimmedLower = trimmed.toLowerCase();
-      const isPhone = /^\d+$/.test(trimmed.replace(/\D/g, ''));
-
-      if (trimmed.includes('@')) {
-        let q = query(usersRef, where('email', '==', trimmedLower), limit(1));
-        let snap = await getDocs(q);
-        // Fallback para buscar com o e-mail no formato original (caso tenha maiúsculas no banco)
-        if (snap.empty && trimmed !== trimmedLower) {
-          q = query(usersRef, where('email', '==', trimmed), limit(1));
-          snap = await getDocs(q);
-        }
-        if (!snap.empty) {
-          userDocData = snap.docs[0].data();
-          userDocId = snap.docs[0].id;
-        }
-      } else if (isPhone && trimmed.replace(/\D/g, '').length >= 8) {
-        const clean = trimmed.replace(/\D/g, '');
-        const qClean = query(usersRef, where('phoneNumber', '==', clean), limit(1));
-        const snapClean = await getDocs(qClean);
-        if (!snapClean.empty) {
-          userDocData = snapClean.docs[0].data();
-          userDocId = snapClean.docs[0].id;
-        } else {
-          const formatPhoneFilter = (numbers: string) => {
-            if (numbers.length === 11) {
-              return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
-            } else if (numbers.length === 10) {
-              return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(6)}`;
-            }
-            return numbers;
-          };
-          const formatted = formatPhoneFilter(clean);
-          const qFormat = query(usersRef, where('phoneNumber', '==', formatted), limit(1));
-          const snapFormat = await getDocs(qFormat);
-          if (!snapFormat.empty) {
-            userDocData = snapFormat.docs[0].data();
-            userDocId = snapFormat.docs[0].id;
-          }
-        }
-      } else {
-        // Tenta variações de capitalização do nome para passar na busca case-sensitive do Firestore
-        const titleCaseName = trimmed.toLowerCase().replace(/(?:^|\s)\S/g, (a) => a.toUpperCase());
-        const upperCaseName = trimmed.toUpperCase();
-        
-        const candidateNames = Array.from(new Set([
-          trimmed,
-          trimmedLower,
-          titleCaseName,
-          upperCaseName
-        ]));
-
-        for (const candidate of candidateNames) {
-          const qName = query(usersRef, where('name', '==', candidate), limit(1));
-          const snapName = await getDocs(qName);
-          if (!snapName.empty) {
-            userDocData = snapName.docs[0].data();
-            userDocId = snapName.docs[0].id;
-            break; // Encontrou a correspondência!
-          }
-        }
-      }
-    } catch (dbErr) {
-      console.warn("Erro de busca no Firestore antes do login, usando fallback:", dbErr);
-    }
-
-    if (userDocData) {
-      if (userDocData.password || userDocData.tempPassword) {
-        // Prioriza a senha provisória sobre a senha anterior
-        const dbPass = userDocData.tempPassword || userDocData.password;
-        if (dbPass === password) {
-          // Autentica de verdade no Firebase Auth para liberar privilégios administrativos
-          try {
-            await signInWithEmailAndPassword(auth, userDocData.email, password);
-          } catch (authErr) {
-            console.warn("Sessão Auth paralela não pôde ser estabelecida, operando com sessão Firestore local:", authErr);
-          }
-
-          // Se logou com a senha provisória, atualiza como senha oficial e limpa a provisória do banco
-          if (userDocData.tempPassword && userDocData.tempPassword === password) {
-            try {
-              await updateDoc(doc(db, 'users', userDocId), {
-                password: password,
-                tempPassword: null
-              });
-              userDocData.password = password;
-              userDocData.tempPassword = null as any;
-            } catch (dbUpdateErr) {
-              console.warn("Erro ao promover senha provisória no Firestore:", dbUpdateErr);
-            }
-          }
-
-          const mockUser = {
-            uid: userDocData.uid || userDocId,
-            email: userDocData.email,
-            displayName: userDocData.name,
-            emailVerified: true
-          } as any;
-
-          setUser(mockUser);
-          setUserData(userDocData);
-          localStorage.setItem('donalu_session', JSON.stringify({ uid: userDocData.uid || userDocId }));
-          return;
-        } else {
-          throw { code: 'auth/wrong-password', message: 'Senha incorreta.' };
-        }
-      } else {
-        try {
-          const credential = await signInWithEmailAndPassword(auth, userDocData.email, password);
-          try {
-            await updateDoc(doc(db, 'users', userDocId), { password });
-          } catch (dbUpdateErr) {
-            console.warn("Erro ao atualizar senha no Firestore após login do Auth:", dbUpdateErr);
-          }
-          const updatedData = { ...userDocData, password };
-          setUser(credential.user);
-          setUserData(updatedData);
-          localStorage.setItem('donalu_session', JSON.stringify({ uid: userDocId }));
-          return;
-        } catch (authErr) {
-          throw authErr;
-        }
-      }
-    }
 
     if (trimmed.includes('@')) {
-      const credential = await signInWithEmailAndPassword(auth, trimmed.toLowerCase(), password);
-      
-      try {
-        const userDocRef = doc(db, 'users', credential.user.uid);
-        const docSnap = await getDoc(userDocRef);
-        if (docSnap.exists()) {
-          const uData = docSnap.data();
-          try {
-            await updateDoc(userDocRef, { password });
-          } catch (dbUpdateErr) {
-            console.warn("Erro ao salvar senha no Firestore:", dbUpdateErr);
-          }
-          setUserData({ ...uData, password } as any);
-        }
-      } catch (dbFetchErr) {
-        console.error("Erro ao recuperar perfil pós-login do Auth:", dbFetchErr);
-      }
-
-      setUser(credential.user);
-      localStorage.setItem('donalu_session', JSON.stringify({ uid: credential.user.uid }));
+      await signInWithEmailAndPassword(auth, trimmed.toLowerCase(), password);
       return;
     }
 
-    throw { code: 'auth/user-not-found', message: 'Usuário não encontrado.' };
+    const phoneDigits = trimmed.replace(/\D/g, '');
+    if (phoneDigits.length < 8) {
+      throw { code: 'auth/invalid-credential', message: 'Telefone ou senha incorretos.' };
+    }
+
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}/api/auth/login-phone`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phoneDigits, password })
+      });
+    } catch {
+      throw { code: 'auth/network-request-failed', message: 'Sem conexão. Tente novamente.' };
+    }
+
+    if (response.status === 429) throw { code: 'auth/too-many-requests', message: 'Muitas tentativas.' };
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok || !json.token) {
+      throw { code: 'auth/invalid-credential', message: 'Telefone ou senha incorretos.' };
+    }
+    await signInWithCustomToken(auth, json.token);
   };
 
-    const registerWithEmail = async (email: string, password: string, name: string, phoneNumber?: string) => {
+  const registerWithEmail = async (email: string, password: string, name: string, phoneNumber?: string) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const currentUser = userCredential.user;
-    
+
     await updateProfile(currentUser, { displayName: name });
-    
+
     const userDocRef = doc(db, 'users', currentUser.uid);
     const newUserData: UserDocument = {
       uid: currentUser.uid,
       email: currentUser.email || '',
       authEmail: currentUser.email || '',
-      name: name,
+      name,
       role: 'client',
       phoneNumber: phoneNumber || '',
-      password: password,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     await setDoc(userDocRef, newUserData);
     setUserData(newUserData);
-    localStorage.setItem('donalu_session', JSON.stringify({ uid: currentUser.uid }));
   };
 
   const updatePhoneNumber = async (phone: string) => {
@@ -404,7 +190,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         await updateEmail(user, emailVal.trim().toLowerCase());
         finalEmail = emailVal.trim().toLowerCase();
       } catch (authErr) {
-        console.error("Erro ao atualizar email no Firebase Auth:", authErr);
+        console.error('Erro ao atualizar email no Firebase Auth:', authErr);
         // Prossegue com o Firestore mesmo se falhar no Auth (ex: exige reautenticação recente)
         finalEmail = emailVal.trim().toLowerCase();
       }
@@ -412,26 +198,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const userDocRef = doc(db, 'users', user.uid);
     const userDocSnap = await getDoc(userDocRef);
-    const existingData = userDocSnap.exists() ? userDocSnap.data() as UserDocument : null;
-    
+    const existingData = userDocSnap.exists() ? stripSecrets(userDocSnap.data() as UserDocument) : null;
+
     const finalUserData: UserDocument = {
       role: existingData?.role || 'client',
       createdAt: existingData?.createdAt || new Date().toISOString(),
       ...(existingData || {}),
       uid: user.uid,
       email: finalEmail,
-      name: name,
+      name,
       phoneNumber: phone,
       updatedAt: new Date().toISOString()
     };
-    
+
     await setDoc(userDocRef, finalUserData);
     setUserData(finalUserData);
-    localStorage.setItem('donalu_session', JSON.stringify({ uid: user.uid }));
   };
 
   const logout = async () => {
-    localStorage.removeItem('donalu_session');
+    try { localStorage.removeItem('donalu_session'); } catch { /* ignore */ }
     await signOut(auth);
     setUser(null);
     setUserData(null);

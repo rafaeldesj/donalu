@@ -122,7 +122,7 @@ export const SecurityCameraSettings = () => {
             ip: '192.168.1.2',
             port: 554,
             username: 'admin',
-            password: '060587ra',
+            password: '',
             streamType: 'RTSP',
             streamPath: '/onvif1',
             wifiSSID: 'Rosicleide_2.4G',
@@ -427,7 +427,7 @@ export const SecurityCameraSettings = () => {
     setFormIp('192.168.1.');
     setFormPort(554);
     setFormUsername('admin');
-    setFormPassword('060587ra');
+    setFormPassword('');
     setFormStreamType('RTSP');
     setFormStreamPath('/onvif1');
     setFormWifiSSID('Rosicleide_2.4G');

@@ -97,10 +97,13 @@ export const AuthButton = () => {
       case 'auth/user-disabled':
         return 'Este usuário foi desativado.';
       case 'auth/user-not-found':
-        return 'Este e-mail, celular ou nome não está cadastrado no sistema.';
       case 'auth/wrong-password':
       case 'auth/invalid-credential':
-        return 'E-mail ou senha incorretos.';
+        return 'E-mail/telefone ou senha incorretos.';
+      case 'auth/too-many-requests':
+        return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
+      case 'auth/network-request-failed':
+        return 'Sem conexão. Verifique a internet e tente novamente.';
       case 'auth/email-already-in-use':
         return 'Este e-mail já está em uso.';
       case 'auth/weak-password':
@@ -150,15 +153,11 @@ export const AuthButton = () => {
       }
     } catch (err: any) {
       console.error(err);
-      if (err.message === 'TEMP_PASSWORD_ACTIVE_USER') {
-        setError('Esta senha provisória foi cadastrada no banco, mas sua conta anterior no Firebase ainda está ativa. Por favor, utilize o "Esqueceu a senha?" acima para redefinir ou peça ao administrador para recriar sua conta.');
+      const friendlyMsg = mapAuthErrorToPortuguese(err.code || '');
+      if (friendlyMsg === 'Ocorreu um erro inesperado. Tente novamente.') {
+        setError(`Erro: ${err.message || err.toString() || 'Erro inesperado'}`);
       } else {
-        const friendlyMsg = mapAuthErrorToPortuguese(err.code || '');
-        if (friendlyMsg === 'Ocorreu um erro inesperado. Tente novamente.') {
-          setError(`Erro: ${err.message || err.toString() || 'Erro inesperado'}`);
-        } else {
-          setError(friendlyMsg);
-        }
+        setError(friendlyMsg);
       }
     } finally {
       setActionLoading(false);
@@ -178,10 +177,15 @@ export const AuthButton = () => {
     setActionLoading(true);
     try {
       await sendPasswordResetEmail(auth, email.trim().toLowerCase());
-      setSuccess('E-mail de redefinição de senha enviado com sucesso! Verifique sua caixa de entrada.');
+      setSuccess('Se este e-mail estiver cadastrado, enviamos um link para redefinir a senha. Verifique sua caixa de entrada.');
     } catch (err: any) {
       console.error(err);
-      setError(mapAuthErrorToPortuguese(err.code || ''));
+      if (err.code === 'auth/invalid-email' || err.code === 'auth/too-many-requests' || err.code === 'auth/network-request-failed') {
+        setError(mapAuthErrorToPortuguese(err.code || ''));
+      } else {
+        // mesma resposta para contas que existem ou não
+        setSuccess('Se este e-mail estiver cadastrado, enviamos um link para redefinir a senha. Verifique sua caixa de entrada.');
+      }
     } finally {
       setActionLoading(false);
     }

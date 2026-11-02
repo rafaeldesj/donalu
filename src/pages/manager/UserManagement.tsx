@@ -1,43 +1,16 @@
 import { useEffect, useState } from 'react';
-import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../../config/firebase';
-import { initializeApp, deleteApp } from 'firebase/app';
-import { getAuth as getSecondaryAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import type { UserDocument, UserRole, StaffFunctions } from '../../types/user';
 import { Plus, Edit2, Trash2, X, Search, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { logAuditAction } from '../../utils/audit';
+import { callAuthApi } from '../../utils/authApi';
 
 export const UserManagement = () => {
   const { user, userData } = useAuth();
 
-  const createSecondaryAuthUser = async (emailVal: string, passwordVal: string) => {
-    const firebaseConfig = {
-      apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAzR9UQyV0xIwYgU9xoTuiEfqwhIiDvIrU",
-      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "dona-lu-4242d.firebaseapp.com",
-      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "dona-lu-4242d",
-      storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "dona-lu-4242d.firebasestorage.app",
-      messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "87878437306",
-      appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:87878437306:web:6bb76b8dadd3e7dbd43583",
-    };
-
-    const appName = `SecondaryApp_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-    try {
-      const secondaryApp = initializeApp(firebaseConfig, appName);
-      const secondaryAuth = getSecondaryAuth(secondaryApp);
-      const cred = await createUserWithEmailAndPassword(secondaryAuth, emailVal, passwordVal);
-      await deleteApp(secondaryApp);
-      console.log("Secondary user account created in Firebase Auth successfully!");
-      return cred.user.uid;
-    } catch (err: any) {
-      console.warn("Secondary user account check or error:", err);
-      if (err.code === 'auth/email-already-in-use') {
-        throw new Error("Este e-mail já está cadastrado. Por favor, utilize outro e-mail.");
-      }
-      throw err;
-    }
-  };
   const [users, setUsers] = useState<UserDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -168,7 +141,7 @@ export const UserManagement = () => {
     const targetUser = users.find((u) => u.uid === userId);
     
     try {
-      await deleteDoc(doc(db, 'users', userId));
+      await callAuthApi('admin-delete-user', { uid: userId });
       setSuccess('Usuário excluído com sucesso!');
       
       if (user) {
@@ -208,15 +181,9 @@ export const UserManagement = () => {
     setSuccess(null);
 
     try {
-      if (resetUser.uid.length === 20) {
-        // Garante que a conta de login do Firebase Auth exista com essa nova senha provisória
-        await createSecondaryAuthUser(resetUser.email, tempPassword.trim());
-      }
-
-      await updateDoc(doc(db, 'users', resetUser.uid), {
-        tempPassword: tempPassword.trim()
-      });
-      setSuccess(`Senha provisória salva com sucesso para ${resetUser.name}!`);
+      // A senha vai direto ao Firebase Authentication (via servidor); nada é gravado no Firestore.
+      await callAuthApi('admin-set-password', { uid: resetUser.uid, password: tempPassword.trim() });
+      setSuccess(`Nova senha definida com sucesso para ${resetUser.name}!`);
       
       if (user) {
         await logAuditAction({
@@ -235,7 +202,7 @@ export const UserManagement = () => {
       setTimeout(() => setSuccess(null), 4000);
     } catch (err: any) {
       console.error(err);
-      setError('Erro ao salvar senha provisória no Firestore.');
+      setError(err?.message || 'Erro ao definir a nova senha.');
     } finally {
       setSubmitting(false);
     }
@@ -285,9 +252,10 @@ export const UserManagement = () => {
       if (editUser) {
         const isEmailChanged = safeEmail !== editUser.email;
 
-        // Se o e-mail mudou, a gente apenas atualiza no Firestore.
-        // A lógica de login e onSnapshot do app do cliente se encarrega de sincronizar o Auth
-        // na primeira oportunidade e usar o authEmail anterior por debaixo dos panos para logar.
+        // Se o e-mail mudou, o servidor atualiza o login (Auth) e o perfil juntos.
+        if (isEmailChanged) {
+          await callAuthApi('admin-update-email', { uid: editUser.uid, email: safeEmail });
+        }
         await updateDoc(doc(db, 'users', editUser.uid), payload as any);
         setSuccess('Usuário atualizado com sucesso!');
         
@@ -306,24 +274,24 @@ export const UserManagement = () => {
           });
         }
       } else {
-        // Cria a conta de login no Auth secundário
+        // O servidor cria a conta no Firebase Auth e o perfil no Firestore (sem gravar a senha).
         let newAuthUid: string;
         try {
-          newAuthUid = await createSecondaryAuthUser(safeEmail, initialPassword.trim());
+          const created = await callAuthApi<{ uid: string }>('admin-create-user', {
+            email: safeEmail,
+            password: initialPassword.trim(),
+            name,
+            role,
+            phoneNumber: phoneNumber.trim(),
+            staffFunctions: role === 'staff' ? staffFunctions : undefined
+          });
+          newAuthUid = created.uid;
         } catch (authErr: any) {
           setError(authErr.message || 'Erro ao criar conta de autenticação.');
           setSubmitting(false);
           return;
         }
 
-        // Cria o documento no Firestore APENAS com o UID real gerado
-        await setDoc(doc(db, 'users', newAuthUid), {
-          ...payload,
-          authEmail: safeEmail,
-          tempPassword: initialPassword.trim(),
-          uid: newAuthUid
-        });
-        
         setSuccess('Usuário cadastrado com sucesso!');
         
         if (user) {
@@ -344,7 +312,7 @@ export const UserManagement = () => {
       setTimeout(() => setSuccess(null), 4000);
     } catch (err: any) {
       console.error(err);
-      setError('Erro ao salvar usuário no Firestore.');
+      setError(err?.message || 'Erro ao salvar usuário.');
     } finally {
       setSubmitting(false);
     }

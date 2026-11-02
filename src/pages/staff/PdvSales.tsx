@@ -1,16 +1,10 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../config/firebase';
-import { collection, doc, setDoc, getDocs } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { User, Plus, Search, X } from 'lucide-react';
 import { ClientDashboard } from '../client/ClientDashboard';
 
-// Para o Cadastro Rápido sem deslogar
-import { initializeApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
-import { firebaseConfig } from '../../config/firebase';
-
-const secondaryApp = initializeApp(firebaseConfig, "Secondary");
-const secondaryAuth = getAuth(secondaryApp);
+import { callAuthApi } from '../../utils/authApi';
 
 interface ClientUser {
   uid: string;
@@ -58,26 +52,14 @@ export const PdvSales = () => {
     }
     setIsSubmitting(true);
     try {
-      const generatedEmail = `cliente_${Date.now()}@donalu.com`;
-      const generatedPassword = 'donalu';
-      
-      const userCredential = await createUserWithEmailAndPassword(secondaryAuth, generatedEmail, generatedPassword);
-      const newUid = userCredential.user.uid;
-      
-      // Criar doc no Firestore
-      const newUserDoc = {
-        uid: newUid,
-        email: generatedEmail,
-        name: fastName,
-        phoneNumber: fastPhone,
-        role: 'client',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        authEmail: generatedEmail
-      };
-      
-      await setDoc(doc(db, 'users', newUid), newUserDoc);
-      
+      // O servidor cria a conta (senha aleatória) e o perfil; o cliente define a própria senha em "Esqueci a senha".
+      const created = await callAuthApi<{ uid: string; email: string }>('create-client', {
+        name: fastName.trim(),
+        phoneNumber: fastPhone
+      });
+      const newUid = created.uid;
+      const generatedEmail = created.email;
+
       const newClient = {
         uid: newUid,
         name: fastName,
@@ -95,8 +77,6 @@ export const PdvSales = () => {
       console.error("Erro no cadastro rápido:", err);
       alert("Erro ao cadastrar cliente.");
     } finally {
-      // Logout secondary auth just to be safe
-      secondaryAuth.signOut();
       setIsSubmitting(false);
     }
   };
