@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { doc, onSnapshot, setDoc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { db, auth } from '../config/firebase';
+import { API_BASE_URL } from '../config/api';
 import { useAuth } from '../hooks/useAuth';
 import { Send, Bot, User, Mic, Image, MapPin, Trash2 } from 'lucide-react';
 
@@ -411,16 +412,6 @@ export const ClientSupportChat = ({ isFloating = false, onClose }: ClientSupport
         }
       }
 
-      // Load AI config
-      const configRef = doc(db, 'settings', 'ai_assistant_config');
-      const configSnap = await getDoc(configRef);
-      const aiConfig = configSnap.exists() ? configSnap.data() : {
-        assistantName: 'Dona Lu Assistente',
-        aiInstructions: 'Seja um assistente virtual atencioso e simpático para a Dona Lu Pastelaria.',
-        aiRestrictions: 'Não dê descontos sem aprovação, não fale sobre concorrentes.',
-        geminiApiKey: ''
-      };
-
       // Load products
       const productsSnap = await getDocs(collection(db, 'products'));
       const productsList: any[] = [];
@@ -459,57 +450,28 @@ export const ClientSupportChat = ({ isFloating = false, onClose }: ClientSupport
 
       let replyText = '';
 
-      // Try Gemini API if key exists and no direct rule matched
-      if (aiConfig.geminiApiKey && aiConfig.geminiApiKey.trim() !== '') {
-        try {
-          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${aiConfig.geminiApiKey}`;
-
-          // Inject custom rules into system prompt for Gemini to guide it
-          const customRulesPrompt = rulesList.length > 0 
-            ? `\nDIRETRIZES E INSTRUÇÕES ENSINADAS (Siga estas diretrizes de forma estrita e inteligente, executando as instruções na resposta em vez de repeti-las para o cliente):\n${rulesList.map(r => `- Diretriz para "${r.pattern}": ${r.response}`).join('\n')}` 
-            : '';
-
-          const systemPrompt = `Você é "${aiConfig.assistantName || 'Dona Lu Assistente'}", atendente virtual da Dona Lu Pastelaria.
-Instruções: ${aiConfig.aiInstructions}
-Restrições: ${aiConfig.aiRestrictions}${customRulesPrompt}
-
-ESTABELECIMENTO:
-- Rua Jícara, 239 - Campo Grande, RJ | Tel: (21) 3439-5241
-- Horário: Terça a domingo, 18h às 23h30
-
-PRODUTOS DISPONÍVEIS:
-${availableItems.map(p => `- ${p.name} (R$ ${p.price?.toFixed(2)})`).join('\n')}
-
-${outOfStockItems.length > 0 ? `ESGOTADOS: ${outOfStockItems.map(p => p.name).join(', ')}` : ''}
-
-PEDIDO DO CLIENTE: ${recentOrdersStr}
-
-Responda de forma extremamente curta e natural, como um atendente humano no WhatsApp. Não se apresente como robô ou I.A. Use emojis com moderação. Máximo 2 frases.`;
-
-          const formattedHistory = chatHistory.slice(-4).map(m => `${m.sender === 'client' ? 'Cliente' : 'Atendente'}: ${m.text}`).join('\n');
-          const prompt = `${systemPrompt}\n\nConversa:\n${formattedHistory}\n\nCliente: "${newClientMessage}"\n\nResponda:`;
-
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 10000);
-
-          const response = await fetch(geminiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-            signal: controller.signal
-          });
-
-          clearTimeout(timeout);
-
-          if (response.ok) {
-            const resJson = await response.json();
-            replyText = resJson.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-          } else {
-            console.warn('Gemini API retornou erro, usando fallback local.');
-          }
-        } catch (geminiError) {
-          console.warn('Gemini API falhou (rede/timeout/CORS), usando fallback local:', geminiError);
+      // Assistente (Gemini) roda no servidor: a chave nunca chega ao navegador.
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 12000);
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (auth.currentUser) headers.Authorization = `Bearer ${await auth.currentUser.getIdToken()}`;
+        const response = await fetch(`${API_BASE_URL}/api/ai/chat`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            message: newClientMessage,
+            history: chatHistory.slice(-4).map(m => ({ sender: m.sender, text: m.text }))
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timeout);
+        if (response.ok) {
+          const resJson = await response.json();
+          replyText = (resJson.text || '').trim();
         }
+      } catch (aiError) {
+        console.warn('Assistente indisponível, usando respostas locais:', aiError);
       }
 
       // Local rules engine fallback

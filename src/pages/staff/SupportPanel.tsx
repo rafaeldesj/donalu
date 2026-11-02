@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { collection, query, onSnapshot, doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import { MessageSquare, Bot, User, Send, Settings, Save, AlertCircle, Play, Pause, Check, Trash2, GraduationCap, ChevronLeft, Mic, Image, MapPin } from 'lucide-react';
+import { MessageSquare, Bot, User, Send, Settings, Save, Play, Pause, Check, Trash2, GraduationCap, ChevronLeft, Mic, Image, MapPin } from 'lucide-react';
 
 interface Message {
   sender: 'client' | 'assistant' | 'operator';
@@ -30,7 +30,6 @@ interface AIConfig {
   assistantName: string;
   aiInstructions: string;
   aiRestrictions: string;
-  geminiApiKey: string;
 }
 
 export const SupportPanel = () => {
@@ -247,8 +246,7 @@ export const SupportPanel = () => {
   const [config, setConfig] = useState<AIConfig>({
     assistantName: 'Dona Lu Assistente',
     aiInstructions: 'Seja um assistente virtual atencioso e simpático para a Dona Lu Pastelaria. Ajude com o cardápio, sabores e andamento do pedido.',
-    aiRestrictions: 'Não dê descontos sem aprovação, não fale sobre concorrentes.',
-    geminiApiKey: ''
+    aiRestrictions: 'Não dê descontos sem aprovação, não fale sobre concorrentes.'
   });
   
   const [savingConfig, setSavingConfig] = useState(false);
@@ -279,7 +277,8 @@ export const SupportPanel = () => {
         const docRef = doc(db, 'settings', 'ai_assistant_config');
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          setConfig(docSnap.data() as AIConfig);
+          const d = docSnap.data();
+          setConfig({ assistantName: d.assistantName, aiInstructions: d.aiInstructions, aiRestrictions: d.aiRestrictions });
         }
       } catch (err) {
         console.error("Erro ao carregar configurações da I.A.:", err);
@@ -312,7 +311,12 @@ export const SupportPanel = () => {
     setSaveSuccess(false);
     try {
       const docRef = doc(db, 'settings', 'ai_assistant_config');
-      await setDoc(docRef, config);
+      // Grava só os campos públicos; a chave do Gemini fica no servidor (nunca no Firestore).
+      await setDoc(docRef, {
+        assistantName: config.assistantName,
+        aiInstructions: config.aiInstructions,
+        aiRestrictions: config.aiRestrictions
+      });
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
@@ -1040,32 +1044,6 @@ export const SupportPanel = () => {
             />
           </div>
 
-          {/* Chave do Gemini */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', borderTop: '1px dashed rgba(255,255,255,0.05)', paddingTop: '1.25rem' }}>
-            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fff', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              Chave de API do Gemini (Opcional)
-              <span style={{ fontSize: '0.72rem', background: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)', padding: '0.1rem 0.35rem', borderRadius: '4px' }}>API Key</span>
-            </label>
-            <input
-              type="password"
-              value={config.geminiApiKey}
-              onChange={(e) => setConfig({ ...config, geminiApiKey: e.target.value })}
-              placeholder="Cole sua API Key do Google AI Studio..."
-              style={{
-                padding: '0.65rem 1rem',
-                background: 'rgba(0,0,0,0.2)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '8px',
-                color: '#fff',
-                outline: 'none',
-                fontSize: '0.9rem'
-              }}
-            />
-            <p style={{ margin: '0.2rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              <AlertCircle size={12} />
-              Se não informada, a I.A. responderá usando o motor de regras local inteligente (que cobre status do pedido, estoque e horários da loja).
-            </p>
-          </div>
 
           {/* Submit */}
           <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '1rem' }}>
