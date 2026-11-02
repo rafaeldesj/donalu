@@ -99,6 +99,28 @@ describe('login por telefone', () => {
   it('outro IP não é afetado pelo bloqueio de uma conta+IP', async () => {
     expect((await api('login-phone', { phone: '21988887777', password: 'minha-senha-9' }, undefined, '10.9.9.9')).code).toBe(200);
   });
+  it('entra com o NOME (qualquer capitalização) e a senha', async () => {
+    await adminAuth().createUser({ uid: 'n1', email: 'ana@teste.local', password: 'ana-senha-12' });
+    await adminDb().collection('users').doc('n1').set({ uid: 'n1', email: 'ana@teste.local', authEmail: 'ana@teste.local', name: 'Ana Carolina', role: 'client', phoneNumber: '', createdAt: 'x', updatedAt: 'x' });
+    for (const identifier of ['Ana Carolina', 'ana carolina', 'ANA CAROLINA', '  Ana   Carolina ']) {
+      const r = await api('login', { identifier, password: 'ana-senha-12' }, undefined, '10.1.1.1');
+      expect(r.code).toBe(200);
+    }
+    const bad = await api('login', { identifier: 'Ana Carolina', password: 'errada-123' }, undefined, '10.1.1.2');
+    expect(bad.code).toBe(401);
+    expect(bad.body.message).toBe((await api('login', { identifier: 'Nome Que Nao Existe', password: 'errada-123' }, undefined, '10.1.1.3')).body.message);
+  });
+  it('com nomes ou celulares repetidos entra a conta cuja senha confere (nunca a de outra pessoa)', async () => {
+    for (const [uid, pass] of [['d1', 'primeira-senha-1'], ['d2', 'segunda-senha-2']]) {
+      await adminAuth().createUser({ uid, email: `${uid}@teste.local`, password: pass });
+      await adminDb().collection('users').doc(uid).set({ uid, email: `${uid}@teste.local`, authEmail: `${uid}@teste.local`, name: 'Maria Silva', role: 'client', phoneNumber: '(21) 97000-0000', createdAt: 'x', updatedAt: 'x' });
+    }
+    for (const identifier of ['Maria Silva', '21970000000']) {
+      const r2 = await api('login', { identifier, password: 'segunda-senha-2' }, undefined, '10.2.2.2');
+      const decoded = JSON.parse(Buffer.from(r2.body.token.split('.')[1], 'base64url').toString());
+      expect(decoded.uid).toBe('d2');
+    }
+  });
   it('rejeita entrada malformada sem erro de servidor', async () => {
     expect((await api('login-phone', {})).code).toBe(401);
     expect((await api('login-phone', { phone: '123', password: 'x' })).code).toBe(401);

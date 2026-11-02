@@ -120,7 +120,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   /**
-   * Login por e-mail (direto no Firebase Auth) ou por telefone (função de servidor que valida a senha
+   * Login por e-mail (direto no Firebase Auth) ou por celular/nome (função de servidor que valida a senha
    * no Firebase Auth e devolve um token de sessão). Nenhuma senha é lida ou comparada no navegador.
    */
   const loginWithEmail = async (emailOrPhone: string, password: string) => {
@@ -131,17 +131,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    const phoneDigits = trimmed.replace(/\D/g, '');
-    if (phoneDigits.length < 8) {
-      throw { code: 'auth/invalid-credential', message: 'Telefone ou senha incorretos.' };
+    if (trimmed.length < 2) {
+      throw { code: 'auth/invalid-credential', message: 'Usuário ou senha incorretos.' };
     }
 
     let response: Response;
     try {
-      response = await fetch(`${API_BASE_URL}/api/auth/login-phone`, {
+      response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: phoneDigits, password })
+        body: JSON.stringify({ identifier: trimmed, password })
       });
     } catch {
       throw { code: 'auth/network-request-failed', message: 'Sem conexão. Tente novamente.' };
@@ -150,7 +149,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (response.status === 429) throw { code: 'auth/too-many-requests', message: 'Muitas tentativas.' };
     const json = await response.json().catch(() => ({}));
     if (!response.ok || !json.token) {
-      throw { code: 'auth/invalid-credential', message: 'Telefone ou senha incorretos.' };
+      throw { code: 'auth/invalid-credential', message: 'Usuário ou senha incorretos.' };
     }
     await signInWithCustomToken(auth, json.token);
   };

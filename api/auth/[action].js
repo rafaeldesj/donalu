@@ -7,7 +7,7 @@ import {
   requireCaller, randomPassword, fail
 } from '../_lib/admin.js';
 
-const GENERIC_LOGIN_ERROR = 'Telefone ou senha incorretos.';
+const GENERIC_LOGIN_ERROR = 'Usuário ou senha incorretos.';
 const TOO_MANY = 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
 const SENSITIVE_FIELDS = ['password', 'tempPassword'];
 
@@ -57,33 +57,58 @@ function validEmail(e) {
 
 // ---------- ações ----------
 
-/** Login por telefone: valida a senha no Firebase Auth e devolve um custom token. */
-async function loginPhone(req, res) {
-  const { phone, password } = req.body || {};
-  const clean = digits(phone);
-  if (clean.length < 8 || typeof password !== 'string' || !password || password.length > 128) {
+const MAX_CANDIDATES = 10;
+
+function nameVariants(raw) {
+  const t = String(raw || '').trim().replace(/\s+/g, ' ');
+  const lower = t.toLowerCase();
+  const title = lower.replace(/(?:^|\s)\S/g, (c) => c.toUpperCase());
+  return [...new Set([t, lower, title, t.toUpperCase()])];
+}
+
+/** Contas candidatas para um identificador (celular ou nome). E-mail é tratado direto no Firebase Auth. */
+async function findCandidates(identifier) {
+  const col = adminDb().collection('users');
+  const found = new Map();
+  const digitsOnly = digits(identifier);
+  const looksLikePhone = /^[\d\s()+-]+$/.test(identifier) && digitsOnly.length >= 8;
+  const queries = looksLikePhone
+    ? phoneVariants(identifier).map((v) => col.where('phoneNumber', '==', v))
+    : nameVariants(identifier).map((v) => col.where('name', '==', v));
+  for (const q of queries) {
+    const snap = await q.limit(MAX_CANDIDATES).get();
+    snap.forEach((d) => found.set(d.id, d.data()));
+  }
+  return [...found].slice(0, MAX_CANDIDATES);
+}
+
+/**
+ * Login por celular ou nome: valida a senha no Firebase Auth e devolve um custom token.
+ * Se vários cadastros tiverem o mesmo celular/nome, entra aquele cuja senha confere.
+ */
+async function loginIdentifier(req, res) {
+  const body = req.body || {};
+  const identifier = String(body.identifier ?? body.phone ?? '').trim();
+  const password = body.password;
+  const key = identifier.toLowerCase().replace(/\s+/g, ' ');
+  if (identifier.length < 2 || identifier.length > 120 || typeof password !== 'string' || !password || password.length > 128) {
     return res.status(401).json({ success: false, message: GENERIC_LOGIN_ERROR });
   }
 
   const ip = clientIp(req);
-  // Dois contadores: por telefone+IP (força bruta numa conta) e por IP (varredura de várias contas).
-  const byAccount = await checkRateLimit(`login:${clean}:${ip}`, { max: 5, windowMs: 15 * 60e3, lockMs: 15 * 60e3 });
+  // Dois contadores: por identificador+IP (força bruta numa conta) e por IP (varredura de várias contas).
+  const byAccount = await checkRateLimit(`login:${key}:${ip}`, { max: 5, windowMs: 15 * 60e3, lockMs: 15 * 60e3 });
   const byIp = await checkRateLimit(`login-ip:${ip}`, { max: 30, windowMs: 15 * 60e3, lockMs: 15 * 60e3 });
   if (!byAccount.allowed || !byIp.allowed) return res.status(429).json({ success: false, message: TOO_MANY });
 
   let uid = null;
   try {
-    const found = new Map();
-    for (const v of phoneVariants(phone)) {
-      const snap = await adminDb().collection('users').where('phoneNumber', '==', v).limit(3).get();
-      snap.forEach((d) => found.set(d.id, d.data()));
-    }
-    for (const [id, data] of [...found].slice(0, 3)) {
+    for (const [id, data] of await findCandidates(identifier)) {
       const email = data.authEmail || data.email;
       if (email && (await verifyPasswordWithFirebase(email, password))) { uid = id; break; }
     }
   } catch (err) {
-    console.error('[login-phone] erro:', err.message);
+    console.error('[login] erro:', err.message);
     return res.status(500).json({ success: false, message: 'Não foi possível entrar agora. Tente novamente.' });
   }
 
@@ -228,7 +253,8 @@ async function createClient(req, res) {
 }
 
 const routes = {
-  'login-phone': loginPhone,
+  'login': loginIdentifier,
+  'login-phone': loginIdentifier,
   'claim-profile': claimProfile,
   'admin-create-user': adminCreateUser,
   'admin-set-password': adminSetPassword,
