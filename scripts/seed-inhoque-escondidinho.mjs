@@ -48,8 +48,8 @@ const PRODUCTS = [
     optionGroups: INHOQUE_GROUPS, description: `Inhoque de ${s}. Escolha em que passar e o molho.`
   })),
   ...[
-    ['Carne Seca', 'escondidinho_carne_seca'], ['Calabresa', 'escondidinho_carne_seca'], ['Carne Assada', 'escondidinho_carne_seca'],
-    ['Camarão', 'escondidinho_camarao'], ['Carne Moída', 'escondidinho_carne_seca']
+    ['Carne Seca', 'escondidinho_carne_seca'], ['Calabresa', 'escondidinho_calabresa'], ['Carne Assada', 'escondidinho_carne_assada'],
+    ['Camarão', 'escondidinho_camarao'], ['Carne Moída', 'escondidinho_carne_moida']
   ].map(([s, img]) => mk(`Escondidinho de ${s}`, CAT_ESCONDIDINHO, `/assets/${img}.jpg`, {
     description: `Escondidinho de aipim com ${s.toLowerCase()}.`
   }))

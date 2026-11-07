@@ -1,14 +1,17 @@
 # Créditos das fotos do cardápio (Inhoque e Escondidinho)
 
-Fotos do Wikimedia Commons, recortadas e redimensionadas. Licenças livres que exigem crédito ao autor.
+Fotos com licença livre (Wikimedia Commons e Openverse/Flickr), recortadas e redimensionadas. As licenças exigem crédito ao autor.
 
 Arquivo | Foto original | Autor | Licença | Origem
 ---|---|---|---|---
-inhoque_batata_inglesa.jpg | Gnocchi di patate con sugo di pomodoro e con gorgonzola.jpg | Sabrina Spotti | CC0 | https://commons.wikimedia.org/wiki/File:Gnocchi_di_patate_con_sugo_di_pomodoro_e_con_gorgonzola.jpg
-inhoque_batata_doce.jpg | Sweet Potato Gnocchi with Maple Sage Brown Butter.jpg | Joy | CC BY 2.0 | https://commons.wikimedia.org/wiki/File:Sweet_Potato_Gnocchi_with_Maple_Sage_Brown_Butter.jpg
 inhoque_aipim.jpg | Cassava root gnocchi.jpg | Carla404 | CC BY-SA 3.0 | https://commons.wikimedia.org/wiki/File:Cassava_root_gnocchi.jpg
-inhoque_espinafre.jpg | Gnocchi Verde.jpg | FakirNL | CC BY-SA 3.0 | https://commons.wikimedia.org/wiki/File:Gnocchi_Verde.jpg
-escondidinho_carne_seca.jpg | Escondidinho de carne seca.jpg | mpellegr from Barcelona, Spain | CC BY 2.0 | https://commons.wikimedia.org/wiki/File:Escondidinho_de_carne_seca.jpg
 escondidinho_camarao.jpg | Escondidinho de camarão.jpg | Ezalvarenga | CC BY-SA 3.0 | https://commons.wikimedia.org/wiki/File:Escondidinho_de_camar%C3%A3o.jpg
+inhoque_batata_inglesa.jpg | Gnocchi after | tristanf | BY 2.0 | https://www.flickr.com/photos/89056504@N00/3930588397
+inhoque_batata_doce.jpg | Pan-fried Sweet Potato Gnocchi | joyosity | BY 2.0 | https://www.flickr.com/photos/33993074@N00/4285980075
+inhoque_espinafre.jpg | Gnocchi with ricotta cheese and spinach / Gnocchi con ricotta y espinacas | pablo em | BY-SA 2.0 | https://www.flickr.com/photos/156111741@N07/53126973929
+escondidinho_carne_seca.jpg | Escondidinho de carne seca @breeeno mandou bem! | mpellegr | BY 2.0 | https://www.flickr.com/photos/22603251@N00/10000552933
+escondidinho_calabresa.jpg | Cottage Pie - whole | avlxyz | BY-SA 2.0 | https://www.flickr.com/photos/10559879@N00/2628060286
+escondidinho_carne_assada.jpg | Insides - Delia Smith's Cottage Pie with Cheese-crusted Leeks | avlxyz | BY-SA 2.0 | https://www.flickr.com/photos/10559879@N00/4906822321
+escondidinho_carne_moida.jpg | Cottage Pie (veggie shepherd's pie) | randomduck | BY-SA 2.0 | https://www.flickr.com/photos/96463101@N00/2343873328
 
-As fotos de Escondidinho de Calabresa, Carne Assada e Carne Moída reutilizam a foto de carne seca (ilustrativa): troque por fotos próprias quando tiver.
+Observação: não há fotos livres específicas de Escondidinho de Calabresa, Carne Assada e Carne Moída; foram usadas fotos de pratos equivalentes (purê gratinado sobre carne). Troque por fotos próprias quando tiver.
