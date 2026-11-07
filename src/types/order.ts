@@ -1,5 +1,19 @@
 export type OrderStatus = 'pending' | 'preparing' | 'prepared' | 'ready' | 'delivering' | 'completed' | 'cancelled' | 'aguardando_caixa' | 'pendente_pagamento' | 'awaiting_payment' | 'building_cart' | 'merged' | 'abandoned';
 
+/** Grupo de opções de um produto (ex.: "Molho": Carne Assada / Bolonhesa). Configurado pelo gerente no cardápio. */
+export interface ProductOptionGroup {
+  id: string;
+  title: string;
+  required: boolean;
+  options: string[];
+}
+
+/** Escolha feita pelo cliente em um grupo de opções do produto. */
+export interface SelectedOption {
+  group: string;
+  choice: string;
+}
+
 export interface OrderItem {
   id: number;
   name: string;
@@ -14,6 +28,7 @@ export interface OrderItem {
   sweetChocolateOption?: 'preto' | 'branco' | null;
   sweetCheeseOption?: 'minas' | 'mussarela' | null;
   ingredients?: string[];
+  selectedOptions?: SelectedOption[];
 }
 
 export interface OrderDocument {

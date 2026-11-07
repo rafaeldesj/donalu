@@ -334,6 +334,12 @@ export const ClientDashboard = ({
 
   // States para customização de pastel antes de adicionar ao carrinho
   const [customizingPastel, setCustomizingPastel] = useState<any | null>(null);
+  // Produtos com grupos de opções configurados pelo gerente (ex.: Inhoque: "Passar na" / "Molho")
+  const [optionsItem, setOptionsItem] = useState<any | null>(null);
+  const [optionsChoices, setOptionsChoices] = useState<Record<string, string>>({});
+  const [optionsEditIdx, setOptionsEditIdx] = useState<number | null>(null);
+  type EditOptionGroup = { id: string; title: string; required: boolean; optionsText: string };
+  const [editOptionGroups, setEditOptionGroups] = useState<EditOptionGroup[]>([]);
   const [editingCartItemIndex, setEditingCartItemIndex] = useState<number | null>(null);
   const [tempWithBorda, setTempWithBorda] = useState(false);
   const [tempBordaType, setTempBordaType] = useState<'queijo' | 'kitkat_preto' | 'kitkat_branco' | 'kitkat' | 'sem_borda' | null>(null);
@@ -1133,6 +1139,9 @@ export const ClientDashboard = ({
     setEditDescription(pastel.description);
     setEditPrice(pastel.price);
     setEditImage(pastel.image || '');
+    setEditOptionGroups(((pastel as any).optionGroups || []).map((g: any) => ({
+      id: g.id, title: g.title, required: g.required !== false, optionsText: (g.options || []).join('\n')
+    })));
   };
 
   const saveEdit = async () => {
@@ -1145,13 +1154,27 @@ export const ClientDashboard = ({
       const existingItem = pastels.find((p: any) => p.id === editingId);
       const category = existingItem?.category || activeCategory;
 
+      // Grupos de opções: ignora grupos sem título ou sem opções
+      const optionGroups = editOptionGroups
+        .map((g, i) => ({
+          id: g.id || `g${Date.now()}_${i}`,
+          title: g.title.trim(),
+          required: g.required,
+          options: g.optionsText.split('\n').map(o => o.trim()).filter(Boolean)
+        }))
+        .filter(g => g.title && g.options.length > 0);
+
+      // Preserva campos que não são editados aqui (estoque, ocultar se zerar etc.)
+      const { optionGroups: _old, ...preserved } = (existingItem || {}) as any;
       await setDoc(doc(db, 'products', docId), {
+        ...preserved,
         id: editingId,
         name: editName,
         description: editDescription,
         price: editPrice,
         image: editImage,
-        category: category
+        category: category,
+        ...(optionGroups.length > 0 ? { optionGroups } : {})
       });
       setEditingId(null);
       if (editingId === isNewItem) {
@@ -1202,6 +1225,7 @@ export const ClientDashboard = ({
     setEditDescription('');
     setEditPrice(0);
     setEditImage('');
+    setEditOptionGroups([]);
     setIsNewItem(newId);
   };
 
@@ -1373,6 +1397,14 @@ export const ClientDashboard = ({
       return;
     }
 
+    // Produto com grupos de opções (checkbox) configurados no cardápio
+    if (Array.isArray((item as any).optionGroups) && (item as any).optionGroups.length > 0) {
+      setOptionsEditIdx(null);
+      setOptionsChoices({});
+      setOptionsItem(item);
+      return;
+    }
+
     // Se for pastel (doce ou salgado), abre a janela sobreposta de opcionais/adicionais
     if (item.category === 'Pastéis Doces' || item.category === 'Pastéis Salgados') {
       setEditingCartItemIndex(null);
@@ -1458,6 +1490,15 @@ export const ClientDashboard = ({
     const cartItem = cart[idx];
     const baseItem = pastels.find(mi => mi.id === cartItem.id);
     if (!baseItem) return;
+
+    if (Array.isArray((baseItem as any).optionGroups) && (baseItem as any).optionGroups.length > 0) {
+      const prefill: Record<string, string> = {};
+      (cartItem.selectedOptions || []).forEach(o => { prefill[o.group] = o.choice; });
+      setOptionsEditIdx(idx);
+      setOptionsChoices(prefill);
+      setOptionsItem(baseItem);
+      return;
+    }
     
     setEditingCartItemIndex(idx);
     setCustomizingPastel(baseItem);
@@ -1483,6 +1524,45 @@ export const ClientDashboard = ({
       }
       return { ...item, ingredients: newIngs };
     }));
+  };
+
+  const confirmItemOptions = () => {
+    if (!optionsItem) return;
+    const groups: { id: string; title: string; required: boolean; options: string[] }[] = optionsItem.optionGroups || [];
+    const missing = groups.find(g => g.required && !optionsChoices[g.title]);
+    if (missing) {
+      alert(`Escolha uma opção em "${missing.title}".`);
+      return;
+    }
+    const selectedOptions = groups
+      .filter(g => optionsChoices[g.title])
+      .map(g => ({ group: g.title, choice: optionsChoices[g.title] }));
+    const sameOptions = (a?: { group: string; choice: string }[], b?: { group: string; choice: string }[]) =>
+      JSON.stringify(a || []) === JSON.stringify(b || []);
+
+    setCart((prevCart) => {
+      if (optionsEditIdx !== null && prevCart[optionsEditIdx]) {
+        return prevCart.map((it, i) => i === optionsEditIdx ? { ...it, selectedOptions } : it);
+      }
+      const existingIdx = prevCart.findIndex(i => i.id === optionsItem.id && sameOptions(i.selectedOptions, selectedOptions));
+      if (existingIdx > -1) {
+        return prevCart.map((it, i) => i === existingIdx ? { ...it, quantity: it.quantity + 1 } : it);
+      }
+      return [...prevCart, {
+        id: optionsItem.id,
+        name: optionsItem.name,
+        price: optionsItem.price,
+        quantity: 1,
+        category: optionsItem.category,
+        withCatupiry: false,
+        withBorda: false,
+        ingredients: [],
+        selectedOptions
+      }];
+    });
+    setOptionsItem(null);
+    setOptionsEditIdx(null);
+    setOptionsChoices({});
   };
 
   const handleClearCart = () => {
@@ -1658,6 +1738,7 @@ export const ClientDashboard = ({
             details.push(`Adicionais: ${item.ingredients.join(', ')}`);
           }
         }
+        item.selectedOptions?.forEach(o => details.push(`${o.group}: ${o.choice}`));
         if (details.length > 0) {
           customSuffix = ` (${details.join(' + ')})`;
         }
@@ -1868,6 +1949,7 @@ export const ClientDashboard = ({
                   details.push(`Adicionais: ${item.ingredients.join(', ')}`);
                 }
               }
+              item.selectedOptions?.forEach(o => details.push(`${o.group}: ${o.choice}`));
               if (details.length > 0) {
                 customSuffix = ` (${details.join(' + ')})`;
               }
@@ -2016,6 +2098,7 @@ export const ClientDashboard = ({
               details.push(`Adicionais: ${item.ingredients.join(', ')}`);
             }
           }
+          item.selectedOptions?.forEach(o => details.push(`${o.group}: ${o.choice}`));
           if (details.length > 0) {
             customSuffix = ` (${details.join(' + ')})`;
           }
@@ -2449,6 +2532,7 @@ export const ClientDashboard = ({
                   details.push(`Adicionais: ${item.ingredients.join(', ')}`);
                 }
               }
+              item.selectedOptions?.forEach(o => details.push(`${o.group}: ${o.choice}`));
               if (details.length > 0) customSuffix = ` (${details.join(' + ')})`;
               return {
                 id: item.id,
@@ -2695,6 +2779,7 @@ export const ClientDashboard = ({
               details.push(`Adicionais: ${item.ingredients.join(', ')}`);
             }
           }
+          item.selectedOptions?.forEach(o => details.push(`${o.group}: ${o.choice}`));
           if (details.length > 0) {
             customSuffix = ` (${details.join(' + ')})`;
           }
@@ -3325,6 +3410,48 @@ export const ClientDashboard = ({
                           />
                         </label>
                       </div>
+
+                      {/* Grupos de opções (checkbox) escolhidos pelo cliente ao pedir este item */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.4rem' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary-gold)' }}>Opções para o cliente escolher (checkbox)</span>
+                        {editOptionGroups.map((g, gi) => (
+                          <div key={g.id || gi} style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', padding: '0.6rem', border: '1px dashed rgba(255,255,255,0.12)', borderRadius: '8px' }}>
+                            <input
+                              type="text"
+                              className="pastel-edit-input"
+                              value={g.title}
+                              onChange={(e) => setEditOptionGroups(prev => prev.map((x, i) => i === gi ? { ...x, title: e.target.value } : x))}
+                              placeholder="Título do grupo (ex: Molho)"
+                            />
+                            <textarea
+                              className="pastel-edit-textarea"
+                              value={g.optionsText}
+                              onChange={(e) => setEditOptionGroups(prev => prev.map((x, i) => i === gi ? { ...x, optionsText: e.target.value } : x))}
+                              placeholder={'Uma opção por linha\nEx:\nCarne Assada\nBolonhesa'}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', cursor: 'pointer' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={g.required}
+                                  onChange={(e) => setEditOptionGroups(prev => prev.map((x, i) => i === gi ? { ...x, required: e.target.checked } : x))}
+                                />
+                                Obrigatório escolher
+                              </label>
+                              <button type="button" onClick={() => setEditOptionGroups(prev => prev.filter((_, i) => i !== gi))} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem' }}>
+                                Remover grupo
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => setEditOptionGroups(prev => [...prev, { id: `g${Date.now()}`, title: '', required: true, optionsText: '' }])}
+                          style={{ alignSelf: 'flex-start', background: 'rgba(245,158,11,0.1)', border: '1px dashed var(--primary-gold)', color: 'var(--primary-gold)', padding: '0.3rem 0.8rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem' }}
+                        >
+                          + Adicionar grupo de opções
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     // Modo Visualização
@@ -3524,13 +3651,21 @@ export const ClientDashboard = ({
                           <button type="button" onClick={() => updateQuantity(idx, -1)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><Minus size={14} /></button>
                           <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{item.quantity}</span>
                           <button type="button" onClick={() => updateQuantity(idx, 1)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><Plus size={14} /></button>
-                          {(item.category === 'Pastéis Salgados' || item.category === 'Pastéis Doces') && (
+                          {((item.category === 'Pastéis Salgados' || item.category === 'Pastéis Doces') || (item.selectedOptions && item.selectedOptions.length > 0)) && (
                             <button type="button" onClick={() => handleEditCartItem(idx)} style={{ background: 'none', border: 'none', color: 'var(--primary-gold)', cursor: 'pointer', marginLeft: '0.2rem' }} title="Editar opções"><Edit2 size={14} /></button>
                           )}
                           <button type="button" onClick={() => removeFromCart(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', marginLeft: '0.2rem' }}><Trash2 size={14} /></button>
                         </div>
                       </div>
                       
+                      {item.selectedOptions && item.selectedOptions.length > 0 && (
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '0.3rem', display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+                          {item.selectedOptions.map(o => (
+                            <span key={o.group}><strong style={{ color: 'var(--primary-gold)' }}>{o.group}:</strong> {o.choice}</span>
+                          ))}
+                        </div>
+                      )}
+
                       {/* Mostrar resumo rápido das opções no carrinho */}
                       {(item.category === 'Pastéis Salgados' || item.category === 'Pastéis Doces') && (
                         <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '0.2rem', display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
@@ -4495,7 +4630,7 @@ export const ClientDashboard = ({
                   <div key={`${item.id}-${idx}`} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '0.6rem', marginBottom: '0.4rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem' }}>
                       <span style={{ color: '#fff', fontWeight: 600 }}>
-                        <strong style={{ color: 'var(--primary-gold)' }}>{item.quantity}x</strong> {item.name}
+                        <strong style={{ color: 'var(--primary-gold)' }}>{item.quantity}x</strong> {item.name}{item.selectedOptions && item.selectedOptions.length > 0 ? ` (${item.selectedOptions.map(o => `${o.group}: ${o.choice}`).join(' + ')})` : ''}
                       </span>
                       <span style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', marginLeft: '1rem' }}>
                         R$ {(item.price * item.quantity).toFixed(2).replace('.', ',')}
@@ -6135,6 +6270,76 @@ export const ClientDashboard = ({
             >
               Voltar
             </button>
+          </div>
+        </div>
+      )}
+
+      {optionsItem && (
+        <div
+          className="lightbox-overlay animate-fade-in"
+          style={{ zIndex: 3000, alignItems: 'center', justifyContent: 'center', display: 'flex', position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(5, 5, 8, 0.85)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+          onClick={() => { setOptionsItem(null); setOptionsEditIdx(null); }}
+        >
+          <div
+            style={{ background: 'linear-gradient(135deg, #16121e 0%, #0d0a11 100%)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '24px', padding: '1.5rem', width: '90%', maxWidth: '460px', maxHeight: 'min(90vh, 90dvh)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem', boxShadow: '0 20px 50px rgba(0,0,0,0.8)', position: 'relative', color: '#fff' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.75rem', paddingRight: '1.5rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--primary-gold)' }}>✨ {optionsItem.name}</h3>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>R$ {Number(optionsItem.price).toFixed(2).replace('.', ',')}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setOptionsItem(null); setOptionsEditIdx(null); }}
+              style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', background: 'rgba(255,255,255,0.05)', border: 'none', width: '28px', height: '28px', borderRadius: '50%', color: '#fff', cursor: 'pointer', fontSize: '0.8rem' }}
+              aria-label="Fechar"
+            >
+              ✕
+            </button>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {(optionsItem.optionGroups || []).map((g: { id: string; title: string; required: boolean; options: string[] }) => (
+                <div key={g.id} style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <h4 style={{ margin: '0 0 0.6rem 0', fontSize: '0.85rem', color: 'var(--primary-gold)' }}>
+                    {g.title} {g.required ? '(escolha uma)' : '(opcional)'}
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                    {g.options.map(opt => (
+                      <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: '#fff', cursor: 'pointer', userSelect: 'none' }}>
+                        <input
+                          type="checkbox"
+                          checked={optionsChoices[g.title] === opt}
+                          onChange={() => setOptionsChoices(prev => {
+                            const next = { ...prev };
+                            if (next[g.title] === opt) delete next[g.title]; else next[g.title] = opt;
+                            return next;
+                          })}
+                          style={{ accentColor: 'var(--primary-gold)', cursor: 'pointer', width: '16px', height: '16px' }}
+                        />
+                        {opt}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+              <button
+                type="button"
+                onClick={() => { setOptionsItem(null); setOptionsEditIdx(null); }}
+                style={{ flex: 1, padding: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', color: '#fff', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmItemOptions}
+                style={{ flex: 2, padding: '0.75rem', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', border: 'none', borderRadius: '12px', color: '#fff', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 700 }}
+              >
+                {optionsEditIdx !== null ? 'Salvar opções' : 'Adicionar ao carrinho'}
+              </button>
+            </div>
           </div>
         </div>
       )}
